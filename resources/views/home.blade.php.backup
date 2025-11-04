@@ -1,0 +1,2489 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  <title>Waka - Đọc sách online - Library Management</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='0.9em' font-size='90'>📚</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ asset('style.css') }}">
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="logo">WAKA</div>
+    <nav>
+      <ul>
+        <li><a href="#">Sách điện tử</a></li>
+        <li><a href="#">Sách hội viên</a></li>
+        <li><a href="#">Sách nói</a></li>
+        <li><a href="#">Truyện tranh</a></li>
+        <li><a href="#">Dịch vụ xuất bản</a></li>
+      </ul>
+    </nav>
+    <div class="header-actions">
+      <!-- Search Button -->
+      <button class="search-btn" id="searchBtn" aria-label="Tìm kiếm">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="m21 21-4.35-4.35"/>
+        </svg>
+      </button>
+      
+      <!-- Auth Buttons -->
+      <div class="auth-buttons">
+        @guest
+          <a href="{{ route('register') }}" class="btn btn-register">Đăng ký</a>
+          <a href="{{ route('login') }}" class="btn btn-login">Đăng nhập</a>
+        @else
+          <div class="user-menu">
+            <button class="btn btn-user" id="userMenuBtn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+              {{ auth()->user()->name }}
+            </button>
+            <div class="user-dropdown" id="userDropdown">
+              @if(auth()->user()->isAdmin() || auth()->user()->isLibrarian())
+                <a href="{{ route('admin.dashboard') }}" class="dropdown-item">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7"/>
+                    <rect x="14" y="3" width="7" height="7"/>
+                    <rect x="14" y="14" width="7" height="7"/>
+                    <rect x="3" y="14" width="7" height="7"/>
+                  </svg>
+                  Admin Panel
+                </a>
+              @endif
+              <a href="#" class="dropdown-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+                Hồ sơ của tôi
+              </a>
+              <a href="#" class="dropdown-item">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+                Sách của tôi
+              </a>
+              <div class="dropdown-divider"></div>
+              <form action="{{ route('logout') }}" method="POST">
+                @csrf
+                <button type="submit" class="dropdown-item logout-item">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                    <polyline points="16 17 21 12 16 7"/>
+                    <line x1="21" y1="12" x2="9" y2="12"/>
+                  </svg>
+                  Đăng xuất
+                </button>
+              </form>
+            </div>
+          </div>
+        @endguest
+      </div>
+    </div>
+  </header>
+
+  <!-- Search Modal -->
+  <div class="search-modal" id="searchModal">
+    <div class="search-modal-content">
+      <div class="search-modal-header">
+        <h3>Tìm kiếm sách</h3>
+        <button class="search-close" id="searchClose">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="search-input-wrapper">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" class="search-input" id="searchInput" placeholder="Nhập tên sách, tác giả, thể loại..." autocomplete="off">
+      </div>
+      <div class="search-suggestions">
+        <h4>Gợi ý tìm kiếm</h4>
+        <div class="suggestion-tags">
+          <span class="suggestion-tag">Đắc Nhân Tâm</span>
+          <span class="suggestion-tag">Nhà Giả Kim</span>
+          <span class="suggestion-tag">Tuổi Trẻ Đáng Giá</span>
+          <span class="suggestion-tag">Tư duy ngược</span>
+          <span class="suggestion-tag">Chủ nghĩa tối giản</span>
+          <span class="suggestion-tag">Tiểu thuyết</span>
+          <span class="suggestion-tag">Kinh doanh</span>
+          <span class="suggestion-tag">Tâm lý học</span>
+        </div>
+      </div>
+      <div class="search-results" id="searchResults">
+        <!-- Search results will be populated here -->
+      </div>
+    </div>
+    <div class="search-modal-overlay" id="searchOverlay"></div>
+  </div>
+
+  <!-- Banner Carousel -->
+  <section class="banner-carousel">
+    <div class="banner-slides">
+      <!-- Slide 1 -->
+      <div class="banner-slide active">
+        <div class="banner-content">
+          <h1>MUA 1 NĂM TẶNG 1 TÚI CANVAS</h1>
+          <p>Chỉ 99K - Áp dụng cho mọi khách hàng</p>
+          <button class="banner-btn">Mua ngay</button>
+        </div>
+        <div class="banner-image">
+          <div class="banner-placeholder">
+            <svg width="300" height="300" viewBox="0 0 300 300">
+              <rect width="300" height="300" fill="#00ff99" opacity="0.1" rx="20"/>
+              <text x="50%" y="50%" text-anchor="middle" fill="#00ff99" font-size="24" font-family="Poppins">
+                Banner 1
+              </text>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide 2 -->
+      <div class="banner-slide">
+        <div class="banner-content">
+          <h1>ĐỌC SÁCH KHÔNG GIỚI HẠN</h1>
+          <p>Hàng ngàn đầu sách chỉ với 99K/tháng</p>
+          <button class="banner-btn">Khám phá ngay</button>
+        </div>
+        <div class="banner-image">
+          <div class="banner-placeholder">
+            <svg width="300" height="300" viewBox="0 0 300 300">
+              <rect width="300" height="300" fill="#ffdd00" opacity="0.1" rx="20"/>
+              <text x="50%" y="50%" text-anchor="middle" fill="#ffdd00" font-size="24" font-family="Poppins">
+                Banner 2
+              </text>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide 3 -->
+      <div class="banner-slide">
+        <div class="banner-content">
+          <h1>SÁCH NÓI MIỄN PHÍ</h1>
+          <p>Nghe sách mọi lúc mọi nơi - Hoàn toàn miễn phí</p>
+          <button class="banner-btn">Nghe ngay</button>
+        </div>
+        <div class="banner-image">
+          <div class="banner-placeholder">
+            <svg width="300" height="300" viewBox="0 0 300 300">
+              <rect width="300" height="300" fill="#ff6b9d" opacity="0.1" rx="20"/>
+              <text x="50%" y="50%" text-anchor="middle" fill="#ff6b9d" font-size="24" font-family="Poppins">
+                Banner 3
+              </text>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slide 4 -->
+      <div class="banner-slide">
+        <div class="banner-content">
+          <h1>TRUYỆN TRANH HOT NHẤT</h1>
+          <p>Cập nhật mỗi ngày - Đọc trọn bộ không quảng cáo</p>
+          <button class="banner-btn">Đọc ngay</button>
+        </div>
+        <div class="banner-image">
+          <div class="banner-placeholder">
+            <svg width="300" height="300" viewBox="0 0 300 300">
+              <rect width="300" height="300" fill="#00ddff" opacity="0.1" rx="20"/>
+              <text x="50%" y="50%" text-anchor="middle" fill="#00ddff" font-size="24" font-family="Poppins">
+                Banner 4
+              </text>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Arrows -->
+    <button class="banner-nav banner-prev" aria-label="Previous slide">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </button>
+    <button class="banner-nav banner-next" aria-label="Next slide">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="9 18 15 12 9 6"></polyline>
+      </svg>
+    </button>
+
+    <!-- Dots Navigation -->
+    <div class="banner-dots">
+      <button class="banner-dot active" aria-label="Slide 1"></button>
+      <button class="banner-dot" aria-label="Slide 2"></button>
+      <button class="banner-dot" aria-label="Slide 3"></button>
+      <button class="banner-dot" aria-label="Slide 4"></button>
+    </div>
+  </section>
+
+  <!-- Bảng xếp hạng -->
+  <section class="books">
+    <h2>Bảng xếp hạng</h2>
+    
+    <!-- Tabs Navigation -->
+    <div class="ranking-tabs-inline">
+      <div class="tabs-container">
+        <button class="tab-btn active">Đọc nhiều</button>
+        <button class="tab-btn">Nghe nhiều</button>
+        <button class="tab-btn">Sách Hiệu Sỏi</button>
+        <button class="tab-btn">Truyện tranh</button>
+        <button class="tab-btn">Podcast</button>
+        <button class="tab-btn">Cộng đồng viết</button>
+      </div>
+    </div>
+    
+    <div class="book-list">
+      @if(isset($rankingBooks) && $rankingBooks->count() > 0)
+        @foreach($rankingBooks as $book)
+          <x-book-item :book="$book" />
+        @endforeach
+      @else
+        <p style="text-align: center; color: #666; padding: 40px;">Chưa có sách trong bảng xếp hạng</p>
+      @endif
+    </div>
+  </section>
+
+  <section class="books waka-recommended">
+    <h2>Waka đề xuất</h2>
+    <div class="book-list">
+      @if(isset($wakaRecommendedBooks) && $wakaRecommendedBooks->count() > 0)
+        @foreach($wakaRecommendedBooks as $book)
+          <x-book-item :book="$book" :premium="true" />
+        @endforeach
+      @else
+        <p style="text-align: center; color: #666; padding: 40px;">Chưa có sách đề xuất</p>
+      @endif
+    </div>
+  </section>
+
+  <section class="books minimalist-living">
+    <h2>Sống Tối Giản Cùng Waka</h2>
+    <div class="book-list">
+      @if(isset($minimalistBooks) && $minimalistBooks->count() > 0)
+        @foreach($minimalistBooks as $book)
+          <x-book-item :book="$book" :premium="true" />
+        @endforeach
+      @else
+        <p style="text-align: center; color: #666; padding: 40px;">Chưa có sách về sống tối giản</p>
+      @endif
+    </div>
+  </section>
+
+  <section class="books spiritual-peace">
+    <h2>Thiên Định - Tìm Bình An trong Tâm Hồn</h2>
+    <div class="book-list">
+      @if(isset($spiritualBooks) && $spiritualBooks->count() > 0)
+        @foreach($spiritualBooks as $book)
+          <x-book-item :book="$book" :premium="true" />
+        @endforeach
+      @else
+        <p style="text-align: center; color: #666; padding: 40px;">Chưa có sách về tâm linh</p>
+      @endif
+    </div>
+  </section>
+
+  <section class="books">
+    <h2>Hành trình chữa lành, tìm lại chính mình</h2>
+    <div class="book-list">
+      @if(isset($healingBooks) && $healingBooks->count() > 0)
+        @foreach($healingBooks as $book)
+          <x-book-item :book="$book" :premium="true" />
+        @endforeach
+      @else
+        <p style="text-align: center; color: #666; padding: 40px;">Chưa có sách chữa lành</p>
+      @endif
+    </div>
+  </section>
+
+  <section class="books">
+    <h2>Sách cho ngày muốn bỏ cuộc</h2>
+    <div class="book-list">
+      @if(isset($motivationalBooks) && $motivationalBooks->count() > 0)
+        @foreach($motivationalBooks as $book)
+          <x-book-item :book="$book" :premium="true" />
+        @endforeach
+      @else
+        <p style="text-align: center; color: #666; padding: 40px;">Chưa có sách động lực</p>
+      @endif
+    </div>
+  </section>
+
+  <section class="books">
+    <h2>Cân bằng cảm xúc - Đón nhận hạnh phúc</h2>
+    <div class="book-list">
+      @if(isset($healingBooks) && $healingBooks->count() > 0)
+        @foreach($healingBooks->take(8) as $book)
+          <x-book-item :book="$book" :premium="true" />
+        @endforeach
+      @else
+        <p style="text-align: center; color: #666; padding: 40px;">Chưa có sách</p>
+      @endif
+    </div>
+  </section>
+
+  <section class="books">
+    <h2>Hãy sống theo cách của bạn</h2>
+    <div class="book-list">
+      @if(isset($minimalistBooks) && $minimalistBooks->count() > 0)
+        @foreach($minimalistBooks->take(8) as $book)
+          <x-book-item :book="$book" :premium="true" />
+        @endforeach
+      @else
+        <p style="text-align: center; color: #666; padding: 40px;">Chưa có sách</p>
+      @endif
+    </div>
+  </section>
+
+  <section class="books">
+    <h2>Nghĩ khác để sống khác</h2>
+    <div class="book-list">
+      @if(isset($motivationalBooks) && $motivationalBooks->count() > 0)
+        @foreach($motivationalBooks->take(8) as $book)
+          <x-book-item :book="$book" :premium="true" />
+        @endforeach
+      @else
+        <p style="text-align: center; color: #666; padding: 40px;">Chưa có sách</p>
+      @endif
+    </div>
+  </section>
+
+  <section class="books">
+    <h2>Thấu hiểu người, thay đổi mình</h2>
+    <div class="book-list">
+      @if(isset($rankingBooks) && $rankingBooks->count() > 0)
+        @foreach($rankingBooks->take(8) as $book)
+          <x-book-item :book="$book" :premium="true" />
+        @endforeach
+      @else
+        <p style="text-align: center; color: #666; padding: 40px;">Chưa có sách</p>
+      @endif
+    </div>
+  </section>
+
+  <!-- Giữ nguyên section Thư viện sách vì đã có dữ liệu từ database rồi -->
+  <section class="books library-collection">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2>Thư viện sách của chúng tôi</h2>
+      <a href="{{ route('books.index') }}" style="color: #27ae60; text-decoration: none; font-weight: 600;">Xem tất cả →</a>
+    </div>
+    
+    @if(isset($books) && $books->count() > 0)
+      <div class="book-list">
+      <div class="book-item" 
+           data-book-title="Cánh Chim Bất Tử"
+           data-book-author="Nguyễn Nhật Ánh"
+           data-book-genre="Tiểu thuyết"
+           data-book-rating="4.8/5"
+           data-book-year="2015"
+           data-book-description="Một câu chuyện cảm động về tuổi thơ, tình bạn và những kỷ niệm khó quên. Tác phẩm mang đến những giá trị nhân văn sâu sắc về cuộc sống và con người."
+           data-book-premium="false">
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#1a5f4d" rx="8"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="14" font-family="Poppins">
+              Cánh Chim Bất Tử
+            </text>
+          </svg>
+        </div>
+        <p>Cánh Chim Bất Tử</p>
+      </div>
+      <div class="book-item"
+           data-book-title="Đắc Nhân Tâm"
+           data-book-author="Dale Carnegie"
+           data-book-genre="Kỹ năng sống"
+           data-book-rating="4.9/5"
+           data-book-year="1936"
+           data-book-description="Cuốn sách kinh điển về nghệ thuật giao tiếp và thu phục lòng người. Một tác phẩm bất hủ giúp bạn thành công trong cuộc sống và xây dựng các mối quan hệ tốt đẹp."
+           data-book-premium="false">
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#2d6e5a" rx="8"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="14" font-family="Poppins">
+              Đắc Nhân Tâm
+            </text>
+          </svg>
+        </div>
+        <p>Đắc Nhân Tâm</p>
+      </div>
+      <div class="book-item"
+           data-book-title="Khởi Dậy Tiềm Thức"
+           data-book-author="Joseph Murphy"
+           data-book-genre="Tâm lý học"
+           data-book-rating="4.7/5"
+           data-book-year="1963"
+           data-book-description="Khám phá sức mạnh vô tận của tiềm thức và cách sử dụng nó để thay đổi cuộc sống. Tác phẩm kinh điển về phát triển bản thân và sức mạnh của tâm trí."
+           data-book-premium="false">
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#3f7d67" rx="8"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="14" font-family="Poppins">
+              Khởi Dậy Tiềm Thức
+            </text>
+          </svg>
+        </div>
+        <p>Khởi Dậy Tiềm Thức</p>
+      </div>
+      <div class="book-item"
+           data-book-title="Nhà Giả Kim"
+           data-book-author="Paulo Coelho"
+           data-book-genre="Triết lý - Huyền bí"
+           data-book-rating="4.9/5"
+           data-book-year="1988"
+           data-book-description="Hành trình tìm kiếm kho báu và ý nghĩa cuộc sống. Một tác phẩm triết lý sâu sắc về việc theo đuổi ước mơ và lắng nghe trái tim mình."
+           data-book-premium="false">
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#518c74" rx="8"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="14" font-family="Poppins">
+              Nhà Giả Kim
+            </text>
+          </svg>
+        </div>
+        <p>Nhà Giả Kim</p>
+      </div>
+      <div class="book-item">
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#639b81" rx="8"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="14" font-family="Poppins">
+              Cà Phê Cùng Tony
+            </text>
+          </svg>
+        </div>
+        <p>Cà Phê Cùng Tony</p>
+      </div>
+      <div class="book-item">
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#75aa8e" rx="8"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="14" font-family="Poppins">
+              Tuổi Trẻ Đáng Giá Bao Nhiêu
+            </text>
+          </svg>
+        </div>
+        <p>Tuổi Trẻ Đáng Giá Bao Nhiêu</p>
+      </div>
+      <div class="book-item">
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#87b99b" rx="8"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="14" font-family="Poppins">
+              Tư Duy Ngược
+            </text>
+          </svg>
+        </div>
+        <p>Tư Duy Ngược</p>
+      </div>
+      <div class="book-item">
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#99c8a8" rx="8"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="14" font-family="Poppins">
+              Quẳng Gánh Lo Đi
+            </text>
+          </svg>
+        </div>
+        <p>Quẳng Gánh Lo Đi</p>
+      </div>
+      <div class="book-item">
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#abd7b5" rx="8"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="14" font-family="Poppins">
+              7 Thói Quen
+            </text>
+          </svg>
+        </div>
+        <p>7 Thói Quen Hiệu Quả</p>
+      </div>
+      <div class="book-item">
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#bde6c2" rx="8"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="14" font-family="Poppins">
+              Sức Mạnh Tiềm Thức
+            </text>
+          </svg>
+        </div>
+        <p>Sức Mạnh Tiềm Thức</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Waka đề xuất -->
+  <section class="books waka-recommended">
+    <h2>Waka đề xuất</h2>
+    <div class="book-list">
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#f5f5f5" rx="8"/>
+            <text x="50%" y="30%" text-anchor="middle" fill="#333" font-size="16" font-family="Poppins" font-weight="600">LỰA CHỌN</text>
+            <text x="50%" y="40%" text-anchor="middle" fill="#e74c3c" font-size="20" font-family="Poppins" font-weight="700">ĐÚNG</text>
+            <text x="50%" y="55%" text-anchor="middle" fill="#333" font-size="12" font-family="Poppins">QUAN TRỌNG HƠN</text>
+            <text x="50%" y="62%" text-anchor="middle" fill="#333" font-size="12" font-family="Poppins">NỖ LỰC</text>
+          </svg>
+        </div>
+        <p>Lựa chọn đúng quan trọng hơn nỗ lực</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#e8f5f0" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#27ae60" font-size="18" font-family="Poppins" font-weight="700">BÍ QUYẾT</text>
+            <text x="50%" y="45%" text-anchor="middle" fill="#27ae60" font-size="18" font-family="Poppins" font-weight="700">THAY ĐỔI</text>
+            <text x="50%" y="55%" text-anchor="middle" fill="#27ae60" font-size="18" font-family="Poppins" font-weight="700">CUỘC ĐỜI</text>
+          </svg>
+        </div>
+        <p>Bí quyết thay đổi cuộc đời</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#d4e9f7" rx="8"/>
+            <text x="50%" y="30%" text-anchor="middle" fill="#666" font-size="14" font-family="Poppins">GIẢM "XÓC"...</text>
+            <text x="50%" y="45%" text-anchor="middle" fill="#3498db" font-size="16" font-family="Poppins" font-weight="700">HÀNH TRÌNH</text>
+            <text x="50%" y="55%" text-anchor="middle" fill="#3498db" font-size="16" font-family="Poppins" font-weight="700">CUỘC ĐỜI</text>
+          </svg>
+        </div>
+        <p>Giảm "xóc"... Hành trình cuộc đời</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#f39c12" opacity="0.5" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#fff" font-size="14" font-family="Poppins">chúng ta cách nhau</text>
+            <text x="50%" y="50%" text-anchor="middle" fill="#fff" font-size="16" font-family="Poppins" font-weight="700">MỘT BƯỚC CHÂN</text>
+          </svg>
+        </div>
+        <p>Chúng ta cách nhau một bước chân</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#2c3e50" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#f39c12" font-size="18" font-family="Poppins" font-weight="700">DÁM LÀM</text>
+            <text x="50%" y="50%" text-anchor="middle" fill="#e74c3c" font-size="22" font-family="Poppins" font-weight="700">GIÀU</text>
+          </svg>
+        </div>
+        <p>Dám làm giàu</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#00b894" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">KHỞI NGHIỆP</text>
+            <text x="50%" y="52%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">THÀNH CÔNG</text>
+          </svg>
+        </div>
+        <p>Khởi nghiệp thành công</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sống Tối Giản Cùng Waka -->
+  <section class="books minimalist-living">
+    <h2>Sống Tối Giản Cùng Waka</h2>
+    <div class="book-list">
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#f8f9fa" rx="8"/>
+            <text x="50%" y="30%" text-anchor="middle" fill="#666" font-size="12" font-family="Poppins">HỌC ĂN.</text>
+            <text x="50%" y="42%" text-anchor="middle" fill="#666" font-size="12" font-family="Poppins">HỌC THẦM</text>
+            <text x="50%" y="54%" text-anchor="middle" fill="#666" font-size="12" font-family="Poppins">NẬU. THẦU</text>
+            <text x="50%" y="66%" text-anchor="middle" fill="#d63031" font-size="12" font-family="Poppins">YÊU THƯƠNG</text>
+          </svg>
+        </div>
+        <p>Học ăn, học nấu, thầm thầu yêu thương</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#ffd6e7" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="#e84393" font-size="22" font-family="Poppins" font-weight="700">DỌN ĐẸP</text>
+            <text x="50%" y="55%" text-anchor="middle" fill="#d63031" font-size="18" font-family="Poppins" font-weight="700">Tối Giản</text>
+          </svg>
+        </div>
+        <p>Dọn dẹp tối giản</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#e8f4f8" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#0984e3" font-size="14" font-family="Poppins" font-weight="600">DỌN NHÀ.</text>
+            <text x="50%" y="48%" text-anchor="middle" fill="#0984e3" font-size="14" font-family="Poppins" font-weight="600">DỌN GỌT</text>
+            <text x="50%" y="60%" text-anchor="middle" fill="#666" font-size="11" font-family="Poppins">của. RỬA</text>
+            <text x="50%" y="70%" text-anchor="middle" fill="#0984e3" font-size="11" font-family="Poppins">TRẢI TIM</text>
+          </svg>
+        </div>
+        <p>Dọn nhà, dọn cửa, gọt rửa trải tim</p>
+      </div>
+      <div class="book-item">
+        <div class="price-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#e84393"/>
+            <path d="M9 12l2 2 4-4" stroke="white" stroke-width="2" fill="none"/>
+          </svg>
+          <span>99,000đ</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#a29bfe" rx="8"/>
+            <text x="50%" y="30%" text-anchor="middle" fill="white" font-size="11" font-family="Poppins">một cuốn sách về</text>
+            <text x="50%" y="45%" text-anchor="middle" fill="white" font-size="14" font-family="Poppins" font-weight="700">CHỦ NGHĨA</text>
+            <text x="50%" y="55%" text-anchor="middle" fill="white" font-size="14" font-family="Poppins" font-weight="700">TỐI GIẢN</text>
+          </svg>
+        </div>
+        <p>Một cuốn sách về chủ nghĩa tối giản</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#d5f4e6" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#00b894" font-size="20" font-family="Poppins" font-weight="700">LAGOM</text>
+            <text x="50%" y="48%" text-anchor="middle" fill="#00b894" font-size="16" font-family="Poppins" font-weight="700">VỪA ĐỦ</text>
+            <text x="50%" y="62%" text-anchor="middle" fill="#636e72" font-size="9" font-family="Poppins">Đẳng cấp sống</text>
+          </svg>
+        </div>
+        <p>Vừa đủ - Đẳng cấp sống của người Thụy Điển</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Thiên Định - Tìm Bình An trong Tâm Hồn -->
+  <section class="books spiritual-peace">
+    <h2>Thiên Định - Tìm Bình An trong Tâm Hồn</h2>
+    <div class="book-list">
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#e8f4f8" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#e74c3c" font-size="16" font-family="Poppins" font-weight="700">THỨC TỈNH</text>
+            <text x="50%" y="50%" text-anchor="middle" fill="#c0392b" font-size="14" font-family="Poppins" font-weight="700">MỤC ĐÍCH SỐNG</text>
+          </svg>
+        </div>
+        <p>Thức tỉnh mục đích sống</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#2c3e50" rx="8"/>
+            <text x="50%" y="30%" text-anchor="middle" fill="#fff" font-size="11" font-family="Poppins">SÂU TRONG TA</text>
+            <text x="50%" y="45%" text-anchor="middle" fill="#f39c12" font-size="14" font-family="Poppins" font-weight="700">MỘT BÔNG HOA</text>
+            <text x="50%" y="60%" text-anchor="middle" fill="#fff" font-size="11" font-family="Poppins">LUÔN RỰC SÁNG</text>
+          </svg>
+        </div>
+        <p>Sâu trong ta một bông hoa luôn rực sáng</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#f9e5b8" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="#8b7355" font-size="13" font-family="Poppins">An nhiên giữa những</text>
+            <text x="50%" y="55%" text-anchor="middle" fill="#6d5d4b" font-size="14" font-family="Poppins" font-weight="600">tháng trầm</text>
+          </svg>
+        </div>
+        <p>An nhiên giữa những tháng trầm</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#1a1a2e" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="#fff" font-size="16" font-family="Poppins" font-weight="700">Muôn kiếp</text>
+            <text x="50%" y="55%" text-anchor="middle" fill="#00d4ff" font-size="18" font-family="Poppins" font-weight="700">nhân sinh</text>
+          </svg>
+        </div>
+        <p>Muôn kiếp nhân sinh</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradSpiritual1" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#d4e157;stop-opacity:1" />
+                <stop offset="50%" style="stop-color:#aed581;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#81c784;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradSpiritual1)" rx="8"/>
+            <text x="50%" y="25%" text-anchor="middle" fill="#2e7d32" font-size="12" font-family="Poppins" font-weight="700">CHÁNH NIỆM</text>
+            <text x="50%" y="35%" text-anchor="middle" fill="#2e7d32" font-size="12" font-family="Poppins" font-weight="700">TỪNG PHÚT GIÂY:</text>
+            <text x="50%" y="50%" text-anchor="middle" fill="#1b5e20" font-size="13" font-family="Poppins" font-weight="700">SỐNG</text>
+            <text x="50%" y="60%" text-anchor="middle" fill="#1b5e20" font-size="13" font-family="Poppins" font-weight="700">THÀNH THỜI</text>
+            <text x="50%" y="70%" text-anchor="middle" fill="#1b5e20" font-size="10" font-family="Poppins">GIỮA ĐỜI DỒN DẬP</text>
+          </svg>
+        </div>
+        <p>Chánh niệm từng phút giây: Sống thành thời giữa đời dồn dập</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradSpiritual2" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#e1bee7;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#ce93d8;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradSpiritual2)" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#6a1b9a" font-size="16" font-family="Poppins" font-weight="700">THIỀN</text>
+            <text x="50%" y="50%" text-anchor="middle" fill="#6a1b9a" font-size="14" font-family="Poppins" font-weight="600">Nghệ thuật sống</text>
+            <text x="50%" y="62%" text-anchor="middle" fill="#6a1b9a" font-size="14" font-family="Poppins" font-weight="600">an lạc</text>
+          </svg>
+        </div>
+        <p>Thiền - Nghệ thuật sống an lạc</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#b3e5fc" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#01579b" font-size="16" font-family="Poppins" font-weight="700">BÀN TAY</text>
+            <text x="50%" y="48%" text-anchor="middle" fill="#01579b" font-size="16" font-family="Poppins" font-weight="700">PHẬT</text>
+            <text x="50%" y="62%" text-anchor="middle" fill="#0277bd" font-size="12" font-family="Poppins">Tìm về nơi bình yên</text>
+          </svg>
+        </div>
+        <p>Bàn tay Phật - Tìm về nơi bình yên</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradSpiritual3" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#fff9c4;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#fff59d;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradSpiritual3)" rx="8"/>
+            <text x="50%" y="30%" text-anchor="middle" fill="#f57f17" font-size="14" font-family="Poppins" font-style="italic">Hạnh phúc</text>
+            <text x="50%" y="45%" text-anchor="middle" fill="#e65100" font-size="18" font-family="Poppins" font-weight="700">BÊN TRONG</text>
+            <text x="50%" y="60%" text-anchor="middle" fill="#e65100" font-size="14" font-family="Poppins" font-weight="600">ta</text>
+          </svg>
+        </div>
+        <p>Hạnh phúc bên trong ta</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#c8e6c9" rx="8"/>
+            <text x="50%" y="30%" text-anchor="middle" fill="#2e7d32" font-size="14" font-family="Poppins" font-weight="600">TU DƯỠNG</text>
+            <text x="50%" y="45%" text-anchor="middle" fill="#1b5e20" font-size="18" font-family="Poppins" font-weight="700">TÂM</text>
+            <text x="50%" y="58%" text-anchor="middle" fill="#1b5e20" font-size="18" font-family="Poppins" font-weight="700">ĐỨC</text>
+          </svg>
+        </div>
+        <p>Tu dưỡng tâm đức</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradSpiritual4" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#f8bbd0;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#f48fb1;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradSpiritual4)" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#880e4f" font-size="16" font-family="Poppins" font-weight="700">SỐNG</text>
+            <text x="50%" y="48%" text-anchor="middle" fill="#880e4f" font-size="16" font-family="Poppins" font-weight="700">THUẬN THEO</text>
+            <text x="50%" y="62%" text-anchor="middle" fill="#c2185b" font-size="14" font-family="Poppins" font-weight="600">tự nhiên</text>
+          </svg>
+        </div>
+        <p>Sống thuận theo tự nhiên</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#bbdefb" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#0d47a1" font-size="16" font-family="Poppins" font-weight="700">TÂM</text>
+            <text x="50%" y="48%" text-anchor="middle" fill="#0d47a1" font-size="16" font-family="Poppins" font-weight="700">LINH</text>
+            <text x="50%" y="62%" text-anchor="middle" fill="#1565c0" font-size="14" font-family="Poppins" font-weight="600">Hành trình giác ngộ</text>
+          </svg>
+        </div>
+        <p>Tâm linh - Hành trình giác ngộ</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradSpiritual5" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#b2dfdb;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#80cbc4;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradSpiritual5)" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#004d40" font-size="16" font-family="Poppins" font-weight="700">PHẬT PHÁP</text>
+            <text x="50%" y="50%" text-anchor="middle" fill="#00695c" font-size="14" font-family="Poppins" font-weight="600">Ánh sáng</text>
+            <text x="50%" y="62%" text-anchor="middle" fill="#00695c" font-size="14" font-family="Poppins" font-weight="600">trí tuệ</text>
+          </svg>
+        </div>
+        <p>Phật pháp - Ánh sáng trí tuệ</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cập nhật mới chương truyện -->
+  <section class="latest-chapters">
+    <h2>Cập nhật mới chương truyện</h2>
+    <div class="chapter-grid">
+      <div class="chapter-card">
+        <div class="book-thumbnail">
+          <svg width="100" height="150" viewBox="0 0 100 150">
+            <rect width="100" height="150" fill="#9b5986" rx="6"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="10" font-family="Poppins">Tiếng Sét</text>
+          </svg>
+        </div>
+        <div class="chapter-info">
+          <div class="chapter-time">14:37, 23/10/2025</div>
+          <h3 class="chapter-title">Tiếng kêu tình tình là tình toán tư lâu</h3>
+          <div class="chapter-subtitle">Chương 14: Người nính hót trung thành tấn tụy</div>
+          <div class="chapter-meta">
+            <span class="chapter-status">Hiện đại</span>
+            <span class="chapter-views">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="3" fill="currentColor"/>
+              </svg>
+              167
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chapter-card">
+        <div class="book-thumbnail">
+          <svg width="100" height="150" viewBox="0 0 100 150">
+            <rect width="100" height="150" fill="#8b4c6f" rx="6"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="10" font-family="Poppins">Yêu Giá</text>
+          </svg>
+        </div>
+        <div class="chapter-info">
+          <div class="chapter-time">06:02, 23/10/2025</div>
+          <h3 class="chapter-title">Yêu giá cuối thật</h3>
+          <div class="chapter-subtitle">Chương 363: Tiếng gọi sau giấc</div>
+          <div class="chapter-meta">
+            <span class="chapter-status">Hiện đại</span>
+            <span class="chapter-views">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="3" fill="currentColor"/>
+              </svg>
+              167
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chapter-card">
+        <div class="book-thumbnail">
+          <svg width="100" height="150" viewBox="0 0 100 150">
+            <rect width="100" height="150" fill="#6b4c8b" rx="6"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="10" font-family="Poppins">Dự Độ</text>
+          </svg>
+        </div>
+        <div class="chapter-info">
+          <div class="chapter-time">06:01, 23/10/2025</div>
+          <h3 class="chapter-title">Dự độ khom lưng</h3>
+          <div class="chapter-subtitle">Chương 76: Kế hoạch hiện đại</div>
+          <div class="chapter-meta">
+            <span class="chapter-status">Hiện đại</span>
+            <span class="chapter-views">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="3" fill="currentColor"/>
+              </svg>
+              187
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chapter-card">
+        <div class="book-thumbnail">
+          <svg width="100" height="150" viewBox="0 0 100 150">
+            <rect width="100" height="150" fill="#a63c3c" rx="6"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="10" font-family="Poppins">Thái Tử</text>
+          </svg>
+        </div>
+        <div class="chapter-info">
+          <div class="chapter-time">06:01, 23/10/2025</div>
+          <h3 class="chapter-title">Thái tử nhập vai</h3>
+          <div class="chapter-subtitle">Chương 372.3: Chia rẽ</div>
+          <div class="chapter-meta">
+            <span class="chapter-status">Cổ đại</span>
+            <span class="chapter-views">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="3" fill="currentColor"/>
+              </svg>
+              167
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chapter-card">
+        <div class="book-thumbnail">
+          <svg width="100" height="150" viewBox="0 0 100 150">
+            <rect width="100" height="150" fill="#c94c4c" rx="6"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="10" font-family="Poppins">Cúng Chiểu</text>
+          </svg>
+        </div>
+        <div class="chapter-info">
+          <div class="chapter-time">06:01, 23/10/2025</div>
+          <h3 class="chapter-title">Cúng chiểu vô tận</h3>
+          <div class="chapter-subtitle">Chương 289: Thừa thầu</div>
+          <div class="chapter-meta">
+            <span class="chapter-status">Hiện đại</span>
+            <span class="chapter-views">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="3" fill="currentColor"/>
+              </svg>
+              167
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chapter-card">
+        <div class="book-thumbnail">
+          <svg width="100" height="150" viewBox="0 0 100 150">
+            <rect width="100" height="150" fill="#5c8b6b" rx="6"/>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="10" font-family="Poppins">Yêu Chiểu</text>
+          </svg>
+        </div>
+        <div class="chapter-info">
+          <div class="chapter-time">06:01, 22/10/2025</div>
+          <h3 class="chapter-title">Yêu chiểu nóng bỏng</h3>
+          <div class="chapter-subtitle">Chương 126: Người nhà của em thì em phải chịu</div>
+          <div class="chapter-meta">
+            <span class="chapter-status">Hiện đại</span>
+            <span class="chapter-views">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <circle cx="12" cy="12" r="3" fill="currentColor"/>
+              </svg>
+              88
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Hành trình chữa lành, tìm lại chính mình -->
+  <section class="books">
+    <h2>Hành trình chữa lành, tìm lại chính mình</h2>
+    <div class="book-list">
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradHealing1" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#ffeaa7;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#fdcb6e;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradHealing1)" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#d63031" font-size="16" font-family="Poppins" font-weight="700">
+              HÀNH TRÌNH
+            </text>
+            <text x="50%" y="48%" text-anchor="middle" fill="#d63031" font-size="16" font-family="Poppins" font-weight="700">
+              CHỮA LÀNH
+            </text>
+            <text x="50%" y="62%" text-anchor="middle" fill="#636e72" font-size="12" font-family="Poppins">
+              Tìm lại chính mình
+            </text>
+          </svg>
+        </div>
+        <p>Hành trình chữa lành, tìm lại chính mình</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#dfe6e9" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="#00b894" font-size="18" font-family="Poppins" font-weight="700">
+              TỰ CHỮA LÀNH
+            </text>
+            <text x="50%" y="55%" text-anchor="middle" fill="#00b894" font-size="14" font-family="Poppins">
+              Vượt qua khó khăn
+            </text>
+          </svg>
+        </div>
+        <p>Tự chữa lành - Vượt qua khó khăn</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradHealing2" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#a29bfe;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#6c5ce7;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradHealing2)" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="white" font-size="14" font-family="Poppins" font-weight="600">
+              TÌM LẠI
+            </text>
+            <text x="50%" y="48%" text-anchor="middle" fill="white" font-size="18" font-family="Poppins" font-weight="700">
+              CHÍNH MÌNH
+            </text>
+          </svg>
+        </div>
+        <p>Tìm lại chính mình</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#fab1a0" rx="8"/>
+            <text x="50%" y="38%" text-anchor="middle" fill="#d63031" font-size="16" font-family="Poppins" font-weight="700">
+              CHẤP NHẬN
+            </text>
+            <text x="50%" y="50%" text-anchor="middle" fill="#d63031" font-size="16" font-family="Poppins" font-weight="700">
+              BẢN THÂN
+            </text>
+          </svg>
+        </div>
+        <p>Chấp nhận bản thân</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#ff7675" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              YÊU THƯƠNG
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              CHÍNH MÌNH
+            </text>
+          </svg>
+        </div>
+        <p>Yêu thương chính mình</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#55efc4" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="#00b894" font-size="16" font-family="Poppins" font-weight="700">
+              PHỤC HỒI
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="#00b894" font-size="16" font-family="Poppins" font-weight="700">
+              NĂNG LƯỢNG
+            </text>
+          </svg>
+        </div>
+        <p>Phục hồi năng lượng</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#b2dfdb" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="#00695c" font-size="16" font-family="Poppins" font-weight="700">
+              TRỊ LIỆU
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="#00695c" font-size="16" font-family="Poppins" font-weight="700">
+              TÂM HỒN
+            </text>
+          </svg>
+        </div>
+        <p>Trị liệu tâm hồn</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#c5cae9" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#3f51b5" font-size="16" font-family="Poppins" font-weight="700">
+              HÀNH TRÌNH
+            </text>
+            <text x="50%" y="48%" text-anchor="middle" fill="#3f51b5" font-size="16" font-family="Poppins" font-weight="700">
+              NỘI TÂM
+            </text>
+          </svg>
+        </div>
+        <p>Hành trình nội tâm</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#fce4ec" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="#c2185b" font-size="16" font-family="Poppins" font-weight="700">
+              CHỮA LÀNH
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="#c2185b" font-size="16" font-family="Poppins" font-weight="700">
+              NỘI TÂM
+            </text>
+          </svg>
+        </div>
+        <p>Chữa lành nội tâm</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#fff9c4" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="#f57f17" font-size="16" font-family="Poppins" font-weight="700">
+              KHỎE
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="#f57f17" font-size="16" font-family="Poppins" font-weight="700">
+              TÂM HỒN
+            </text>
+          </svg>
+        </div>
+        <p>Khỏe tâm hồn</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sách cho ngày muốn bỏ cuộc -->
+  <section class="books">
+    <h2>Sách cho ngày muốn bỏ cuộc</h2>
+    <div class="book-list">
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradGiveup1" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#ff6b6b;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#ee5a6f;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradGiveup1)" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="white" font-size="18" font-family="Poppins" font-weight="700">
+              ĐỪNG
+            </text>
+            <text x="50%" y="48%" text-anchor="middle" fill="white" font-size="18" font-family="Poppins" font-weight="700">
+              BỎ CUỘC
+            </text>
+          </svg>
+        </div>
+        <p>Đừng bỏ cuộc</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#2d3436" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#ffeaa7" font-size="16" font-family="Poppins" font-weight="700">
+              VƯỢT QUA
+            </text>
+            <text x="50%" y="48%" text-anchor="middle" fill="#ffeaa7" font-size="16" font-family="Poppins" font-weight="700">
+              KHÓ KHĂN
+            </text>
+          </svg>
+        </div>
+        <p>Vượt qua khó khăn</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#fdcb6e" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#d63031" font-size="16" font-family="Poppins" font-weight="700">
+              KHÔNG BAO GIỜ
+            </text>
+            <text x="50%" y="48%" text-anchor="middle" fill="#d63031" font-size="16" font-family="Poppins" font-weight="700">
+              ĐẦU HÀNG
+            </text>
+          </svg>
+        </div>
+        <p>Không bao giờ đầu hàng</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradGiveup2" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#74b9ff;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#0984e3;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradGiveup2)" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              SỨC MẠNH
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              NGHỊ LỰC
+            </text>
+          </svg>
+        </div>
+        <p>Sức mạnh nghị lực</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#55efc4" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="#00b894" font-size="18" font-family="Poppins" font-weight="700">
+              TIẾP TỤC
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="#00b894" font-size="18" font-family="Poppins" font-weight="700">
+              ĐỨNG DẬY
+            </text>
+          </svg>
+        </div>
+        <p>Tiếp tục đứng dậy</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#e17055" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              KIÊN ĐỊNH
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              MỤC TIÊU
+            </text>
+          </svg>
+        </div>
+        <p>Kiên định mục tiêu</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cân bằng cảm xúc - Đón nhận hạnh phúc -->
+  <section class="books">
+    <h2>Cân bằng cảm xúc - Đón nhận hạnh phúc</h2>
+    <div class="book-list">
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradEmotion1" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#ffeaa7;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#fdcb6e;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradEmotion1)" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#e17055" font-size="16" font-family="Poppins" font-weight="700">
+              CÂN BẰNG
+            </text>
+            <text x="50%" y="48%" text-anchor="middle" fill="#e17055" font-size="16" font-family="Poppins" font-weight="700">
+              CẢM XÚC
+            </text>
+          </svg>
+        </div>
+        <p>Cân bằng cảm xúc</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#ffeaa7" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#fdcb6e" font-size="22" font-family="Poppins" font-weight="700">
+              HẠNH PHÚC
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="#e17055" font-size="12" font-family="Poppins">
+              Đón nhận niềm vui
+            </text>
+          </svg>
+        </div>
+        <p>Hạnh phúc - Đón nhận niềm vui</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradEmotion2" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#a29bfe;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#6c5ce7;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradEmotion2)" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              QUẢN TRỊ
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              CẢM XÚC
+            </text>
+          </svg>
+        </div>
+        <p>Quản trị cảm xúc</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#ff7675" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              TÍCH CỰC
+            </text>
+            <text x="50%" y="48%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              LẠC QUAN
+            </text>
+          </svg>
+        </div>
+        <p>Tích cực lạc quan</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#fab1a0" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="#e17055" font-size="18" font-family="Poppins" font-weight="700">
+              SỐNG VUI
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="#e17055" font-size="18" font-family="Poppins" font-weight="700">
+              SỐNG KHỎE
+            </text>
+          </svg>
+        </div>
+        <p>Sống vui - Sống khỏe</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#81ecec" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="#00b894" font-size="16" font-family="Poppins" font-weight="700">
+              YÊU ĐỜI
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="#00b894" font-size="16" font-family="Poppins" font-weight="700">
+              YÊU MÌNH
+            </text>
+          </svg>
+        </div>
+        <p>Yêu đời yêu mình</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Hãy sống theo cách của bạn -->
+  <section class="books">
+    <h2>Hãy sống theo cách của bạn</h2>
+    <div class="book-list">
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradYourway1" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#6c5ce7;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#a29bfe;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradYourway1)" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="white" font-size="18" font-family="Poppins" font-weight="700">
+              SỐNG
+            </text>
+            <text x="50%" y="48%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              THEO CÁCH
+            </text>
+            <text x="50%" y="60%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              CỦA BẠN
+            </text>
+          </svg>
+        </div>
+        <p>Sống theo cách của bạn</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#00b894" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="white" font-size="18" font-family="Poppins" font-weight="700">
+              TỰ DO
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="white" font-size="18" font-family="Poppins" font-weight="700">
+              LỰA CHỌN
+            </text>
+          </svg>
+        </div>
+        <p>Tự do lựa chọn</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#fdcb6e" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#d63031" font-size="16" font-family="Poppins" font-weight="700">
+              DŨNG CẢM
+            </text>
+            <text x="50%" y="48%" text-anchor="middle" fill="#d63031" font-size="16" font-family="Poppins" font-weight="700">
+              LÀ CHÍNH
+            </text>
+            <text x="50%" y="60%" text-anchor="middle" fill="#d63031" font-size="16" font-family="Poppins" font-weight="700">
+              MÌNH
+            </text>
+          </svg>
+        </div>
+        <p>Dũng cảm là chính mình</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradYourway2" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#ff7675;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#d63031;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradYourway2)" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              SỐNG
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              ĐÚNG NGHĨA
+            </text>
+          </svg>
+        </div>
+        <p>Sống đúng nghĩa</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#74b9ff" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="#0984e3" font-size="18" font-family="Poppins" font-weight="700">
+              CON ĐƯỜNG
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="#0984e3" font-size="18" font-family="Poppins" font-weight="700">
+              RIÊNG
+            </text>
+          </svg>
+        </div>
+        <p>Con đường riêng</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#a29bfe" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="#6c5ce7" font-size="16" font-family="Poppins" font-weight="700">
+              SỐNG CHO
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="#6c5ce7" font-size="16" font-family="Poppins" font-weight="700">
+              CHÍNH MÌNH
+            </text>
+          </svg>
+        </div>
+        <p>Sống cho chính mình</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Nghĩ khác để sống khác -->
+  <section class="books">
+    <h2>Nghĩ khác để sống khác</h2>
+    <div class="book-list">
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradThink1" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#00b894;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#00cec9;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradThink1)" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="white" font-size="18" font-family="Poppins" font-weight="700">
+              NGHĨ KHÁC
+            </text>
+            <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="600">
+              ĐỂ
+            </text>
+            <text x="50%" y="62%" text-anchor="middle" fill="white" font-size="18" font-family="Poppins" font-weight="700">
+              SỐNG KHÁC
+            </text>
+          </svg>
+        </div>
+        <p>Nghĩ khác để sống khác</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#e17055" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              TƯ DUY
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              SÁNG TẠO
+            </text>
+          </svg>
+        </div>
+        <p>Tư duy sáng tạo</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#fab1a0" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#d63031" font-size="16" font-family="Poppins" font-weight="700">
+              ĐỔI MỚI
+            </text>
+            <text x="50%" y="48%" text-anchor="middle" fill="#d63031" font-size="16" font-family="Poppins" font-weight="700">
+              TƯ DUY
+            </text>
+          </svg>
+        </div>
+        <p>Đổi mới tư duy</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradThink2" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#a29bfe;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#6c5ce7;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradThink2)" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              TƯ DUY
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              TÍCH CỰC
+            </text>
+          </svg>
+        </div>
+        <p>Tư duy tích cực</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#fdcb6e" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#2d3436" font-size="16" font-family="Poppins" font-weight="700">
+              THAY ĐỔI
+            </text>
+            <text x="50%" y="48%" text-anchor="middle" fill="#2d3436" font-size="16" font-family="Poppins" font-weight="700">
+              CUỘC SỐNG
+            </text>
+          </svg>
+        </div>
+        <p>Thay đổi cuộc sống</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#55efc4" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="#00b894" font-size="16" font-family="Poppins" font-weight="700">
+              TƯ DUY
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="#00b894" font-size="16" font-family="Poppins" font-weight="700">
+              KHÁC BIỆT
+            </text>
+          </svg>
+        </div>
+        <p>Tư duy khác biệt</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Thấu hiểu người, thay đổi mình -->
+  <section class="books">
+    <h2>Thấu hiểu người, thay đổi mình</h2>
+    <div class="book-list">
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradUnderstand1" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#0984e3;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#74b9ff;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradUnderstand1)" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="white" font-size="18" font-family="Poppins" font-weight="700">
+              THẤU HIỂU
+            </text>
+            <text x="50%" y="48%" text-anchor="middle" fill="white" font-size="18" font-family="Poppins" font-weight="700">
+              NGƯỜI
+            </text>
+            <text x="50%" y="62%" text-anchor="middle" fill="white" font-size="14" font-family="Poppins">
+              Thay đổi mình
+            </text>
+          </svg>
+        </div>
+        <p>Thấu hiểu người, thay đổi mình</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#00b894" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="white" font-size="18" font-family="Poppins" font-weight="700">
+              GIAO TIẾP
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="white" font-size="18" font-family="Poppins" font-weight="700">
+              HIỆU QUẢ
+            </text>
+          </svg>
+        </div>
+        <p>Giao tiếp hiệu quả</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#ff7675" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              KỸ NĂNG
+            </text>
+            <text x="50%" y="48%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              LẮNG NGHE
+            </text>
+          </svg>
+        </div>
+        <p>Kỹ năng lắng nghe</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <defs>
+              <linearGradient id="gradUnderstand2" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" style="stop-color:#fdcb6e;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#e17055;stop-opacity:1" />
+              </linearGradient>
+            </defs>
+            <rect width="160" height="240" fill="url(#gradUnderstand2)" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              HIỂU NGƯỜI
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              HIỂU TA
+            </text>
+          </svg>
+        </div>
+        <p>Hiểu người - Hiểu ta</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#a29bfe" rx="8"/>
+            <text x="50%" y="35%" text-anchor="middle" fill="#6c5ce7" font-size="16" font-family="Poppins" font-weight="700">
+              HOÀN THIỆN
+            </text>
+            <text x="50%" y="48%" text-anchor="middle" fill="#6c5ce7" font-size="16" font-family="Poppins" font-weight="700">
+              BẢN THÂN
+            </text>
+          </svg>
+        </div>
+        <p>Hoàn thiện bản thân</p>
+      </div>
+      <div class="book-item premium">
+        <div class="member-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+            <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+          </svg>
+          <span>HỘI VIÊN</span>
+        </div>
+        <div class="book-cover">
+          <svg width="160" height="240" viewBox="0 0 160 240">
+            <rect width="160" height="240" fill="#ff7675" rx="8"/>
+            <text x="50%" y="40%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              NGHỆ THUẬT
+            </text>
+            <text x="50%" y="52%" text-anchor="middle" fill="white" font-size="16" font-family="Poppins" font-weight="700">
+              GIAO TIẾP
+            </text>
+          </svg>
+        </div>
+        <p>Nghệ thuật giao tiếp</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Thư viện sách - Dữ liệu thật từ Database -->
+  <section class="books library-collection">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <h2>Thư viện sách của chúng tôi</h2>
+      <a href="{{ route('books.index') }}" style="color: #27ae60; text-decoration: none; font-weight: 600;">Xem tất cả →</a>
+    </div>
+    
+    @if(isset($books) && $books->count() > 0)
+      <div class="book-list">
+        @foreach($books as $book)
+          <div class="book-item" 
+               data-book-id="{{ $book->id }}"
+               data-book-title="{{ $book->ten_sach }}"
+               data-book-author="{{ $book->tac_gia }}"
+               data-book-genre="{{ $book->category->ten_danh_muc ?? 'Chưa phân loại' }}"
+               data-book-rating="4.5/5"
+               data-book-year="{{ $book->nam_xuat_ban ?? 'N/A' }}"
+               data-book-description="{{ Str::limit($book->mo_ta ?? 'Chưa có mô tả', 200) }}"
+               data-book-premium="false">
+            <div class="book-cover">
+              @if($book->hinh_anh && file_exists(public_path('storage/' . $book->hinh_anh)))
+                <img src="{{ asset('storage/' . $book->hinh_anh) }}" alt="{{ $book->ten_sach }}" style="width: 160px; height: 240px; object-fit: cover; border-radius: 8px;">
+              @else
+                <svg width="160" height="240" viewBox="0 0 160 240">
+                  <defs>
+                    <linearGradient id="grad{{ $book->id }}" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" style="stop-color:{{ sprintf('#%06X', mt_rand(0, 0xFFFFFF)) }};stop-opacity:0.8" />
+                      <stop offset="100%" style="stop-color:{{ sprintf('#%06X', mt_rand(0, 0xFFFFFF)) }};stop-opacity:1" />
+                    </linearGradient>
+                  </defs>
+                  <rect width="160" height="240" fill="url(#grad{{ $book->id }})" rx="8"/>
+                  <text x="50%" y="50%" text-anchor="middle" fill="white" font-size="14" font-family="Poppins" font-weight="600" style="max-width: 140px;">
+                    {{ Str::limit($book->ten_sach, 30) }}
+                  </text>
+                </svg>
+              @endif
+            </div>
+            <p style="font-weight: 600;">{{ Str::limit($book->ten_sach, 40) }}</p>
+            <p style="font-size: 0.85em; color: #666; margin-top: 4px;">{{ $book->tac_gia }}</p>
+            <p style="font-size: 0.8em; color: #27ae60; margin-top: 4px;">
+              @php
+                $availableCopies = $book->inventories->where('status', 'Co san')->count();
+              @endphp
+              @if($availableCopies > 0)
+                <span style="color: #27ae60;">✓ Còn {{ $availableCopies }} bản</span>
+              @else
+                <span style="color: #e74c3c;">✗ Hết sách</span>
+              @endif
+            </p>
+            
+            @auth
+              @if($availableCopies > 0)
+                <button onclick="borrowBook({{ $book->id }})" style="margin-top: 10px; padding: 8px 16px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.9em; width: 100%;">
+                  Mượn sách
+                </button>
+              @endif
+            @else
+              <a href="{{ route('login') }}" style="display: inline-block; margin-top: 10px; padding: 8px 16px; background: #3498db; color: white; text-decoration: none; border-radius: 6px; font-size: 0.9em; text-align: center; width: 100%;">
+                Đăng nhập để mượn
+              </a>
+            @endauth
+          </div>
+        @endforeach
+      </div>
+      
+      <!-- Pagination -->
+      <div style="margin-top: 40px; display: flex; justify-content: center;">
+        {{ $books->links() }}
+      </div>
+    @else
+      <div style="text-align: center; padding: 40px; color: #666;">
+        <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin: 0 auto 20px;">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+        <p style="font-size: 1.2em;">Chưa có sách nào trong thư viện</p>
+      </div>
+    @endif
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-container">
+      <div class="footer-main">
+        <!-- Left Section -->
+        <div class="footer-left">
+          <div class="footer-logo">
+            <h2>WAKA</h2>
+            <p class="company-name">Công ty cổ phần sách điện tử Waka</p>
+          </div>
+          <div class="footer-contact">
+            <div class="contact-item">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M3 5a2 2 0 0 1 2-2h3.28a1 1 0 0 1 .948.684l1.498 4.493a1 1 0 0 1-.502 1.21l-2.257 1.13a11.042 11.042 0 0 0 5.516 5.516l1.13-2.257a1 1 0 0 1 1.21-.502l4.493 1.498a1 1 0 0 1 .684.949V19a2 2 0 0 1-2 2h-1C9.716 21 3 14.284 3 6V5z" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              <span>0877736289</span>
+            </div>
+            <div class="contact-item">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke="currentColor" stroke-width="2"/>
+              </svg>
+              <span>Support@waka.vn</span>
+            </div>
+          </div>
+          <div class="footer-badge">
+            <div class="badge-box">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                <circle cx="20" cy="20" r="18" fill="#0066cc"/>
+                <path d="M20 8l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6l2-6z" fill="white"/>
+              </svg>
+              <div class="badge-text">
+                <p class="badge-title">ĐÃ THÔNG BÁO</p>
+                <p class="badge-subtitle">BỘ CÔNG THƯƠNG</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Middle Sections -->
+        <div class="footer-links">
+          <div class="footer-column">
+            <h4>Về chúng tôi</h4>
+            <ul>
+              <li><a href="#">Giới thiệu</a></li>
+              <li><a href="#">Cơ cấu tổ chức</a></li>
+              <li><a href="#">Lĩnh vực hoạt động</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-column">
+            <h4>Cơ hội đầu tư</h4>
+            <ul>
+              <li><a href="#">Tuyển dụng</a></li>
+              <li><a href="#">Liên hệ</a></li>
+              <li><a href="#">Dịch vụ xuất bản sách</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-column">
+            <h4>Thông tin hữu ích</h4>
+            <ul>
+              <li><a href="#">Thỏa thuận sử dụng dịch vụ</a></li>
+              <li><a href="#">Quyền lợi</a></li>
+              <li><a href="#">Quy định riêng tư</a></li>
+              <li><a href="#">Quy chế hoạt động sàn TMĐT</a></li>
+              <li><a href="#">Câu hỏi thường gặp</a></li>
+            </ul>
+          </div>
+
+          <div class="footer-column">
+            <h4>Tin tức</h4>
+            <ul>
+              <li><a href="#">Tin dịch vụ</a></li>
+              <li><a href="#">Review sách</a></li>
+              <li><a href="#">Lịch phát hành</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Right Section - App Download -->
+        <div class="footer-right">
+          <div class="qr-code">
+            <svg width="120" height="120" viewBox="0 0 120 120">
+              <rect width="120" height="120" fill="white" rx="8"/>
+              <!-- Simple QR Code Pattern -->
+              <rect x="10" y="10" width="30" height="30" fill="black"/>
+              <rect x="15" y="15" width="20" height="20" fill="white"/>
+              <rect x="20" y="20" width="10" height="10" fill="black"/>
+              
+              <rect x="80" y="10" width="30" height="30" fill="black"/>
+              <rect x="85" y="15" width="20" height="20" fill="white"/>
+              <rect x="90" y="20" width="10" height="10" fill="black"/>
+              
+              <rect x="10" y="80" width="30" height="30" fill="black"/>
+              <rect x="15" y="85" width="20" height="20" fill="white"/>
+              <rect x="20" y="90" width="10" height="10" fill="black"/>
+              
+              <rect x="50" y="50" width="20" height="20" fill="black"/>
+              <rect x="55" y="30" width="10" height="10" fill="black"/>
+              <rect x="30" y="55" width="10" height="10" fill="black"/>
+              <rect x="75" y="55" width="15" height="15" fill="black"/>
+              <rect x="55" y="75" width="15" height="15" fill="black"/>
+            </svg>
+          </div>
+          <div class="app-buttons">
+            <a href="#" class="app-store-btn">
+              <svg width="120" height="40" viewBox="0 0 120 40">
+                <rect width="120" height="40" rx="5" fill="#000"/>
+                <text x="60" y="15" text-anchor="middle" fill="white" font-size="8">Download on the</text>
+                <text x="60" y="28" text-anchor="middle" fill="white" font-size="14" font-weight="600">App Store</text>
+              </svg>
+            </a>
+            <a href="#" class="google-play-btn">
+              <svg width="120" height="40" viewBox="0 0 120 40">
+                <rect width="120" height="40" rx="5" fill="#000"/>
+                <text x="60" y="15" text-anchor="middle" fill="white" font-size="8">GET IT ON</text>
+                <text x="60" y="28" text-anchor="middle" fill="white" font-size="14" font-weight="600">Google Play</text>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer Bottom Info -->
+      <div class="footer-bottom">
+        <div class="company-info">
+          <p><strong>Công ty Cổ phần Sách điện tử Waka</strong> – Tầng 6, Tháp văn phòng quốc tế Hòa Bình, số 106 đường Hoàng Quốc Việt, Phường Nghĩa Đô, Thành phố Hà Nội, Việt Nam.</p>
+          <p>ĐKKD số 0108796796 do SKHĐT TP Hà Nội cấp lần đầu ngày 24/06/2019.</p>
+          <p>Giấy xác nhận Đăng ký hoạt động phát hành xuất bản phẩm điện tử số 8132/XN-CXBIPH do Cục Xuất bản, In và Phát hành cấp ngày 31/12/2019.</p>
+          <p>Giấy chứng nhận Đăng ký kết nối đề cung cấp dịch vụ nội dung thông tin trên mạng viễn thông di động số 91/GCN-CVT cấp ngày 24/03/2025.</p>
+          <p>Người đại diện: (Bà) Phùng Thị Như Quỳnh (Theo Giấy ủy quyền số 2402/GUQ-WAKA/2025 ngày 24/02/2025).</p>
+          <p>Người đại diện được ủy quyền phối hợp với CQNN giải quyết các vấn đề liên quan đến bảo vệ quyền lợi Khách hàng: (Bà) Phùng Thị Như Quỳnh – Số điện thoại: 0877756263 – Email: Support@waka.vn. – Địa chỉ liên hệ: Tháp văn phòng quốc tế Hòa Bình, số 106 đường Hoàng Quốc Việt, Phường Nghĩa Đô, Thành phố Hà Nội, Việt Nam.</p>
+          <p>Số VPĐD: 024.73086566 | Số CSKH: 1900545482 nhấn 5 | Hotline: 0877736289</p>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Book Detail Modal -->
+  <div id="bookDetailModal" class="book-detail-modal">
+    <div class="book-detail-overlay"></div>
+    <div class="book-detail-container">
+      <button class="book-detail-close" aria-label="Đóng">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+      
+      <div class="book-detail-content">
+        <div class="book-detail-left">
+          <div class="book-detail-cover" id="modalBookCover">
+            <!-- Book cover will be inserted here -->
+          </div>
+        </div>
+        
+        <div class="book-detail-right">
+          <div class="book-detail-badge" id="modalBookBadge" style="display: none;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" fill="#FF6B35"/>
+              <path d="M12 7l1.545 3.13L17 10.635l-2.5 2.435L15 17l-3-1.575L9 17l.5-3.93L7 10.635l3.455-.505L12 7z" fill="white"/>
+            </svg>
+            <span>HỘI VIÊN</span>
+          </div>
+          
+          <h2 class="book-detail-title" id="modalBookTitle"></h2>
+          <p class="book-detail-author" id="modalBookAuthor"></p>
+          
+          <div class="book-detail-info">
+            <div class="book-detail-info-item">
+              <span class="book-detail-label">Thể loại:</span>
+              <span class="book-detail-value" id="modalBookGenre"></span>
+            </div>
+            <div class="book-detail-info-item">
+              <span class="book-detail-label">Đánh giá:</span>
+              <span class="book-detail-value">
+                <span id="modalBookRating"></span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#ffdd00">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+              </span>
+            </div>
+            <div class="book-detail-info-item">
+              <span class="book-detail-label">Năm xuất bản:</span>
+              <span class="book-detail-value" id="modalBookYear"></span>
+            </div>
+          </div>
+          
+          <div class="book-detail-actions">
+            <button class="book-detail-read-btn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+              </svg>
+              Đọc sách
+            </button>
+            <button class="book-detail-favorite-btn" aria-label="Yêu thích">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+            </button>
+          </div>
+          
+          <div class="book-detail-description">
+            <p id="modalBookDescription"></p>
+          </div>
+          
+          <button class="book-detail-more-btn">Chi tiết</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ asset('script.js') }}"></script>
+  
+  <!-- User Menu Toggle Script -->
+  <script>
+    const userMenuBtn = document.getElementById('userMenuBtn');
+    const userDropdown = document.getElementById('userDropdown');
+    
+    if (userMenuBtn && userDropdown) {
+      userMenuBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        userDropdown.classList.toggle('show');
+      });
+      
+      document.addEventListener('click', function(e) {
+        if (!userMenuBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+          userDropdown.classList.remove('show');
+        }
+      });
+    }
+  </script>
+  
+  <!-- Borrow Book Function -->
+  <script>
+    function borrowBook(bookId) {
+      if (!bookId) {
+        alert('Không tìm thấy thông tin sách');
+        return;
+      }
+      
+      // Get CSRF token
+      const token = document.querySelector('meta[name="csrf-token"]');
+      if (!token) {
+        // Add CSRF token meta tag if not exists
+        const metaTag = document.createElement('meta');
+        metaTag.setAttribute('name', 'csrf-token');
+        metaTag.setAttribute('content', '{{ csrf_token() }}');
+        document.head.appendChild(metaTag);
+      }
+      
+      const csrfToken = token ? token.getAttribute('content') : '{{ csrf_token() }}';
+      
+      // Show loading
+      const button = event.target;
+      const originalText = button.textContent;
+      button.textContent = 'Đang xử lý...';
+      button.disabled = true;
+      
+      // Send AJAX request
+      fetch('{{ route("borrow.book") }}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': csrfToken,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          book_id: bookId,
+          borrow_days: 14
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          alert('✓ ' + data.message);
+          // Reload page to update available copies
+          window.location.reload();
+        } else {
+          alert('✗ ' + data.message);
+          button.textContent = originalText;
+          button.disabled = false;
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Có lỗi xảy ra khi mượn sách. Vui lòng thử lại.');
+        button.textContent = originalText;
+        button.disabled = false;
+      });
+    }
+  </script>
+  
+  <!-- Custom JavaScript -->
+  <script src="{{ asset('script.js') }}"></script>
+</body>
+</html>

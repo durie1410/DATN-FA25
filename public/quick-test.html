@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick Test - Create Book</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .btn { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; margin: 10px; }
+        .btn:hover { background: #0056b3; }
+        .result { margin: 20px 0; padding: 15px; border: 1px solid #ddd; background: #f9f9f9; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Quick Test - Create Book</h1>
+    
+    <button class="btn" onclick="testCreatePurchasableBook()">Test Create Purchasable Book</button>
+    <button class="btn" onclick="testCreateBook()">Test Create Book</button>
+    <button class="btn" onclick="checkDatabase()">Check Database</button>
+    
+    <div id="result" class="result" style="display: none;"></div>
+    
+    <h2>Test Links:</h2>
+    <ul>
+        <li><a href="/admin/purchasable-books/create" target="_blank">Create Purchasable Book</a></li>
+        <li><a href="/admin/books/create" target="_blank">Create Book</a></li>
+        <li><a href="/admin/purchasable-books" target="_blank">List Purchasable Books</a></li>
+        <li><a href="/admin/books" target="_blank">List Books</a></li>
+    </ul>
+    
+    <script>
+        function testCreatePurchasableBook() {
+            const formData = new FormData();
+            formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+            formData.append('ten_sach', 'Test Book ' + Date.now());
+            formData.append('tac_gia', 'Test Author');
+            formData.append('mo_ta', 'Test description');
+            formData.append('gia', '100000');
+            formData.append('dinh_dang', 'PDF');
+            formData.append('nha_xuat_ban', 'Test Publisher');
+            formData.append('nam_xuat_ban', '2024');
+            formData.append('isbn', '978-1234567890');
+            formData.append('so_trang', '200');
+            formData.append('ngon_ngu', 'Tiếng Việt');
+            formData.append('kich_thuoc_file', '1024');
+            formData.append('trang_thai', 'active');
+            
+            showResult('Creating purchasable book...', 'info');
+            
+            fetch('/admin/purchasable-books', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (response.redirected) {
+                    showResult(`Success! Redirected to: ${response.url}`, 'success');
+                    setTimeout(() => {
+                        window.open(response.url, '_blank');
+                    }, 1000);
+                } else {
+                    return response.text();
+                }
+            })
+            .then(data => {
+                if (data) {
+                    showResult(`Response: ${data}`, 'info');
+                }
+            })
+            .catch(error => {
+                showResult(`Error: ${error.message}`, 'error');
+            });
+        }
+        
+        function testCreateBook() {
+            const formData = new FormData();
+            formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
+            formData.append('ten_sach', 'Test Book ' + Date.now());
+            formData.append('category_id', '1'); // Assuming category 1 exists
+            formData.append('tac_gia', 'Test Author');
+            formData.append('nam_xuat_ban', '2024');
+            formData.append('mo_ta', 'Test description');
+            formData.append('gia', '100000');
+            formData.append('dinh_dang', 'PDF');
+            formData.append('trang_thai', 'active');
+            
+            showResult('Creating book...', 'info');
+            
+            fetch('/admin/books', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (response.redirected) {
+                    showResult(`Success! Redirected to: ${response.url}`, 'success');
+                    setTimeout(() => {
+                        window.open(response.url, '_blank');
+                    }, 1000);
+                } else {
+                    return response.text();
+                }
+            })
+            .then(data => {
+                if (data) {
+                    showResult(`Response: ${data}`, 'info');
+                }
+            })
+            .catch(error => {
+                showResult(`Error: ${error.message}`, 'error');
+            });
+        }
+        
+        function checkDatabase() {
+            showResult('Checking database...', 'info');
+            
+            fetch('/admin/purchasable-books')
+            .then(response => response.text())
+            .then(data => {
+                if (data.includes('Test Book')) {
+                    showResult('Database contains test books!', 'success');
+                } else {
+                    showResult('No test books found in database', 'info');
+                }
+            })
+            .catch(error => {
+                showResult(`Error checking database: ${error.message}`, 'error');
+            });
+        }
+        
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = message;
+            resultDiv.className = `result ${type}`;
+            resultDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

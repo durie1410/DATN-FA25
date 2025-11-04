@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAKA Style Homepage Demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="css/waka-homepage.css" rel="stylesheet">
+</head>
+<body>
+    <!-- WAKA Style Homepage -->
+    <div class="waka-homepage">
+
+        <!-- Main Header -->
+        <header class="waka-header">
+            <div class="container-fluid">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <div class="waka-logo">
+                            <h1>WAKA</h1>
+                            <span class="logo-subtitle">Thư Viện Số</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <nav class="waka-nav">
+                            <ul class="nav-menu">
+                                <li><a href="#" class="nav-link">Sách điện tử</a></li>
+                                <li><a href="#" class="nav-link">Sách hội viên</a></li>
+                                <li><a href="#" class="nav-link">Sách nói</a></li>
+                                <li><a href="#" class="nav-link">Truyện tranh</a></li>
+                            </ul>
+                            <div class="nav-submenu">
+                                <a href="#" class="submenu-link">Dịch vụ Xuất bản</a>
+                                <a href="#" class="submenu-link">Xem thêm</a>
+                            </div>
+                        </nav>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="header-actions">
+                            <button class="search-btn">
+                                <i class="fas fa-search"></i>
+                            </button>
+                            <button class="package-btn">
+                                <i class="fas fa-crown"></i>
+                                Gói cước
+                            </button>
+                            <button class="register-btn">Đăng ký</button>
+                            <button class="login-btn">Đăng nhập</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Hero Section -->
+        <section class="waka-hero">
+            <div class="hero-background">
+                <div class="hero-pattern"></div>
+                <div class="floating-elements">
+                    <div class="floating-book book-1"></div>
+                    <div class="floating-book book-2"></div>
+                    <div class="floating-book book-3"></div>
+                </div>
+            </div>
+            <div class="container">
+                <div class="row align-items-center min-vh-100">
+                    <div class="col-lg-6">
+                        <div class="hero-content">
+                            <h1 class="hero-title">
+                                <span class="title-main">Khám Phá</span>
+                                <span class="title-sub">Thế Giới Tri Thức</span>
+                                <span class="title-accent">Tương Lai</span>
+                            </h1>
+                            <p class="hero-description">
+                                Trải nghiệm đọc sách thông minh với AI, tìm kiếm thông minh và giao diện hiện đại. 
+                                <span class="highlight">Hàng nghìn cuốn sách</span> đang chờ bạn khám phá.
+                            </p>
+                            <div class="hero-stats">
+                                <div class="stat-item">
+                                    <div class="stat-number">1,250</div>
+                                    <div class="stat-label">Sách có sẵn</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-number">25</div>
+                                    <div class="stat-label">Thể loại</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-number">150</div>
+                                    <div class="stat-label">Sách mới</div>
+                                </div>
+                            </div>
+                            <div class="hero-actions">
+                                <button class="btn-primary" onclick="scrollToBooks()">
+                                    <i class="fas fa-book"></i>
+                                    Khám phá ngay
+                                </button>
+                                <button class="btn-secondary">
+                                    <i class="fas fa-play"></i>
+                                    Xem demo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="hero-visual">
+                            <div class="book-showcase">
+                                <div class="book-stack">
+                                    <div class="book-item book-1">
+                                        <div class="book-cover">
+                                            <i class="fas fa-book"></i>
+                                        </div>
+                                    </div>
+                                    <div class="book-item book-2">
+                                        <div class="book-cover">
+                                            <i class="fas fa-book-open"></i>
+                                        </div>
+                                    </div>
+                                    <div class="book-item book-3">
+                                        <div class="book-cover">
+                                            <i class="fas fa-scroll"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Featured Books Section -->
+        <section class="featured-books" id="books-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Sách Nổi Bật</h2>
+                    <p class="section-subtitle">Những cuốn sách được yêu thích nhất</p>
+                </div>
+                
+                <div class="books-carousel">
+                    <div class="carousel-container">
+                        <div class="books-grid">
+                            <!-- Book 1 -->
+                            <div class="book-card">
+                                <div class="book-image">
+                                    <div class="book-placeholder">
+                                        <i class="fas fa-book"></i>
+                                    </div>
+                                    <div class="book-badge">
+                                        <span class="badge-text">HỘI VIÊN</span>
+                                        <i class="fas fa-crown"></i>
+                                    </div>
+                                </div>
+                                <div class="book-info">
+                                    <h3 class="book-title">Tư Duy Chiến Lược</h3>
+                                    <p class="book-author">Avinash K. Dixit</p>
+                                    <div class="book-meta">
+                                        <span class="book-category">Kinh tế</span>
+                                        <span class="book-availability">
+                                            <i class="fas fa-book"></i>
+                                            5/8
+                                        </span>
+                                    </div>
+                                    <div class="book-actions">
+                                        <button class="btn-read">
+                                            <i class="fas fa-eye"></i>
+                                            Đọc sách
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Book 2 -->
+                            <div class="book-card">
+                                <div class="book-image">
+                                    <div class="book-placeholder">
+                                        <i class="fas fa-book"></i>
+                                    </div>
+                                    <div class="book-badge">
+                                        <span class="badge-text">HỘI VIÊN</span>
+                                        <i class="fas fa-crown"></i>
+                                    </div>
+                                </div>
+                                <div class="book-info">
+                                    <h3 class="book-title">Wake Up! Xoay Tư Duy</h3>
+                                    <p class="book-author">Chris Barez-Brown</p>
+                                    <div class="book-meta">
+                                        <span class="book-category">Tâm lý</span>
+                                        <span class="book-availability">
+                                            <i class="fas fa-book"></i>
+                                            3/5
+                                        </span>
+                                    </div>
+                                    <div class="book-actions">
+                                        <button class="btn-read">
+                                            <i class="fas fa-eye"></i>
+                                            Đọc sách
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Book 3 -->
+                            <div class="book-card">
+                                <div class="book-image">
+                                    <div class="book-placeholder">
+                                        <i class="fas fa-book"></i>
+                                    </div>
+                                    <div class="book-badge">
+                                        <span class="badge-text">HỘI VIÊN</span>
+                                        <i class="fas fa-crown"></i>
+                                    </div>
+                                </div>
+                                <div class="book-info">
+                                    <h3 class="book-title">Dám Nghĩ Nhỏ</h3>
+                                    <p class="book-author">Owain & Rory Gallagher</p>
+                                    <div class="book-meta">
+                                        <span class="book-category">Phát triển bản thân</span>
+                                        <span class="book-availability">
+                                            <i class="fas fa-book"></i>
+                                            7/10
+                                        </span>
+                                    </div>
+                                    <div class="book-actions">
+                                        <button class="btn-read">
+                                            <i class="fas fa-eye"></i>
+                                            Đọc sách
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="carousel-nav prev">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button class="carousel-nav next">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Categories Section -->
+        <section class="categories-section">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">Thể Loại Sách</h2>
+                    <p class="section-subtitle">Khám phá các thể loại sách đa dạng</p>
+                </div>
+                
+                <div class="categories-grid">
+                    <div class="category-card">
+                        <div class="category-icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <h3 class="category-name">Kinh tế</h3>
+                        <p class="category-count">125 sách</p>
+                    </div>
+                    <div class="category-card">
+                        <div class="category-icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <h3 class="category-name">Tâm lý</h3>
+                        <p class="category-count">98 sách</p>
+                    </div>
+                    <div class="category-card">
+                        <div class="category-icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <h3 class="category-name">Phát triển bản thân</h3>
+                        <p class="category-count">156 sách</p>
+                    </div>
+                    <div class="category-card">
+                        <div class="category-icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <h3 class="category-name">Công nghệ</h3>
+                        <p class="category-count">87 sách</p>
+                    </div>
+                    <div class="category-card">
+                        <div class="category-icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <h3 class="category-name">Lịch sử</h3>
+                        <p class="category-count">203 sách</p>
+                    </div>
+                    <div class="category-card">
+                        <div class="category-icon">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <h3 class="category-name">Văn học</h3>
+                        <p class="category-count">312 sách</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Floating Elements -->
+        <div class="floating-widgets">
+            <div class="support-widget">
+                <div class="widget-icon">
+                    <i class="fas fa-headset"></i>
+                </div>
+                <span class="widget-text">Hỗ trợ</span>
+            </div>
+            
+            <div class="recommendation-banner">
+                <div class="banner-content">
+                    <span class="banner-text">CUỐN SÁCH NÊN ĐỌC HÔM NAY</span>
+                    <div class="banner-book">
+                        <i class="fas fa-book"></i>
+                    </div>
+                </div>
+                <div class="delivery-icon">
+                    <i class="fas fa-motorcycle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize counters animation
+            animateCounters();
+            
+            // Initialize carousel
+            initializeCarousel();
+            
+            // Initialize floating widgets
+            initializeFloatingWidgets();
+        });
+
+        function animateCounters() {
+            const counters = document.querySelectorAll('.stat-number');
+            
+            counters.forEach(counter => {
+                const target = parseInt(counter.textContent.replace(/,/g, ''));
+                let current = 0;
+                const increment = target / 50;
+                
+                const timer = setInterval(() => {
+                    current += increment;
+                    if (current >= target) {
+                        current = target;
+                        clearInterval(timer);
+                    }
+                    counter.textContent = Math.floor(current).toLocaleString();
+                }, 30);
+            });
+        }
+
+        function initializeCarousel() {
+            const carousel = document.querySelector('.books-carousel');
+            const booksGrid = document.querySelector('.books-grid');
+            const prevBtn = document.querySelector('.carousel-nav.prev');
+            const nextBtn = document.querySelector('.carousel-nav.next');
+            
+            let currentIndex = 0;
+            const booksPerView = 3;
+            const totalBooks = document.querySelectorAll('.book-card').length;
+            const maxIndex = Math.max(0, totalBooks - booksPerView);
+            
+            function updateCarousel() {
+                const translateX = -currentIndex * (100 / booksPerView);
+                booksGrid.style.transform = `translateX(${translateX}%)`;
+                
+                prevBtn.style.opacity = currentIndex === 0 ? '0.5' : '1';
+                nextBtn.style.opacity = currentIndex >= maxIndex ? '0.5' : '1';
+            }
+            
+            prevBtn.addEventListener('click', () => {
+                if (currentIndex > 0) {
+                    currentIndex--;
+                    updateCarousel();
+                }
+            });
+            
+            nextBtn.addEventListener('click', () => {
+                if (currentIndex < maxIndex) {
+                    currentIndex++;
+                    updateCarousel();
+                }
+            });
+            
+            updateCarousel();
+        }
+
+        function initializeFloatingWidgets() {
+            const supportWidget = document.querySelector('.support-widget');
+            const recommendationBanner = document.querySelector('.recommendation-banner');
+            
+            // Support widget animation
+            supportWidget.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.1)';
+            });
+            
+            supportWidget.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+            });
+            
+            // Recommendation banner animation
+            recommendationBanner.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px)';
+            });
+            
+            recommendationBanner.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        }
+
+        // Global functions
+        window.scrollToBooks = function() {
+            document.getElementById('books-section').scrollIntoView({
+                behavior: 'smooth'
+            });
+        };
+    </script>
+</body>
+</html>
