@@ -4,10 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\Book;
 use App\Models\Category;
+use App\Models\InventoryReceipt;
+use App\Models\Inventory;
+use App\Models\InventoryTransaction;
+use App\Services\CacheService;
+use App\Services\FileUploadService;
 use App\Http\Requests\BookRequest;
 use App\Services\AuditService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class BookController extends Controller
 {
@@ -32,8 +39,8 @@ class BookController extends Controller
         // Lấy danh sách sách sau khi lọc với phân trang
         $books = $query->orderBy('id', 'asc')->paginate(10);
 
-        // Lấy danh sách thể loại để hiển thị dropdown
-        $categories = Category::all();
+        // Lấy danh sách thể loại để hiển thị dropdown (cached)
+        $categories = CacheService::getCategories();
 
         return view('admin.books.index', compact('books', 'categories'));
     }
@@ -84,7 +91,7 @@ class BookController extends Controller
 
     public function create()
     {
-        $categories = Category::all();
+        $categories = CacheService::getActiveCategories();
         return view('admin.books.create', compact('categories'));
     }
 
@@ -95,20 +102,22 @@ class BookController extends Controller
         $path = null;
         if ($request->hasFile('hinh_anh')) {
             try {
-                $file = $request->file('hinh_anh');
-                $filename = time() . '_' . $file->getClientOriginalName();
-                $destinationPath = storage_path('app/public/books');
-                
-                // Đảm bảo thư mục tồn tại
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0755, true);
-                }
-                
-                $file->move($destinationPath, $filename);
-                $path = 'books/' . $filename;
+                $result = FileUploadService::uploadImage(
+                    $request->file('hinh_anh'),
+                    'books',
+                    [
+                        'max_size' => 2048, // 2MB
+                        'resize' => true,
+                        'width' => 800,
+                        'height' => 800,
+                    ]
+                );
+                $path = $result['path'];
             } catch (\Exception $e) {
                 \Log::error('Upload error:', ['message' => $e->getMessage()]);
-                return redirect()->back()->with('error', 'Lỗi khi upload ảnh: ' . $e->getMessage());
+                return redirect()->back()
+                    ->withErrors(['hinh_anh' => $e->getMessage()])
+                    ->withInput();
             }
         }
 
@@ -122,7 +131,6 @@ class BookController extends Controller
                 'hinh_anh' => $path,
                 'mo_ta' => $request->mo_ta,
                 'gia' => $request->gia,
-                'dinh_dang' => $request->dinh_dang,
                 'trang_thai' => $request->trang_thai,
                 'danh_gia_trung_binh' => 0,
                 'so_luong_ban' => 0,
@@ -131,6 +139,9 @@ class BookController extends Controller
 
             // Log book creation
             AuditService::logCreated($book, "Book '{$book->ten_sach}' created");
+            
+            // Clear dashboard cache
+            CacheService::clearDashboard();
 
             return redirect()->route('admin.books.index')->with('success', 'Thêm sách thành công!');
         } catch (\Exception $e) {
@@ -142,68 +153,198 @@ class BookController extends Controller
     public function edit($id)
     {
         $book = Book::findOrFail($id);
-        $categories = Category::all();
-        return view('admin.books.edit', compact('book', 'categories'));
+        $categories = CacheService::getActiveCategories();
+        $publishers = \App\Models\Publisher::where('trang_thai', 'active')->orderBy('ten_nha_xuat_ban')->get();
+        return view('admin.books.edit', compact('book', 'categories', 'publishers'));
     }
 
     public function update(Request $request, $id)
     {
-        $book = Book::findOrFail($id);
+        try {
+            $book = Book::findOrFail($id);
 
-        $request->validate([
-            'ten_sach' => 'required|max:255',
-            'category_id' => 'required',
-            'tac_gia' => 'required',
-            'nam_xuat_ban' => 'required|digits:4',
-            'hinh_anh' => 'nullable|file|image|mimes:jpeg,png,jpg|max:2048',
-            'gia' => 'nullable|numeric|min:0',
-            'dinh_dang' => 'required',
-            'trang_thai' => 'required|in:active,inactive',
-        ]);
+            // Store old values before update for audit log
+            $oldValues = $book->getAttributes();
 
-        $path = $book->hinh_anh;
-        
-        if ($request->hasFile('hinh_anh')) {
-            try {
-                // Xóa ảnh cũ nếu có
-                if ($book->hinh_anh && Storage::disk('public')->exists($book->hinh_anh)) {
-                    Storage::disk('public')->delete($book->hinh_anh);
+            $request->validate([
+                'ten_sach' => 'required|max:255',
+                'category_id' => 'required',
+                'tac_gia' => 'required',
+                'nam_xuat_ban' => 'required|digits:4',
+                'hinh_anh' => 'nullable|file|image|mimes:jpeg,png,jpg|max:2048',
+                'gia' => 'nullable|numeric|min:0',
+                'trang_thai' => 'required|in:active,inactive',
+                'nha_xuat_ban_id' => 'nullable|exists:publishers,id',
+                'so_luong' => 'required|integer|min:0',
+            ]);
+
+            $path = $book->hinh_anh;
+            
+            if ($request->hasFile('hinh_anh')) {
+                try {
+                    // Xóa ảnh cũ nếu có
+                    if ($book->hinh_anh) {
+                        FileUploadService::deleteFile($book->hinh_anh, 'public');
+                    }
+                    
+                    // Upload ảnh mới sử dụng FileUploadService
+                    $result = FileUploadService::uploadImage(
+                        $request->file('hinh_anh'),
+                        'books',
+                        [
+                            'max_size' => 2048, // 2MB
+                            'resize' => true,
+                            'width' => 800,
+                            'height' => 800,
+                        ]
+                    );
+                    $path = $result['path'];
+                    
+                    // Log for debugging
+                    \Log::info('Image uploaded successfully', [
+                        'path' => $path,
+                        'filename' => $result['filename'] ?? 'unknown',
+                        'url' => $result['url'] ?? 'unknown',
+                        'book_id' => $book->id,
+                    ]);
+                    
+                } catch (\Exception $e) {
+                    \Log::error('Upload error:', ['message' => $e->getMessage()]);
+                    return redirect()->back()
+                        ->withErrors(['hinh_anh' => $e->getMessage()])
+                        ->withInput();
                 }
-                
-                // Lưu ảnh mới
-                $file = $request->file('hinh_anh');
-                $filename = time() . '_' . $file->getClientOriginalName();
-                $destinationPath = storage_path('app/public/books');
-                
-                // Đảm bảo thư mục tồn tại
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0755, true);
-                }
-                
-                $file->move($destinationPath, $filename);
-                $path = 'books/' . $filename;
-                
-            } catch (\Exception $e) {
-                \Log::error('Upload error:', ['message' => $e->getMessage()]);
-                return redirect()->back()->with('error', 'Lỗi khi upload ảnh: ' . $e->getMessage());
             }
+            
+            // Log path before saving
+            if ($request->hasFile('hinh_anh')) {
+                \Log::info('Saving image path to database', [
+                    'path' => $path,
+                    'book_id' => $book->id,
+                    'exists' => \Storage::disk('public')->exists($path),
+                ]);
+            }
+
+            $updateData = [
+                'ten_sach' => $request->ten_sach,
+                'category_id' => $request->category_id,
+                'tac_gia' => $request->tac_gia,
+                'nam_xuat_ban' => $request->nam_xuat_ban,
+                'hinh_anh' => $path,
+                'mo_ta' => $request->mo_ta,
+                'gia' => $request->gia,
+                'trang_thai' => $request->trang_thai,
+                'so_luong' => $request->so_luong ?? 0,
+            ];
+
+            // Thêm nha_xuat_ban_id nếu có trong request
+            if ($request->filled('nha_xuat_ban_id')) {
+                $updateData['nha_xuat_ban_id'] = $request->nha_xuat_ban_id;
+            }
+
+            // Kiểm tra nếu số lượng tăng lên, tạo phiếu nhập kho tự động (chờ phê duyệt)
+            $oldQuantity = $book->so_luong ?? 0;
+            $newQuantity = $request->so_luong ?? 0;
+            $quantityDifference = $newQuantity - $oldQuantity;
+
+            DB::beginTransaction();
+            try {
+                // Không cập nhật số lượng sách ngay, chỉ tạo phiếu nhập kho
+                // Số lượng sẽ được cập nhật khi duyệt phiếu nhập kho
+                unset($updateData['so_luong']);
+                $book->update($updateData);
+
+                // Nếu số lượng tăng, tạo phiếu nhập kho tự động (chờ phê duyệt)
+                if ($quantityDifference > 0) {
+                    // Tạo số phiếu
+                    $receiptNumber = InventoryReceipt::generateReceiptNumber();
+
+                    // Lấy vị trí mặc định hoặc vị trí đầu tiên có sẵn
+                    $defaultLocation = 'Kệ 1, Tầng 1, Vị trí 1';
+                    $existingLocation = Inventory::where('book_id', $book->id)
+                        ->where('storage_type', 'Kho')
+                        ->first();
+                    
+                    if ($existingLocation) {
+                        $defaultLocation = $existingLocation->location;
+                    }
+
+                    // Tạo phiếu nhập kho tự động (chờ phê duyệt)
+                    $receipt = InventoryReceipt::create([
+                        'receipt_number' => $receiptNumber,
+                        'receipt_date' => now()->toDateString(),
+                        'book_id' => $book->id,
+                        'quantity' => $quantityDifference,
+                        'storage_location' => $defaultLocation,
+                        'storage_type' => 'Kho',
+                        'unit_price' => $book->gia ?? 0,
+                        'total_price' => ($book->gia ?? 0) * $quantityDifference,
+                        'supplier' => 'Cập nhật trực tiếp từ quản lý sách',
+                        'received_by' => Auth::id(),
+                        'approved_by' => null, // Chưa được duyệt
+                        'status' => 'pending', // Chờ phê duyệt
+                        'notes' => 'Phiếu nhập kho tự động được tạo khi cập nhật số lượng sách từ ' . $oldQuantity . ' lên ' . $newQuantity . '. Vui lòng duyệt phiếu để số lượng sách được cập nhật vào kho.',
+                    ]);
+
+                    // KHÔNG tạo Inventory items ngay, chỉ tạo khi duyệt phiếu
+                }
+
+                DB::commit();
+
+                // Log update with old values (array) and description (string)
+                AuditService::logUpdated($book, $oldValues, "Book '{$book->ten_sach}' updated");
+                
+                // Clear dashboard cache
+                CacheService::clearDashboard();
+
+                $successMessage = 'Cập nhật sách thành công!';
+                if ($quantityDifference > 0) {
+                    $successMessage .= ' Đã tạo phiếu nhập kho số lượng ' . $quantityDifference . ' cuốn (chờ phê duyệt). Vui lòng duyệt phiếu nhập kho để số lượng sách được cập nhật vào kho.';
+                }
+
+                return redirect()->route('admin.books.index')->with('success', $successMessage);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                \Log::error('Update Book error:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+                return redirect()->back()
+                    ->with('error', 'Có lỗi xảy ra khi cập nhật sách: ' . $e->getMessage())
+                    ->withInput();
+            }
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()
+                ->withErrors($e->errors())
+                ->withInput();
+        } catch (\Exception $e) {
+            \Log::error('Update Book error:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            return redirect()->back()
+                ->with('error', 'Lỗi khi cập nhật sách: ' . $e->getMessage())
+                ->withInput();
         }
-
-        $book->update([
-            'ten_sach' => $request->ten_sach,
-            'category_id' => $request->category_id,
-            'tac_gia' => $request->tac_gia,
-            'nam_xuat_ban' => $request->nam_xuat_ban,
-            'hinh_anh' => $path,
-            'mo_ta' => $request->mo_ta,
-            'gia' => $request->gia,
-            'dinh_dang' => $request->dinh_dang,
-            'trang_thai' => $request->trang_thai,
-        ]);
-
-        return redirect()->route('admin.books.index')->with('success', 'Cập nhật sách thành công!');
     }
 
+    public function hide($id)
+    {
+        $book = Book::findOrFail($id);
+        $book->update(['trang_thai' => 'inactive']);
+        
+        // Log book hiding
+        AuditService::logUpdated($book, "Book '{$book->ten_sach}' hidden");
+        
+        return redirect()->route('admin.books.index')->with('success', 'Ẩn sách thành công!');
+    }
+
+    public function unhide($id)
+    {
+        $book = Book::findOrFail($id);
+        $book->update(['trang_thai' => 'active']);
+        
+        // Log book unhiding
+        AuditService::logUpdated($book, "Book '{$book->ten_sach}' unhidden");
+        
+        return redirect()->route('admin.books.index')->with('success', 'Hiển thị sách thành công!');
+    }
+
+    // Giữ lại method destroy để tương thích (nếu cần)
     public function destroy($id)
     {
         Book::destroy($id);

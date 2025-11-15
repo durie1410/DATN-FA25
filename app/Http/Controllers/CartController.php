@@ -6,6 +6,7 @@ use App\Models\Book;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\PurchasableBook;
+use App\Models\Inventory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -29,60 +30,50 @@ class CartController extends Controller
      */
     public function add(Request $request)
     {
+        // Kiểm tra đăng nhập
+        if (!Auth::check()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Vui lòng đăng nhập để thêm vào giỏ hàng!',
+                'redirect_url' => route('login')
+            ], 401);
+        }
+
         $request->validate([
             'book_id' => 'required',
-            'paper_quantity' => 'nullable|integer|min:1|max:10',
-            'ebook_duration' => 'nullable|integer|min:1|max:12'
+            'paper_quantity' => 'required|integer|min:1|max:10'
         ]);
 
         $cart = $this->getCurrentCart();
         $paperQuantity = $request->paper_quantity ?? 0;
-        $ebookDuration = $request->ebook_duration ?? 0;
         
-        // Kiểm tra ít nhất một loại được chọn
-        if ($paperQuantity == 0 && $ebookDuration == 0) {
+        // Kiểm tra số lượng sách giấy
+        if ($paperQuantity == 0) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vui lòng chọn ít nhất một sản phẩm!'
+                'message' => 'Vui lòng chọn số lượng sách!'
             ], 400);
         }
 
         try {
             // Xử lý sách giấy
-            if ($paperQuantity > 0) {
-                $purchasableBook = $this->getOrCreatePurchasableBook($request->book_id, 'paper');
-                
-                if (!$purchasableBook->isInStock()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Sách giấy này đã hết hàng'
-                    ], 400);
-                }
-                
-                if ($purchasableBook->so_luong_ton < $paperQuantity) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => "Sách giấy chỉ còn {$purchasableBook->so_luong_ton} bản trong kho"
-                    ], 400);
-                }
-                
-                CartItem::addOrUpdate($cart->id, $purchasableBook->id, $paperQuantity);
+            $purchasableBook = $this->getOrCreatePurchasableBook($request->book_id, 'paper');
+            
+            if (!$purchasableBook->isInStock()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Sách giấy này đã hết hàng'
+                ], 400);
             }
             
-            // Xử lý ebook
-            if ($ebookDuration > 0) {
-                $purchasableBook = $this->getOrCreatePurchasableBook($request->book_id, 'ebook');
-                
-                if (!$purchasableBook->isInStock()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Sách điện tử này đã hết hàng'
-                    ], 400);
-                }
-                
-                // Với ebook, quantity = duration (tháng)
-                CartItem::addOrUpdate($cart->id, $purchasableBook->id, $ebookDuration);
+            if ($purchasableBook->so_luong_ton < $paperQuantity) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Sách giấy chỉ còn {$purchasableBook->so_luong_ton} bản trong kho"
+                ], 400);
             }
+            
+            CartItem::addOrUpdate($cart->id, $purchasableBook->id, $paperQuantity);
             
             return response()->json([
                 'success' => true,
@@ -116,23 +107,40 @@ class CartController extends Controller
         // Nếu không phải, tìm Book và tạo PurchasableBook tương ứng
         $book = Book::findOrFail($bookId);
         
-        // Tạo identifier cho từng loại (paper hoặc ebook)
-        $identifier = $type === 'ebook' ? 'ebook_' . $book->id : 'paper_' . $book->id;
-        
-        // Tìm PurchasableBook đã tồn tại với cùng identifier (dựa trên tên sách và loại)
+        // Tìm PurchasableBook đã tồn tại với cùng identifier (dựa trên tên sách)
         $purchasableBook = PurchasableBook::where('ten_sach', $book->ten_sach)
-            ->where('dinh_dang', $type === 'ebook' ? 'PDF' : 'PAPER')
             ->first();
         
         if ($purchasableBook) {
+            // Đồng bộ số lượng tồn kho từ inventories
+            $availableStockForPurchase = Inventory::where('book_id', $book->id)
+                ->where('storage_type', 'Kho')
+                ->where('status', 'Co san')
+                ->count();
+            
+            // Nếu không có trong inventories, sử dụng so_luong từ bảng books
+            $stockQuantity = $availableStockForPurchase > 0 ? $availableStockForPurchase : ($book->so_luong ?? 0);
+            
+            // Cập nhật số lượng tồn kho
+            $purchasableBook->update(['so_luong_ton' => $stockQuantity]);
+            
             return $purchasableBook;
         }
         
         // Tạo mới PurchasableBook
-        $price = $type === 'ebook' ? ($book->gia ?? 111000) * 0.21 : ($book->gia ?? 111000);
+        $price = $book->gia ?? 111000;
         
         // Load publisher nếu có
         $book->load('publisher');
+        
+        // Tính số lượng tồn kho từ inventories
+        $availableStockForPurchase = Inventory::where('book_id', $book->id)
+            ->where('storage_type', 'Kho')
+            ->where('status', 'Co san')
+            ->count();
+        
+        // Nếu không có trong inventories, sử dụng so_luong từ bảng books
+        $stockQuantity = $availableStockForPurchase > 0 ? $availableStockForPurchase : ($book->so_luong ?? 0);
         
         $purchasableBook = PurchasableBook::create([
             'ten_sach' => $book->ten_sach,
@@ -145,10 +153,10 @@ class CartController extends Controller
             'isbn' => $book->isbn ?? null,
             'so_trang' => $book->so_trang ?? null,
             'ngon_ngu' => 'Tiếng Việt',
-            'dinh_dang' => $type === 'ebook' ? 'PDF' : 'PAPER',
+            'dinh_dang' => 'PAPER',
             'kich_thuoc_file' => null,
             'trang_thai' => 'active',
-            'so_luong_ton' => $type === 'ebook' ? 999 : ($book->available_copies ?? 1),
+            'so_luong_ton' => $stockQuantity,
             'so_luong_ban' => 0,
             'danh_gia_trung_binh' => 0,
             'so_luot_xem' => 0,
@@ -305,22 +313,123 @@ class CartController extends Controller
     /**
      * Chuyển giỏ hàng từ session sang user khi đăng nhập
      */
-    public function transferToUser($userId)
+    public function transferToUser($userId, $oldSessionId = null)
     {
-        $sessionId = Session::getId();
-        $sessionCart = Cart::forSession($sessionId)->active()->first();
-        
-        if ($sessionCart && !$sessionCart->isEmpty()) {
-            $userCart = Cart::getOrCreateForUser($userId);
+        try {
+            // Sử dụng session ID cũ nếu được cung cấp (trước khi regenerate)
+            // Nếu không, sử dụng session ID hiện tại
+            $sessionId = $oldSessionId ?? Session::getId();
+            $currentSessionId = Session::getId();
             
-            // Chuyển các item từ session cart sang user cart
-            foreach ($sessionCart->items as $item) {
-                CartItem::addOrUpdate($userCart->id, $item->purchasable_book_id, $item->quantity);
+            Log::info('TransferToUser: Starting transfer', [
+                'user_id' => $userId,
+                'old_session_id' => $oldSessionId,
+                'session_id' => $sessionId,
+                'current_session_id' => $currentSessionId
+            ]);
+            
+            // Tìm tất cả giỏ hàng session có thể có
+            // Ưu tiên tìm theo session ID cũ (nếu có)
+            $sessionCarts = collect();
+            
+            if ($oldSessionId) {
+                // Tìm theo session ID cũ (trước khi regenerate)
+                $cartsByOldSession = Cart::where('session_id', $oldSessionId)
+                    ->where('status', 'active')
+                    ->whereNull('user_id')
+                    ->where('created_at', '>=', now()->subDay())
+                    ->get();
+                
+                $sessionCarts = $sessionCarts->merge($cartsByOldSession);
+                
+                Log::info('TransferToUser: Found carts by old session ID', [
+                    'old_session_id' => $oldSessionId,
+                    'count' => $cartsByOldSession->count()
+                ]);
             }
             
-            // Xóa session cart
-            $sessionCart->items()->delete();
-            $sessionCart->delete();
+            // Nếu session ID hiện tại khác với session ID cũ, cũng tìm theo session ID hiện tại
+            if ($oldSessionId !== $currentSessionId) {
+                $cartsByCurrentSession = Cart::where('session_id', $currentSessionId)
+                    ->where('status', 'active')
+                    ->whereNull('user_id')
+                    ->where('created_at', '>=', now()->subDay())
+                    ->get();
+                
+                $sessionCarts = $sessionCarts->merge($cartsByCurrentSession);
+                
+                Log::info('TransferToUser: Found carts by current session ID', [
+                    'current_session_id' => $currentSessionId,
+                    'count' => $cartsByCurrentSession->count()
+                ]);
+            }
+            
+            // Loại bỏ trùng lặp
+            $sessionCarts = $sessionCarts->unique('id');
+            
+            Log::info('TransferToUser: Found session carts', [
+                'count' => $sessionCarts->count(),
+                'session_ids' => $sessionCarts->pluck('session_id')->toArray()
+            ]);
+            
+            if ($sessionCarts->isEmpty()) {
+                Log::info('TransferToUser: No session carts found');
+                return;
+            }
+            
+            $userCart = Cart::getOrCreateForUser($userId);
+            
+            $transferredItems = 0;
+            
+            // Chuyển các item từ tất cả session carts sang user cart
+            foreach ($sessionCarts as $sessionCart) {
+                $items = $sessionCart->items()->get();
+                
+                Log::info('TransferToUser: Processing session cart', [
+                    'cart_id' => $sessionCart->id,
+                    'session_id' => $sessionCart->session_id,
+                    'items_count' => $items->count()
+                ]);
+                
+                foreach ($items as $item) {
+                    try {
+                        CartItem::addOrUpdate($userCart->id, $item->purchasable_book_id, $item->quantity);
+                        $transferredItems++;
+                        
+                        Log::info('TransferToUser: Item transferred', [
+                            'item_id' => $item->id,
+                            'purchasable_book_id' => $item->purchasable_book_id,
+                            'quantity' => $item->quantity
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error('TransferToUser: Error transferring item', [
+                            'item_id' => $item->id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+                
+                // Xóa session cart sau khi chuyển xong
+                $sessionCart->items()->delete();
+                $sessionCart->delete();
+            }
+            
+            // Cập nhật lại tổng của user cart
+            $userCart->recalculateTotals();
+            
+            Log::info('TransferToUser: Transfer completed', [
+                'user_id' => $userId,
+                'transferred_items' => $transferredItems,
+                'user_cart_total_items' => $userCart->fresh()->total_items
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('TransferToUser: Error during transfer', [
+                'user_id' => $userId,
+                'old_session_id' => $oldSessionId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
         }
     }
 }

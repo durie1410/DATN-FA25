@@ -18,7 +18,10 @@ class Inventory extends Model
         'purchase_price',
         'purchase_date',
         'notes',
+        'hinh_anh',
         'created_by',
+        'storage_type',
+        'receipt_id',
     ];
 
     protected $casts = [
@@ -44,6 +47,28 @@ class Inventory extends Model
     public function borrows()
     {
         return $this->hasMany(Borrow::class, 'book_id', 'book_id');
+    }
+
+    public function receipt()
+    {
+        return $this->belongsTo(InventoryReceipt::class, 'receipt_id');
+    }
+
+    public function displayAllocations()
+    {
+        return $this->hasMany(DisplayAllocation::class);
+    }
+
+    // Scope để lấy sách trong kho
+    public function scopeInStock($query)
+    {
+        return $query->where('storage_type', 'Kho');
+    }
+
+    // Scope để lấy sách trưng bày
+    public function scopeOnDisplay($query)
+    {
+        return $query->where('storage_type', 'Trung bay');
     }
 
     // Scope để lấy sách có sẵn

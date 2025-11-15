@@ -108,10 +108,6 @@
                                                        class="btn btn-sm btn-outline-info" title="Xem chi tiết">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
-                                                    <a href="{{ route('admin.books.edit', $book->id) }}" 
-                                                       class="btn btn-sm btn-outline-warning" title="Chỉnh sửa">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
                                                     <form action="{{ route('admin.books.destroy', $book->id) }}" 
                                                           method="POST" class="d-inline"
                                                           onsubmit="return confirm('Bạn có chắc chắn muốn xóa sách này?')">
@@ -195,9 +191,6 @@
                                             <td>{{ $book->tac_gia }}</td>
                                             <td>
                                                 <span class="badge bg-success">{{ $book->formatted_price }}</span>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-info">{{ $book->dinh_dang }}</span>
                                             </td>
                                             <td>
                                                 @if($book->trang_thai === 'active')

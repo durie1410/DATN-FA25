@@ -25,69 +25,53 @@
     <!-- Statistics Cards -->
     <div class="row mb-4">
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Tổng Thủ Thư</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $totalLibrarians }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-user-tie fa-2x text-gray-300"></i>
-                        </div>
+            <div class="card border-left-primary shadow statistics-card-square">
+                <div class="card-body d-flex flex-column justify-content-center align-items-center text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-user-tie fa-3x text-gray-300"></i>
                     </div>
+                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-2">
+                        Tổng Thủ Thư</div>
+                    <div class="h3 mb-0 font-weight-bold text-gray-800">{{ $totalLibrarians }}</div>
                 </div>
             </div>
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Đang Hoạt Động</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $activeLibrarians }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
-                        </div>
+            <div class="card border-left-success shadow statistics-card-square">
+                <div class="card-body d-flex flex-column justify-content-center align-items-center text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-check-circle fa-3x text-gray-300"></i>
                     </div>
+                    <div class="text-xs font-weight-bold text-success text-uppercase mb-2">
+                        Đang Hoạt Động</div>
+                    <div class="h3 mb-0 font-weight-bold text-gray-800">{{ $activeLibrarians }}</div>
                 </div>
             </div>
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Tạm Dừng</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $inactiveLibrarians }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-pause-circle fa-2x text-gray-300"></i>
-                        </div>
+            <div class="card border-left-warning shadow statistics-card-square">
+                <div class="card-body d-flex flex-column justify-content-center align-items-center text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-pause-circle fa-3x text-gray-300"></i>
                     </div>
+                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-2">
+                        Tạm Dừng</div>
+                    <div class="h3 mb-0 font-weight-bold text-gray-800">{{ $inactiveLibrarians }}</div>
                 </div>
             </div>
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-danger shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                Hợp Đồng Sắp Hết Hạn</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $expiringContracts }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
-                        </div>
+            <div class="card border-left-danger shadow statistics-card-square">
+                <div class="card-body d-flex flex-column justify-content-center align-items-center text-center">
+                    <div class="mb-3">
+                        <i class="fas fa-exclamation-triangle fa-3x text-gray-300"></i>
                     </div>
+                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-2">
+                        Hợp Đồng Sắp Hết Hạn</div>
+                    <div class="h3 mb-0 font-weight-bold text-gray-800">{{ $expiringContracts }}</div>
                 </div>
             </div>
         </div>
@@ -319,6 +303,16 @@
 
 @section('styles')
 <style>
+.statistics-card-square {
+    aspect-ratio: 1;
+    min-height: 200px;
+}
+
+.statistics-card-square .card-body {
+    height: 100%;
+    padding: 1.5rem;
+}
+
 .librarian-info {
     display: flex;
     align-items: center;

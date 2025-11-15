@@ -4,11 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\Book;
 use App\Models\Category;
+use App\Models\Document;
+use App\Models\Reader;
+use App\Models\Reservation;
+use App\Services\CacheService;
 use Illuminate\Http\Request;
 
 class PublicBookController extends Controller
 {
-    public function show($id)
+    public function show($id, Request $request)
     {
         $book = Book::with([
             'category',
@@ -23,44 +27,64 @@ class PublicBookController extends Controller
         // Tăng lượt xem
         $book->increment('so_luot_xem');
 
-        // Lấy sách liên quan (cùng thể loại)
+        // Kiểm tra mode từ query parameter (mặc định là 'buy' nếu không có)
+        $mode = $request->get('mode', 'buy'); // 'buy' hoặc 'borrow'
+        
+        // Lấy thông tin độc giả hiện tại nếu ở chế độ mượn
+        $currentReader = null;
+        $hasActiveReservation = false;
+        if ($mode === 'borrow' && auth()->check()) {
+            $currentReader = Reader::where('user_id', auth()->id())->first();
+            if ($currentReader) {
+                $hasActiveReservation = Reservation::where('book_id', $book->id)
+                    ->where('reader_id', $currentReader->id)
+                    ->whereIn('status', ['pending', 'confirmed', 'ready'])
+                    ->exists();
+            }
+        }
+
+        // Lấy sách liên quan (cùng thể loại) - Fix N+1: thêm eager loading
         $relatedBooks = Book::where('category_id', $book->category_id)
             ->where('id', '!=', $book->id)
             ->where('trang_thai', 'active')
-            ->with('category')
+            ->with(['category', 'publisher'])
             ->limit(6)
             ->get();
 
-        // Lấy sách mua nhiều nhất (top selling)
+        // Lấy sách mua nhiều nhất (top selling) - Fix N+1: thêm eager loading
         $top_selling_books = Book::where('trang_thai', 'active')
             ->where('id', '!=', $book->id)
+            ->with(['category', 'publisher'])
             ->orderBy('so_luong_ban', 'desc')
             ->orderBy('so_luot_xem', 'desc')
             ->limit(5)
             ->get();
 
-        // Lấy sách xem nhiều nhất (most viewed)
+        // Lấy sách xem nhiều nhất (most viewed) - Fix N+1: thêm eager loading
         $most_viewed_books = Book::where('trang_thai', 'active')
             ->where('id', '!=', $book->id)
+            ->with(['category', 'publisher'])
             ->orderBy('so_luot_xem', 'desc')
             ->limit(5)
             ->get();
 
-        // Lấy sách cùng chủ đề (cùng category)
+        // Lấy sách cùng chủ đề (cùng category) - Fix N+1: thêm eager loading
         $same_topic_books = Book::where('category_id', $book->category_id)
             ->where('id', '!=', $book->id)
             ->where('trang_thai', 'active')
+            ->with(['category', 'publisher'])
             ->orderBy('so_luong_ban', 'desc')
             ->orderBy('so_luot_xem', 'desc')
             ->limit(12)
             ->get();
         
-        // Nếu không đủ sách cùng chủ đề, lấy thêm sách nổi bật khác
+        // Nếu không đủ sách cùng chủ đề, lấy thêm sách nổi bật khác - Fix N+1: thêm eager loading
         if ($same_topic_books->count() < 12) {
             $remaining = 12 - $same_topic_books->count();
             $additional_books = Book::where('id', '!=', $book->id)
                 ->where('trang_thai', 'active')
                 ->whereNotIn('id', $same_topic_books->pluck('id'))
+                ->with(['category', 'publisher'])
                 ->orderBy('so_luong_ban', 'desc')
                 ->orderBy('so_luot_xem', 'desc')
                 ->limit($remaining)
@@ -76,12 +100,22 @@ class PublicBookController extends Controller
         }
 
         // Thống kê sách
+        // Số lượng tồn kho có thể mua: sách trong kho (storage_type = 'Kho') và có sẵn (status = 'Co san')
+        $availableStockForPurchase = $book->inventories()
+            ->where('storage_type', 'Kho')
+            ->where('status', 'Co san')
+            ->count();
+        
+        // Nếu không có trong inventories, sử dụng so_luong từ bảng books
+        $stockQuantity = $availableStockForPurchase > 0 ? $availableStockForPurchase : ($book->so_luong ?? 0);
+        
         $stats = [
             'total_reviews' => $book->reviews()->count(),
             'average_rating' => $book->reviews()->avg('rating') ?? 0,
             'total_copies' => $book->inventories()->count(),
             'available_copies' => $book->inventories()->where('status', 'Co san')->count(),
             'borrowed_copies' => $book->inventories()->where('status', 'Dang muon')->count(),
+            'stock_quantity' => $stockQuantity, // Số lượng tồn kho có thể mua
         ];
 
         // Kiểm tra user hiện tại có yêu thích sách này không
@@ -105,7 +139,10 @@ class PublicBookController extends Controller
             'top_selling_books',
             'most_viewed_books',
             'same_topic_books',
-            'author'
+            'author',
+            'mode',
+            'currentReader',
+            'hasActiveReservation'
         ));
     }
 
@@ -153,9 +190,49 @@ class PublicBookController extends Controller
         // Lấy danh sách sách sau khi lọc với phân trang
         $books = $query->paginate(12)->appends($request->query());
 
-        // Lấy danh sách thể loại để hiển thị dropdown
-        $categories = Category::all();
+        // Lấy danh sách thể loại để hiển thị dropdown (cached)
+        $categories = CacheService::getActiveCategories();
 
         return view('books.public', compact('books', 'categories'));
+    }
+
+    public function showDiemSach($id)
+    {
+        $book = Book::with([
+            'category',
+            'publisher'
+        ])->findOrFail($id);
+
+        // Tăng lượt xem
+        $book->increment('so_luot_xem');
+
+        // Lấy danh sách categories cho sidebar
+        $categories = Category::withCount('books')->orderBy('ten_the_loai')->get();
+
+        // Lấy tin nổi bật (có thể lấy từ bảng news hoặc books mới nhất)
+        $hotNews = Book::where('trang_thai', 'active')
+            ->where('id', '!=', $book->id)
+            ->orderBy('created_at', 'desc')
+            ->limit(2)
+            ->get();
+
+        return view('books.diem-sach', compact('book', 'categories', 'hotNews'));
+    }
+
+    public function showTinTuc($id)
+    {
+        $document = Document::findOrFail($id);
+
+        // Lấy danh sách categories cho sidebar
+        $categories = Category::withCount('books')->orderBy('ten_the_loai')->get();
+
+        // Lấy tin nổi bật (các document khác)
+        $hotNews = Document::where('id', '!=', $document->id)
+            ->orderBy('published_date', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->limit(2)
+            ->get();
+
+        return view('books.tin-tuc', compact('document', 'categories', 'hotNews'));
     }
 }

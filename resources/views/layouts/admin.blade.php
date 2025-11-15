@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Admin - Quản Lý Thư Viện WAKA')</title>
+    <title>@yield('title', 'Admin - Quản Lý Thư Viện LIBHUB')</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -21,26 +21,26 @@
             --accent-blue: #3b82f6;
             --accent-pink: #ec4899;
             
-            --background-dark: #0a0a0a;
-            --background-card: #141414;
-            --background-elevated: #1a1a1a;
-            --header-bg: linear-gradient(135deg, #0a2e1a 0%, #052d23 100%);
-            --sidebar-bg: #0d1117;
+            --background-dark: #ffffff;
+            --background-card: #ffffff;
+            --background-elevated: #f9fafb;
+            --header-bg: linear-gradient(135deg, #ffffff 0%, #f0f9f4 100%);
+            --sidebar-bg: #ffffff;
             --sidebar-hover: rgba(0, 255, 153, 0.08);
             --sidebar-active: rgba(0, 255, 153, 0.15);
             
-            --text-primary: #ffffff;
-            --text-secondary: #d4d4d8;
-            --text-muted: #9ca3af;
-            --text-disabled: #6b7280;
+            --text-primary: #1f2937;
+            --text-secondary: #4b5563;
+            --text-muted: #6b7280;
+            --text-disabled: #9ca3af;
             
-            --border-color: rgba(0, 255, 153, 0.12);
-            --border-hover: rgba(0, 255, 153, 0.25);
+            --border-color: rgba(0, 255, 153, 0.2);
+            --border-hover: rgba(0, 255, 153, 0.4);
             
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
             --shadow-primary: 0 0 20px rgba(0, 255, 153, 0.15);
             
             --transition-fast: 0.15s;
@@ -128,7 +128,7 @@
         }
 
         .header-search input {
-            background: rgba(20, 20, 20, 0.6);
+            background: #f9fafb;
             border: 1px solid var(--border-color);
             color: var(--text-primary);
             padding: 11px 45px 11px 18px;
@@ -145,11 +145,11 @@
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(0, 255, 153, 0.1), var(--shadow-primary);
             width: 350px;
-            background: rgba(20, 20, 20, 0.8);
+            background: #ffffff;
         }
 
         .header-search input::placeholder {
-            color: #888;
+            color: #9ca3af;
         }
 
         .header-search button {
@@ -179,7 +179,7 @@
             align-items: center;
             gap: 12px;
             padding: 8px 16px 8px 8px;
-            background: rgba(20, 20, 20, 0.6);
+            background: #f9fafb;
             border: 1px solid var(--border-color);
             color: var(--text-primary);
             border-radius: 50px;
@@ -265,7 +265,7 @@
 
         .dropdown-divider {
             height: 1px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.1);
             margin: 8px 0;
         }
 
@@ -286,15 +286,17 @@
 
         /* Sidebar - WAKA Style */
         .sidebar {
-            width: 280px;
+            width: 220px;
+            min-width: 220px;
             background: var(--sidebar-bg);
             border-right: 1px solid var(--border-color);
             overflow-y: auto;
-            overflow-x: hidden;
+            overflow-x: visible;
             position: sticky;
             top: 72px;
             height: calc(100vh - 72px);
             backdrop-filter: blur(10px);
+            flex-shrink: 0;
         }
         
         .sidebar::-webkit-scrollbar {
@@ -302,7 +304,7 @@
         }
         
         .sidebar::-webkit-scrollbar-track {
-            background: var(--sidebar-bg);
+            background: #f9fafb;
         }
         
         .sidebar::-webkit-scrollbar-thumb {
@@ -316,6 +318,8 @@
         
         .sidebar-menu {
             padding: 24px 0;
+            min-height: auto;
+            display: block;
         }
         
         .menu-section-title {
@@ -325,6 +329,13 @@
             color: var(--text-muted);
             text-transform: uppercase;
             letter-spacing: 1.5px;
+            display: block;
+            min-height: 40px;
+            line-height: 1.5;
+            white-space: nowrap;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            width: 100%;
         }
 
         .menu-item {
@@ -341,6 +352,17 @@
             font-size: 14px;
             font-weight: 500;
             border-radius: 12px;
+            white-space: nowrap;
+            min-width: 0;
+            overflow: hidden;
+        }
+        
+        .menu-item span {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+            min-width: 0;
         }
 
         .menu-item::before {
@@ -400,7 +422,7 @@
         }
 
         .submenu {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.02);
             overflow: hidden;
             max-height: 0;
             transition: max-height var(--transition-normal) var(--ease-smooth);
@@ -415,7 +437,7 @@
             align-items: center;
             gap: 12px;
             padding: 12px 20px 12px 50px;
-            color: #999;
+            color: var(--text-muted);
             text-decoration: none;
             transition: all var(--transition-fast);
             font-size: 13px;
@@ -468,10 +490,7 @@
         .page-title {
             font-size: 34px;
             font-weight: 700;
-            background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--text-primary);
             margin-bottom: 12px;
             display: flex;
             align-items: center;
@@ -484,7 +503,7 @@
 
         .page-subtitle {
             font-size: 15px;
-            color: #888;
+            color: var(--text-muted);
             font-weight: 400;
         }
 
@@ -570,13 +589,13 @@
         }
 
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
             color: var(--text-primary);
         }
 
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.15);
+            background: #f3f4f6;
             border-color: var(--primary-color);
         }
 
@@ -639,8 +658,8 @@
         .form-control, .form-select {
             width: 100%;
             padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
             border-radius: 10px;
             color: var(--text-primary);
             font-family: 'Poppins', sans-serif;
@@ -652,11 +671,11 @@
             outline: none;
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(0, 255, 153, 0.1);
-            background: rgba(255, 255, 255, 0.08);
+            background: #ffffff;
         }
 
         .form-control::placeholder {
-            color: #666;
+            color: var(--text-muted);
         }
 
         textarea.form-control {
@@ -792,7 +811,7 @@
 
         .stat-title {
             font-size: 13px;
-            color: #888;
+            color: var(--text-muted);
             text-transform: uppercase;
             font-weight: 600;
             letter-spacing: 0.5px;
@@ -842,7 +861,7 @@
 
         .stat-label {
             font-size: 13px;
-            color: #888;
+            color: var(--text-muted);
         }
 
         /* Alerts */
@@ -912,7 +931,8 @@
         /* Responsive */
         @media (max-width: 1024px) {
             .sidebar {
-                width: 250px;
+                width: 240px;
+                min-width: 240px;
             }
 
             .main-content {
@@ -970,7 +990,7 @@
         }
 
         ::-webkit-scrollbar-track {
-            background: var(--background-dark);
+            background: #f9fafb;
         }
 
         ::-webkit-scrollbar-thumb {
@@ -1008,17 +1028,10 @@
             <button class="mobile-menu-toggle" onclick="toggleSidebar()">
                 <i class="fas fa-bars"></i>
             </button>
-            <div class="logo">WAKA ADMIN</div>
+            <div class="logo"><span style="color: #dc2626;">THƯ VIỆN</span> <span style="color: #000000;">LIBHUB</span></div>
         </div>
         
         <div class="header-right">
-            <div class="header-search">
-                <form action="#" method="GET">
-                    <input type="text" name="q" placeholder="Tìm kiếm...">
-                    <button type="submit"><i class="fas fa-search"></i></button>
-                </form>
-                </div>
-                
             <div class="user-menu">
                 <button class="btn-user" onclick="toggleUserMenu()">
                     <div class="user-avatar">
@@ -1031,14 +1044,6 @@
                     <a href="{{ route('home') }}" class="dropdown-item">
                         <i class="fas fa-home"></i>
                         Về trang chủ
-                    </a>
-                    <a href="#" class="dropdown-item">
-                        <i class="fas fa-user"></i>
-                        Hồ sơ của tôi
-                    </a>
-                    <a href="#" class="dropdown-item">
-                        <i class="fas fa-cog"></i>
-                        Cài đặt
                     </a>
                     <div class="dropdown-divider"></div>
                     <form action="{{ route('logout') }}" method="POST">
@@ -1071,30 +1076,49 @@
                     <i class="fas fa-book"></i>
                     <span>Quản lý sách</span>
                 </a>
-                <a href="{{ route('admin.categories.index') }}" class="menu-item {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
-                    <i class="fas fa-tags"></i>
-                    <span>Thể loại</span>
+
+                <!-- Quản lý kho -->
+                <div class="menu-section-title">QUẢN LÝ KHO</div>
+                @if(Route::has('admin.inventory.index'))
+                <a href="{{ route('admin.inventory.index') }}" class="menu-item {{ request()->routeIs('admin.inventory.index') || request()->routeIs('admin.inventory.show') || request()->routeIs('admin.inventory.edit') ? 'active' : '' }}">
+                    <i class="fas fa-warehouse"></i>
+                    <span>Danh sách kho</span>
                 </a>
-                <a href="{{ route('admin.publishers.index') }}" class="menu-item {{ request()->routeIs('admin.publishers.*') ? 'active' : '' }}">
-                    <i class="fas fa-building"></i>
-                    <span>Nhà xuất bản</span>
+                @endif
+                @if(Route::has('admin.inventory.receipts'))
+                <a href="{{ route('admin.inventory.receipts') }}" class="menu-item {{ request()->routeIs('admin.inventory.receipts.*') ? 'active' : '' }}">
+                    <i class="fas fa-file-invoice"></i>
+                    <span>Phiếu nhập kho</span>
                 </a>
-                @if(Route::has('admin.authors.index'))
-                <a href="{{ route('admin.authors.index') }}" class="menu-item {{ request()->routeIs('admin.authors.*') ? 'active' : '' }}">
-                    <i class="fas fa-user-edit"></i>
-                    <span>Tác giả</span>
+                @endif
+                @if(Route::has('admin.inventory.transactions'))
+                <a href="{{ route('admin.inventory.transactions') }}" class="menu-item {{ request()->routeIs('admin.inventory.transactions') ? 'active' : '' }}">
+                    <i class="fas fa-exchange-alt"></i>
+                    <span>Giao dịch kho</span>
+                </a>
+                @endif
+                @if(Route::has('admin.inventory.report'))
+                <a href="{{ route('admin.inventory.report') }}" class="menu-item {{ request()->routeIs('admin.inventory.report') ? 'active' : '' }}">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Báo cáo kho</span>
                 </a>
                 @endif
 
                 <!-- Quản lý người dùng -->
-                <div class="menu-section-title">QUẢN LÝ NGƯỜI DÙNG</div>
-                <a href="{{ route('admin.users.index') }}" class="menu-item {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
+                <div class="menu-section-title">NGƯỜI DÙNG</div>
+                @if(Route::has('admin.user-management.dashboard'))
+                <a href="{{ route('admin.user-management.dashboard') }}" class="menu-item {{ request()->routeIs('admin.user-management.*') ? 'active' : '' }}">
+                    <i class="fas fa-users"></i>
+                    <span>Tổng quan</span>
+                </a>
+                @endif
+                <a href="{{ route('admin.users.index') }}" class="menu-item {{ request()->routeIs('admin.users.*') && !request()->routeIs('admin.user-management.*') ? 'active' : '' }}">
                     <i class="fas fa-users-cog"></i>
                     <span>Người dùng</span>
                 </a>
                 @if(Route::has('admin.readers.index'))
                 <a href="{{ route('admin.readers.index') }}" class="menu-item {{ request()->routeIs('admin.readers.*') ? 'active' : '' }}">
-                    <i class="fas fa-users"></i>
+                    <i class="fas fa-book-reader"></i>
                     <span>Độc giả</span>
                 </a>
                 @endif
@@ -1124,38 +1148,15 @@
                     <span>Duyệt trả sách</span>
                 </a>
 
-                <!-- Tài chính -->
-                @if(Route::has('admin.fines.index'))
-                <div class="menu-section-title">TÀI CHÍNH</div>
-                <a href="{{ route('admin.fines.index') }}" class="menu-item {{ request()->routeIs('admin.fines.*') ? 'active' : '' }}">
-                    <i class="fas fa-money-bill-wave"></i>
-                    <span>Quản lý phí phạt</span>
+                <!-- Quản lý đơn hàng -->
+                <div class="menu-section-title">QUẢN LÝ ĐƠN HÀNG</div>
+                <a href="{{ route('admin.orders.index') }}" class="menu-item {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>Quản lý đơn hàng</span>
                 </a>
-                @endif
-
-                <!-- Báo cáo & Đánh giá -->
-                <div class="menu-section-title">BÁO CÁO & ĐÁNH GIÁ</div>
-                @if(Route::has('admin.reports.index'))
-                <a href="{{ route('admin.reports.index') }}" class="menu-item {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}">
-                    <i class="fas fa-chart-bar"></i>
-                    <span>Báo cáo</span>
-                </a>
-                @endif
-                @if(Route::has('admin.reviews.index'))
-                <a href="{{ route('admin.reviews.index') }}" class="menu-item {{ request()->routeIs('admin.reviews.*') ? 'active' : '' }}">
-                    <i class="fas fa-star"></i>
-                    <span>Đánh giá</span>
-                </a>
-                @endif
 
                 <!-- Hệ thống -->
                 <div class="menu-section-title">HỆ THỐNG</div>
-                @if(Route::has('admin.logs.index'))
-                <a href="{{ route('admin.logs.index') }}" class="menu-item {{ request()->routeIs('admin.logs.*') ? 'active' : '' }}">
-                    <i class="fas fa-history"></i>
-                    <span>Nhật ký hệ thống</span>
-                </a>
-                @endif
                 @can('manage-notifications')
                 @if(Route::has('admin.notifications.index'))
                 <a href="{{ route('admin.notifications.index') }}" class="menu-item {{ request()->routeIs('admin.notifications.*') ? 'active' : '' }}">
@@ -1164,12 +1165,6 @@
                 </a>
                 @endif
                 @endcan
-                @if(Route::has('admin.settings.index'))
-                <a href="{{ route('admin.settings.index') }}" class="menu-item {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}">
-                    <i class="fas fa-cog"></i>
-                    <span>Cài đặt</span>
-                </a>
-                @endif
                 @if(Route::has('admin.banners.index'))
                 <a href="{{ route('admin.banners.index') }}" class="menu-item {{ request()->routeIs('admin.banners.*') ? 'active' : '' }}">
                     <i class="fas fa-images"></i>

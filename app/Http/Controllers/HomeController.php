@@ -8,12 +8,11 @@ use App\Models\Borrow;
 use App\Models\Reader;
 use App\Models\Reservation;
 use App\Models\PurchasableBook;
-use App\Models\OrderItem;
 use App\Models\Document;
 use App\Models\Author;
+use App\Models\Inventory;
 use App\Services\AuditService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class HomeController extends Controller
 {
@@ -151,39 +150,88 @@ class HomeController extends Controller
         $categories = Category::withCount('books')->orderBy('ten_the_loai')->get();
         $categoriesTop = $categories->sortByDesc('books_count')->take(12);
 
-        // 1. Lấy Sách Nổi bật (is_featured = true)
-        $featured_books = Book::where(function($query) {
-                $query->where('is_featured', true)
-                      ->orWhere('is_featured', 1);
-            })
-            ->where(function($query) {
-                $query->where('trang_thai', 'active')
-                      ->orWhereNull('trang_thai');
-            })
-            ->orderByRaw('CASE WHEN is_featured = true OR is_featured = 1 THEN 0 ELSE 1 END')
-            ->orderBy('created_at', 'desc')
-            ->limit(6)
-            ->get();
+        // Lấy tất cả book_id từ kho (cả kho và trưng bày) để đảm bảo hiển thị tất cả sản phẩm
+        $bookIdsFromInventory = Inventory::select('book_id')
+            ->distinct()
+            ->pluck('book_id')
+            ->toArray();
 
-        // Nếu không có sách nổi bật, lấy sách mới nhất (bỏ qua điều kiện trang_thai nếu không có sách active)
+        // 1. Lấy Sách Nổi bật (is_featured = true) - ưu tiên sách có trong kho
+        // Bước 1: Lấy sách nổi bật có trong kho
+        $featured_books = collect();
+        if (!empty($bookIdsFromInventory)) {
+            $featured_books = Book::where(function($query) {
+                    $query->where('is_featured', true)
+                          ->orWhere('is_featured', 1);
+                })
+                ->where(function($query) {
+                    $query->where('trang_thai', 'active')
+                          ->orWhereNull('trang_thai');
+                })
+                ->whereIn('id', $bookIdsFromInventory)
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
+        }
+        
+        // Bước 2: Nếu không đủ 10 sách, lấy thêm sách nổi bật không có trong kho
+        if ($featured_books->count() < 10) {
+            $excludedIds = $featured_books->pluck('id')->toArray();
+            $additional_featured = Book::where(function($query) {
+                    $query->where('is_featured', true)
+                          ->orWhere('is_featured', 1);
+                })
+                ->where(function($query) {
+                    $query->where('trang_thai', 'active')
+                          ->orWhereNull('trang_thai');
+                })
+                ->when(!empty($excludedIds), function($query) use ($excludedIds) {
+                    $query->whereNotIn('id', $excludedIds);
+                })
+                ->orderBy('created_at', 'desc')
+                ->limit(10 - $featured_books->count())
+                ->get();
+            $featured_books = $featured_books->merge($additional_featured);
+        }
+        
+        // Bước 3: Nếu vẫn không có sách nổi bật, lấy sách mới nhất (bỏ qua điều kiện is_featured)
         if ($featured_books->isEmpty()) {
             $featured_books = Book::where(function($query) {
                     $query->where('trang_thai', 'active')
                           ->orWhereNull('trang_thai');
                 })
+                ->when(!empty($bookIdsFromInventory), function($query) use ($bookIdsFromInventory) {
+                    // Ưu tiên sách có trong kho
+                    $query->whereIn('id', $bookIdsFromInventory);
+                })
                 ->orderBy('created_at', 'desc')
-                ->limit(6)
+                ->limit(10)
                 ->get();
         }
         
-        // Nếu vẫn không có, lấy bất kỳ sách nào
-        if ($featured_books->isEmpty()) {
-            $featured_books = Book::orderBy('created_at', 'desc')
-                ->limit(6)
+        // Bước 4: Nếu vẫn không có sách có trong kho, lấy sách mới nhất không có trong kho
+        if ($featured_books->isEmpty() && !empty($bookIdsFromInventory)) {
+            $featured_books = Book::where(function($query) {
+                    $query->where('trang_thai', 'active')
+                          ->orWhereNull('trang_thai');
+                })
+                ->whereNotIn('id', $bookIdsFromInventory)
+                ->orderBy('created_at', 'desc')
+                ->limit(10)
                 ->get();
         }
+        
+        // Bước 5: Nếu vẫn không có, lấy bất kỳ sách nào (không có điều kiện)
+        if ($featured_books->isEmpty()) {
+            $featured_books = Book::orderBy('created_at', 'desc')
+                ->limit(10)
+                ->get();
+        }
+        
+        // Giới hạn tối đa 10 sách
+        $featured_books = $featured_books->take(10);
 
-        // 2. Lấy Sách Hay (Sách mới nhất, không phải nổi bật)
+        // 2. Lấy Sách Hay (Sách mới nhất, không phải nổi bật) - ưu tiên sách có trong kho
         $top_books = Book::where(function($query) {
                 $query->where('trang_thai', 'active')
                       ->orWhereNull('trang_thai');
@@ -192,6 +240,10 @@ class HomeController extends Controller
                 $query->where('is_featured', false)
                       ->orWhereNull('is_featured')
                       ->orWhere('is_featured', 0);
+            })
+            ->when(!empty($bookIdsFromInventory), function($query) use ($bookIdsFromInventory) {
+                // Ưu tiên sách có trong kho
+                $query->whereIn('id', $bookIdsFromInventory);
             })
             ->orderBy('created_at', 'desc')
             ->limit(6)
@@ -347,8 +399,15 @@ class HomeController extends Controller
             $diem_sach_list = $diem_sach_list->merge($additional);
         }
 
-        // 6. Lấy Sách xem nhiều nhất (most viewed)
-        $most_viewed_books = Book::where('trang_thai', 'active')
+        // 6. Lấy Sách xem nhiều nhất (most viewed) - ưu tiên sách có trong kho
+        $most_viewed_books = Book::where(function($query) {
+                $query->where('trang_thai', 'active')
+                      ->orWhereNull('trang_thai');
+            })
+            ->when(!empty($bookIdsFromInventory), function($query) use ($bookIdsFromInventory) {
+                // Ưu tiên sách có trong kho
+                $query->whereIn('id', $bookIdsFromInventory);
+            })
             ->orderBy('so_luot_xem', 'desc')
             ->limit(9)
             ->get();
@@ -540,4 +599,5 @@ class HomeController extends Controller
             ], 500);
         }
     }
+
 }

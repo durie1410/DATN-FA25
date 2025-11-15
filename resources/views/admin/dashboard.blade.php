@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Dashboard - Quản Lý Thư Viện WAKA')
+@section('title', 'Dashboard - Quản Lý Thư Viện LIBHUB')
 
 @section('content')
 <!-- Page Header -->

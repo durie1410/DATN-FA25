@@ -440,28 +440,57 @@ function bulkAction(action) {
     }
 }
 
+// Get CSRF token from meta tag or input
+function getCsrfToken() {
+    const token = document.querySelector('meta[name="csrf-token"]');
+    return token ? token.getAttribute('content') : '{{ csrf_token() }}';
+}
+
 // Confirm reservation
 function confirmReservation(reservationId) {
     if (confirm('Bạn có chắc muốn xác nhận đặt trước này?')) {
+        const formData = new FormData();
+        formData.append('_token', getCsrfToken());
+        
         fetch(`/admin/reservations/${reservationId}/confirm`, {
             method: 'POST',
+            body: formData,
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            return response.text().then(text => {
+                throw new Error(text || 'Có lỗi xảy ra');
+            });
+        })
         .then(data => {
             if (data.success) {
-                alert(data.message);
+                alert(data.message || 'Đặt trước đã được xác nhận!');
                 location.reload();
             } else {
-                alert(data.message);
+                alert(data.message || 'Có lỗi xảy ra!');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Có lỗi xảy ra!');
+            // Nếu là lỗi permission hoặc validation, thử submit form thông thường
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/reservations/${reservationId}/confirm`;
+            
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = getCsrfToken();
+            form.appendChild(csrfToken);
+            
+            document.body.appendChild(form);
+            form.submit();
         });
     }
 }
@@ -469,25 +498,48 @@ function confirmReservation(reservationId) {
 // Mark ready
 function markReady(reservationId) {
     if (confirm('Bạn có chắc muốn đánh dấu đặt trước này là sẵn sàng?')) {
+        const formData = new FormData();
+        formData.append('_token', getCsrfToken());
+        
         fetch(`/admin/reservations/${reservationId}/mark-ready`, {
             method: 'POST',
+            body: formData,
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            return response.text().then(text => {
+                throw new Error(text || 'Có lỗi xảy ra');
+            });
+        })
         .then(data => {
             if (data.success) {
-                alert(data.message);
+                alert(data.message || 'Sách đã sẵn sàng để nhận!');
                 location.reload();
             } else {
-                alert(data.message);
+                alert(data.message || 'Có lỗi xảy ra!');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Có lỗi xảy ra!');
+            // Nếu là lỗi permission hoặc validation, thử submit form thông thường
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/reservations/${reservationId}/mark-ready`;
+            
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = getCsrfToken();
+            form.appendChild(csrfToken);
+            
+            document.body.appendChild(form);
+            form.submit();
         });
     }
 }
@@ -495,25 +547,48 @@ function markReady(reservationId) {
 // Cancel reservation
 function cancelReservation(reservationId) {
     if (confirm('Bạn có chắc muốn hủy đặt trước này?')) {
+        const formData = new FormData();
+        formData.append('_token', getCsrfToken());
+        
         fetch(`/admin/reservations/${reservationId}/cancel`, {
             method: 'POST',
+            body: formData,
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            return response.text().then(text => {
+                throw new Error(text || 'Có lỗi xảy ra');
+            });
+        })
         .then(data => {
             if (data.success) {
-                alert(data.message);
+                alert(data.message || 'Đặt trước đã được hủy!');
                 location.reload();
             } else {
-                alert(data.message);
+                alert(data.message || 'Có lỗi xảy ra!');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Có lỗi xảy ra!');
+            // Nếu là lỗi permission hoặc validation, thử submit form thông thường
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/reservations/${reservationId}/cancel`;
+            
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = getCsrfToken();
+            form.appendChild(csrfToken);
+            
+            document.body.appendChild(form);
+            form.submit();
         });
     }
 }
@@ -524,3 +599,7 @@ function exportReservations() {
 }
 </script>
 @endsection
+
+
+
+

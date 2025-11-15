@@ -51,6 +51,11 @@ class UserController extends Controller
         ));
     }
     
+    public function create()
+    {
+        return view('admin.users.create');
+    }
+    
     public function show(User $user)
     {
         return response()->json([
@@ -62,6 +67,11 @@ class UserController extends Controller
             'created_at' => $user->created_at,
             'updated_at' => $user->updated_at,
         ]);
+    }
+    
+    public function edit(User $user)
+    {
+        return view('admin.users.edit', compact('user'));
     }
     
     public function store(Request $request)
@@ -79,12 +89,22 @@ class UserController extends Controller
                 ->withInput();
         }
         
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => $request->role,
-        ]);
+        try {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => $request->password, // Let the model's setPasswordAttribute handle hashing
+                'role' => $request->role,
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle duplicate entry or other database errors
+            if ($e->getCode() == 23000) {
+                return redirect()->back()
+                    ->withErrors(['email' => 'Email này đã được sử dụng hoặc có lỗi xảy ra khi tạo người dùng.'])
+                    ->withInput();
+            }
+            throw $e;
+        }
         
         // Assign role using Spatie Permission if you're using it
         if (method_exists($user, 'assignRole')) {

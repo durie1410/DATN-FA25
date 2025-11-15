@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Services\CacheService;
 
 class Publisher extends Model
 {
@@ -84,6 +85,28 @@ class Publisher extends Model
     public function getBooksCountAttribute()
     {
         return $this->books()->count();
+    }
+
+    /**
+     * Boot the model.
+     */
+    protected static function booted()
+    {
+        // Clear cache when publisher is created, updated, or deleted
+        static::created(function ($publisher) {
+            CacheService::clearPublishers();
+            CacheService::clearDashboard();
+        });
+
+        static::updated(function ($publisher) {
+            CacheService::clearPublishers();
+            CacheService::clearDashboard();
+        });
+
+        static::deleted(function ($publisher) {
+            CacheService::clearPublishers();
+            CacheService::clearDashboard();
+        });
     }
 }
 

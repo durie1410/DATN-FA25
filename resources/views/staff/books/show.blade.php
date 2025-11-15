@@ -49,9 +49,6 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <a href="{{ route('staff.books.edit', $book->id) }}" class="btn btn-warning">
-                            <i class="fas fa-edit me-2"></i>Chỉnh sửa
-                        </a>
                         <a href="{{ route('staff.books.index') }}" class="btn btn-secondary">
                             <i class="fas fa-arrow-left me-2"></i>Quay lại
                         </a>

@@ -51,7 +51,6 @@ class AdvancedDataSeeder extends Seeder
                 'hinh_anh' => $faker->optional(0.7)->imageUrl(300, 400, 'books'),
                 'mo_ta' => $faker->paragraph(3),
                 'gia' => $faker->randomFloat(2, 50000, 500000),
-                'dinh_dang' => $faker->randomElement(['Bìa cứng', 'Bìa mềm', 'E-book']),
                 'trang_thai' => $faker->randomElement(['active', 'inactive']),
                 'danh_gia_trung_binh' => $faker->randomFloat(1, 1, 5),
                 'so_luong_ban' => $faker->numberBetween(100, 10000),

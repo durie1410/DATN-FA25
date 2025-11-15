@@ -109,13 +109,6 @@
 
                                     <!-- Hành động -->
                                     <div class="mt-3">
-                                        @can('edit-books')
-                                        <a href="{{ route('admin.books.edit', $book->id) }}" 
-                                           class="btn btn-warning btn-sm w-100 mb-2">
-                                            <i class="fas fa-edit"></i> Chỉnh sửa
-                                        </a>
-                                        @endcan
-
                                         @if(auth()->check())
                                         <button class="btn btn-outline-danger btn-sm w-100 mb-2" 
                                                 onclick="toggleFavorite({{ $book->id }})">
@@ -260,12 +253,6 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                @can('edit-books')
-                                                <a href="{{ route('admin.inventory.edit', $inventory->id) }}" 
-                                                   class="btn btn-sm btn-outline-primary">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                @endcan
                                             </td>
                                         </tr>
                                         @endforeach

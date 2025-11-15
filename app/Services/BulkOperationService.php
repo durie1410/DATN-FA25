@@ -20,7 +20,7 @@ class BulkOperationService
      */
     public function bulkUpdateBooks($bookIds, $data)
     {
-        $validFields = ['category_id', 'trang_thai', 'dinh_dang'];
+        $validFields = ['category_id', 'trang_thai'];
         $updateData = array_intersect_key($data, array_flip($validFields));
         
         if (empty($updateData)) {
@@ -438,7 +438,6 @@ class BulkOperationService
                         'nam_xuat_ban' => $row['nam_xuat_ban'],
                         'mo_ta' => $row['mo_ta'] ?? '',
                         'gia' => $row['gia'] ?? 0,
-                        'dinh_dang' => $row['dinh_dang'] ?? 'print',
                         'trang_thai' => $row['trang_thai'] ?? 'active',
                     ]);
                     

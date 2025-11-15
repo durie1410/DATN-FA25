@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Services\CacheService;
+use Illuminate\Support\Facades\Storage;
 
 class Book extends Model
 {
@@ -18,11 +20,11 @@ class Book extends Model
         'hinh_anh',
         'mo_ta',
         'gia',
-        'dinh_dang',
         'trang_thai',
         'danh_gia_trung_binh',
         'so_luong_ban',
         'so_luot_xem',
+        'so_luong',
         'is_featured',
     ];
 
@@ -163,9 +165,57 @@ class Book extends Model
         return "<span class='badge {$class}'>{$this->status_text}</span>";
     }
 
+    // Get image URL - simple and reliable
+    public function getImageUrlAttribute()
+    {
+        if (!$this->hinh_anh) {
+            return null;
+        }
+
+        // Check if it's already a full URL
+        if (filter_var($this->hinh_anh, FILTER_VALIDATE_URL)) {
+            return $this->hinh_anh;
+        }
+
+        // Clean path - normalize slashes and remove leading slashes
+        $path = ltrim(str_replace(['\\', '//'], '/', $this->hinh_anh), '/');
+        
+        // Use asset() - most reliable and consistent way
+        return asset('storage/' . $path);
+    }
+
+    // Get image URL with fallback
+    public function getImageUrlOrPlaceholderAttribute()
+    {
+        $url = $this->image_url;
+        if ($url && Storage::disk('public')->exists($this->hinh_anh)) {
+            return $url;
+        }
+        return asset('images/placeholder-book.png'); // Placeholder image path
+    }
+
     // Scope để lấy sách đang hoạt động
     public function scopeActive($query)
     {
         return $query->where('trang_thai', 'active');
+    }
+
+    /**
+     * Boot the model.
+     */
+    protected static function booted()
+    {
+        // Clear cache when book is created, updated, or deleted
+        static::created(function ($book) {
+            CacheService::clearDashboard();
+        });
+
+        static::updated(function ($book) {
+            CacheService::clearDashboard();
+        });
+
+        static::deleted(function ($book) {
+            CacheService::clearDashboard();
+        });
     }
 }

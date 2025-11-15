@@ -45,16 +45,6 @@
                 </a>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="d-flex gap-2 justify-content-end">
-                <button type="button" class="btn btn-secondary" onclick="selectAll()">
-                    <i class="fas fa-check-square me-1"></i>Chọn tất cả
-                </button>
-                <button type="button" class="btn btn-outline-secondary" onclick="clearSelection()">
-                    <i class="fas fa-square me-1"></i>Bỏ chọn
-                </button>
-            </div>
-        </div>
     </div>
 
     <!-- Form tìm kiếm và lọc -->

@@ -13,7 +13,6 @@ use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\FineController;
 use App\Http\Controllers\ReservationController;
-use App\Http\Controllers\AdvancedReportController;
 use App\Http\Controllers\AdvancedSearchController;
 use App\Http\Controllers\AdvancedStatisticsController;
 use App\Http\Controllers\InventoryController;
@@ -50,6 +49,8 @@ Route::get('/trangchu', [HomeController::class, 'trangchu'])->name('trangchu');
 // Route hiển thị danh sách sách cho người dùng frontend
 Route::get('/books', [PublicBookController::class, 'index'])->name('books.public');
 Route::get('/books/{id}', [PublicBookController::class, 'show'])->name('books.show');
+Route::get('/diem-sach/{id}', [PublicBookController::class, 'showDiemSach'])->name('diem-sach.show');
+Route::get('/tin-tuc/{id}', [PublicBookController::class, 'showTinTuc'])->name('tin-tuc.show');
 Route::post('/borrow-book', [HomeController::class, 'borrowBook'])->name('borrow.book')->middleware('auth');
 
 // Public Categories Route
@@ -57,7 +58,7 @@ Route::get('/categories', [CategoryController::class, 'publicIndex'])->name('cat
 
 // Cart Routes
 Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
-Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
+Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add')->middleware('auth');
 Route::put('/cart/update/{id}', [CartController::class, 'update'])->name('cart.update');
 Route::delete('/cart/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
 Route::delete('/cart/clear', [CartController::class, 'clear'])->name('cart.clear');
@@ -67,17 +68,30 @@ Route::get('/cart/count', [CartController::class, 'count'])->name('cart.count');
 Route::post('/books/{id}/comments', [CommentController::class, 'storePublic'])->name('books.comments.store')->middleware('auth');
 
 // Order Routes
-Route::get('/checkout', [App\Http\Controllers\OrderController::class, 'checkout'])->name('checkout');
-Route::post('/orders', [App\Http\Controllers\OrderController::class, 'store'])->name('orders.store');
+Route::get('/checkout', [App\Http\Controllers\OrderController::class, 'checkout'])->name('checkout')->middleware('auth');
+// Đặt GET routes trước POST để tránh conflict
 Route::get('/orders', [App\Http\Controllers\OrderController::class, 'index'])->name('orders.index');
 Route::get('/orders/{id}', [App\Http\Controllers\OrderController::class, 'show'])->name('orders.show');
+Route::post('/orders', [App\Http\Controllers\OrderController::class, 'store'])->name('orders.store');
+Route::post('/orders/{id}/cancel', [App\Http\Controllers\OrderController::class, 'cancel'])->name('orders.cancel')->middleware('auth');
 
 // Authentication Routes
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1'); // 5 attempts per minute
     Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
-    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:3,1'); // 3 attempts per minute
+    
+    // Password Reset Routes
+    Route::get('/password/reset', [AuthController::class, 'showLinkRequestForm'])->name('password.request');
+    Route::post('/password/email', [AuthController::class, 'sendResetLinkEmail'])->name('password.email');
+    Route::get('/password/reset/{token}', [AuthController::class, 'showResetForm'])->name('password.reset');
+    Route::post('/password/reset', [AuthController::class, 'reset'])->name('password.update');
+    
+    // Email Verification Routes
+    Route::get('/email/verify', [AuthController::class, 'showVerificationNotice'])->name('verification.notice');
+    Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])->middleware(['signed'])->name('verification.verify');
+    Route::post('/email/verification-notification', [AuthController::class, 'resendVerificationEmail'])->middleware('throttle:6,1')->name('verification.send');
     Route::get('/register-reader', [App\Http\Controllers\ReaderRegistrationController::class, 'showRegistrationForm'])->name('register.reader.form');
     Route::post('/register-reader', [App\Http\Controllers\ReaderRegistrationController::class, 'register'])->name('register.reader');
     
@@ -103,6 +117,20 @@ Route::middleware('auth')->group(function () {
         // For regular users, redirect to home or books page
         return redirect()->route('home');
     })->name('dashboard');
+    
+    // Account/Profile Routes
+    Route::get('/account', [App\Http\Controllers\UserAccountController::class, 'account'])->name('account');
+    Route::put('/account', [App\Http\Controllers\UserAccountController::class, 'updateAccount'])->name('account.update');
+    Route::get('/account/purchased-books', [App\Http\Controllers\UserAccountController::class, 'purchasedBooks'])->name('account.purchased-books');
+    Route::get('/account/borrowed-books', [App\Http\Controllers\UserAccountController::class, 'borrowedBooks'])->name('account.borrowed-books');
+    Route::get('/account/reading-books', [App\Http\Controllers\UserAccountController::class, 'readingBooks'])->name('account.reading-books');
+    Route::get('/account/purchased-documents', [App\Http\Controllers\UserAccountController::class, 'purchasedDocuments'])->name('account.purchased-documents');
+    Route::get('/account/change-password', [App\Http\Controllers\UserAccountController::class, 'showChangePassword'])->name('account.change-password');
+    Route::put('/account/change-password', [App\Http\Controllers\UserAccountController::class, 'updatePassword'])->name('account.update-password');
+    
+    // Reader Registration Routes (for authenticated users)
+    Route::get('/account/register-reader', [App\Http\Controllers\ReaderRegistrationController::class, 'showRegistrationFormForUser'])->name('account.register-reader');
+    Route::post('/account/register-reader', [App\Http\Controllers\ReaderRegistrationController::class, 'registerForUser'])->name('account.register-reader.store');
 });
 
 // Admin Routes
@@ -136,7 +164,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::post('categories-bulk-action', [CategoryController::class, 'bulkAction'])->name('categories.bulk-action')->middleware('permission:edit-categories');
     Route::post('categories/{id}/move-books', [CategoryController::class, 'moveBooks'])->name('categories.move-books')->middleware('permission:edit-categories');
         Route::resource('authors', App\Http\Controllers\Admin\AuthorController::class)->middleware('permission:view-readers');
-      Route::resource('books', BookController::class)->middleware('permission:view-books');
+      // Vô hiệu hóa create và store - sách mới chỉ được tạo từ quản lý kho
+      Route::resource('books', BookController::class)->except(['create', 'store'])->middleware('permission:view-books');
+      Route::post('books/{id}/hide', [BookController::class, 'hide'])->name('books.hide')->middleware('permission:edit-books');
+      Route::post('books/{id}/unhide', [BookController::class, 'unhide'])->name('books.unhide')->middleware('permission:edit-books');
       Route::resource('purchasable-books', App\Http\Controllers\Admin\PurchasableBookController::class)->middleware('permission:view-books');
       Route::get('books-unified', [App\Http\Controllers\Admin\UnifiedBookController::class, 'index'])->name('books.unified')->middleware('permission:view-books');
       Route::resource('readers', ReaderController::class)->middleware('permission:view-readers');
@@ -158,6 +189,17 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
       Route::get('reports/borrows', [ReportController::class, 'borrowsReport'])->name('reports.borrows')->middleware('permission:view-reports');
       Route::get('reports/readers', [ReportController::class, 'readersReport'])->name('reports.readers')->middleware('permission:view-reports');
       Route::get('reports/books', [ReportController::class, 'booksReport'])->name('reports.books')->middleware('permission:view-reports');
+      
+      // Inventory Reports routes (Báo cáo kho sách)
+      Route::prefix('inventory-reports')->name('inventory-reports.')->group(function() {
+          Route::get('/', [App\Http\Controllers\InventoryReportController::class, 'index'])->name('index')->middleware('permission:view-reports');
+          Route::get('book-statistics', [App\Http\Controllers\InventoryReportController::class, 'bookStatistics'])->name('book-statistics')->middleware('permission:view-reports');
+          Route::get('borrow-return', [App\Http\Controllers\InventoryReportController::class, 'borrowReturnReport'])->name('borrow-return')->middleware('permission:view-reports');
+          Route::get('import', [App\Http\Controllers\InventoryReportController::class, 'importReport'])->name('import')->middleware('permission:view-reports');
+          Route::get('disposal', [App\Http\Controllers\InventoryReportController::class, 'disposalReport'])->name('disposal')->middleware('permission:view-reports');
+          Route::get('fine', [App\Http\Controllers\InventoryReportController::class, 'fineReport'])->name('fine')->middleware('permission:view-reports');
+          Route::get('late-return', [App\Http\Controllers\InventoryReportController::class, 'lateReturnReport'])->name('late-return')->middleware('permission:view-reports');
+      });
       
       // Reviews routes
       Route::resource('reviews', ReviewController::class)->middleware('permission:view-reviews');
@@ -181,6 +223,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
       Route::post('reservations/{id}/mark-ready', [ReservationController::class, 'markReady'])->name('reservations.mark-ready')->middleware('permission:confirm-reservations');
       Route::post('reservations/{id}/cancel', [ReservationController::class, 'cancel'])->name('reservations.cancel')->middleware('permission:edit-reservations');
       Route::get('reservations/export', [ReservationController::class, 'export'])->name('reservations.export')->middleware('permission:view-reservations');
+      
+      // Orders routes (Admin)
+      Route::get('orders', [App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders.index');
+      Route::get('order-edit/{id}', [App\Http\Controllers\Admin\OrderController::class, 'edit'])->name('orders.edit');
+      Route::get('orders/{id}', [App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show');
+      Route::put('orders/{id}', [App\Http\Controllers\Admin\OrderController::class, 'update'])->name('orders.update');
       
       // Advanced Reports routes
       Route::get('advanced-reports', [App\Http\Controllers\Admin\AdvancedReportController::class, 'index'])->name('advanced-reports.index')->middleware('permission:view-reports');
@@ -253,12 +301,36 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::post('email-marketing/subscribers/{id}/unsubscribe', [App\Http\Controllers\Admin\EmailMarketingController::class, 'unsubscribeSubscriber'])->name('email-marketing.subscribers.unsubscribe');
       
       // Inventory routes
-      Route::resource('inventory', InventoryController::class)->middleware('permission:view-books');
+      Route::resource('inventory', InventoryController::class)->except(['destroy'])->middleware('permission:view-books');
+      Route::delete('inventory/{id}', [InventoryController::class, 'destroy'])->name('inventory.destroy')->middleware('permission:edit-books');
       Route::post('inventory/{id}/transfer', [InventoryController::class, 'transfer'])->name('inventory.transfer')->middleware('permission:edit-books');
       Route::post('inventory/{id}/repair', [InventoryController::class, 'repair'])->name('inventory.repair')->middleware('permission:edit-books');
       Route::get('inventory-transactions', [InventoryController::class, 'transactions'])->name('inventory.transactions')->middleware('permission:view-books');
       Route::get('inventory-dashboard', [InventoryController::class, 'dashboard'])->name('inventory.dashboard')->middleware('permission:view-books');
       Route::post('inventory/scan-barcode', [InventoryController::class, 'scanBarcode'])->name('inventory.scan-barcode')->middleware('permission:view-books');
+      Route::post('inventory/sync-to-homepage', [InventoryController::class, 'syncToHomepage'])->name('inventory.sync-to-homepage')->middleware('permission:edit-books');
+      
+      // Inventory Receipts (Phiếu nhập kho)
+      Route::get('inventory-receipts', [InventoryController::class, 'receipts'])->name('inventory.receipts')->middleware('permission:view-books');
+      Route::get('inventory-receipts/create', [InventoryController::class, 'createReceipt'])->name('inventory.receipts.create')->middleware('permission:edit-books');
+      Route::post('inventory-receipts', [InventoryController::class, 'storeReceipt'])->name('inventory.receipts.store')->middleware('permission:edit-books');
+      Route::get('inventory-receipts/{id}', [InventoryController::class, 'showReceipt'])->name('inventory.receipts.show')->middleware('permission:view-books');
+      Route::post('inventory-receipts/{id}/approve', [InventoryController::class, 'approveReceipt'])->name('inventory.receipts.approve')->middleware('permission:edit-books');
+      Route::post('inventory-receipts/{id}/reject', [InventoryController::class, 'rejectReceipt'])->name('inventory.receipts.reject')->middleware('permission:edit-books');
+      
+      // Display Allocations (Phân bổ trưng bày)
+      Route::get('inventory-display-allocations', [InventoryController::class, 'displayAllocations'])->name('inventory.display-allocations')->middleware('permission:view-books');
+      Route::get('inventory-display-allocations/create', [InventoryController::class, 'createDisplayAllocation'])->name('inventory.display-allocations.create')->middleware('permission:edit-books');
+      Route::post('inventory-display-allocations', [InventoryController::class, 'storeDisplayAllocation'])->name('inventory.display-allocations.store')->middleware('permission:edit-books');
+      Route::post('inventory-display-allocations/{id}/return', [InventoryController::class, 'returnFromDisplay'])->name('inventory.display-allocations.return')->middleware('permission:edit-books');
+      
+      // Inventory Report
+      Route::get('inventory-report', [InventoryController::class, 'report'])->name('inventory.report')->middleware('permission:view-books');
+      
+      // Inventory Export/Import
+      Route::get('inventory/export', [InventoryController::class, 'export'])->name('inventory.export')->middleware('permission:view-books');
+      Route::post('inventory/import', [InventoryController::class, 'import'])->name('inventory.import')->middleware('permission:edit-books');
+      Route::post('inventory/import-all-books', [InventoryController::class, 'importAllBooks'])->name('inventory.import-all-books')->middleware('permission:edit-books');
       
       // Admin Management routes
       Route::resource('publishers', App\Http\Controllers\Admin\PublisherController::class)->middleware('permission:view-books');
@@ -274,6 +346,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
       Route::post('faculties-bulk-action', [App\Http\Controllers\Admin\FacultyController::class, 'bulkAction'])->name('faculties.bulk-action')->middleware('permission:edit-readers');
       
       // User Management routes
+      Route::get('user-management', [App\Http\Controllers\Admin\UserManagementController::class, 'dashboard'])->name('user-management.dashboard')->middleware('permission:view-users');
       Route::resource('users', App\Http\Controllers\Admin\UserController::class)->middleware('permission:view-users');
       Route::post('users-bulk-action', [App\Http\Controllers\Admin\UserController::class, 'bulkAction'])->name('users.bulk-action')->middleware('permission:edit-users');
       Route::get('users-export', [App\Http\Controllers\Admin\UserController::class, 'export'])->name('users.export')->middleware('permission:view-users');

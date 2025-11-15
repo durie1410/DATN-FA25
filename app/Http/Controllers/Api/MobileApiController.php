@@ -216,7 +216,6 @@ class MobileApiController extends Controller
                 'is_available' => $book->isAvailable(),
                 'can_reserve' => $book->canBeReserved(),
                 'published_year' => $book->nam_xuat_ban,
-                'format' => $book->dinh_dang,
             ];
         });
 
@@ -254,7 +253,6 @@ class MobileApiController extends Controller
             'rating' => $book->danh_gia_trung_binh,
             'reviews_count' => $book->reviews->count(),
             'published_year' => $book->nam_xuat_ban,
-            'format' => $book->dinh_dang,
             'price' => $book->gia,
             'is_available' => $book->isAvailable(),
             'can_reserve' => $book->canBeReserved(),

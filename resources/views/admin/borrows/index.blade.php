@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Quản Lý Mượn/Trả Sách - WAKA Admin')
+@section('title', 'Quản Lý Mượn/Trả Sách - LIBHUB Admin')
 
 @section('content')
 <!-- Page Header -->
