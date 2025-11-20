@@ -818,5 +818,8 @@
 
         </main>
     </div>
+
+    <!-- AI Search Autocomplete -->
+    <script src="{{ asset('js/ai-search.js') }}"></script>
 </body>
 </html>

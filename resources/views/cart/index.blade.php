@@ -945,4 +945,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<!-- AI Search Autocomplete -->
+<script src="{{ asset('js/ai-search.js') }}"></script>
+
 @endsection

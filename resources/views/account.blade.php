@@ -10,13 +10,13 @@
 <body>
     <header class="main-header">
         <div class="header-top">
-            <div class="logo-section">
+            <a href="{{ route('home') }}" class="logo-section" style="text-decoration: none; color: inherit; cursor: pointer;">
                 <img src="{{ asset('favicon.ico') }}" alt="Logo" class="logo-img">
                 <div class="logo-text">
                     <span class="logo-part1">THƯ VIỆN</span>
                     <span class="logo-part2">LIBHUB</span>
                 </div>
-            </div>
+            </a>
             <div class="hotline-section">
                 <div class="hotline-item">
                     <span class="hotline-label">Hotline khách lẻ:</span>

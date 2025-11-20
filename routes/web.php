@@ -18,6 +18,7 @@ use App\Http\Controllers\AdvancedStatisticsController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\CartController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AiChatController;
 
 /*
 |--------------------------------------------------------------------------
@@ -66,6 +67,10 @@ Route::get('/cart/count', [CartController::class, 'count'])->name('cart.count');
 
 // Public Comments Routes (for book detail pages)
 Route::post('/books/{id}/comments', [CommentController::class, 'storePublic'])->name('books.comments.store')->middleware('auth');
+
+// AI Search Routes
+Route::get('/api/search/suggest', [App\Http\Controllers\AiSearchController::class, 'suggest'])->name('search.suggest');
+Route::get('/api/search', [App\Http\Controllers\AiSearchController::class, 'search'])->name('search.ai');
 
 // Order Routes
 Route::get('/checkout', [App\Http\Controllers\OrderController::class, 'checkout'])->name('checkout')->middleware('auth');
@@ -451,3 +456,9 @@ Route::prefix('staff')->name('staff.')->middleware(['auth', 'staff'])->group(fun
 Route::get('/test-email-marketing', function() {
     return 'Email Marketing routes are working!';
 });
+Route::get('/ai-chat/history', [AiChatController::class, 'history'])
+    ->name('ai.chat.history');
+
+Route::post('/ai-chat', [AiChatController::class, 'chat'])
+    ->middleware(['throttle:10,1','ai.abuse'])
+    ->name('ai.chat');

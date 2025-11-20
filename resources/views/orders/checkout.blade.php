@@ -251,87 +251,86 @@
     checkoutForm.addEventListener('submit', function(e) {
         e.preventDefault();
         e.stopPropagation();
-        e.stopImmediatePropagation();
-        
+
         console.log('Form submitted! Event prevented.');
-        
+
         const button = placeOrderBtn;
         const originalText = button.innerHTML;
-        
+
         // Kiểm tra validation trước khi submit
         const customerName = document.getElementById('customer_name').value.trim();
         const customerEmail = document.getElementById('customer_email').value.trim();
         const paymentMethod = document.getElementById('payment_method').value;
-        
+
         // Validate các trường bắt buộc
         if (!customerName) {
-            showToast('error', 'Vui lòng nhập họ và tên');
+            alert('Vui lòng nhập họ và tên');
             document.getElementById('customer_name').focus();
-            return;
+            return false;
         }
-        
+
         if (!customerEmail) {
-            showToast('error', 'Vui lòng nhập email');
+            alert('Vui lòng nhập email');
             document.getElementById('customer_email').focus();
-            return;
+            return false;
         }
-        
+
         // Validate email format
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(customerEmail)) {
-            showToast('error', 'Email không hợp lệ');
+            alert('Email không hợp lệ');
             document.getElementById('customer_email').focus();
-            return;
+            return false;
         }
-        
+
         if (!paymentMethod) {
-            showToast('error', 'Vui lòng chọn phương thức thanh toán');
+            alert('Vui lòng chọn phương thức thanh toán');
             document.getElementById('payment_method').focus();
-            return;
+            return false;
         }
-        
+
         // Kiểm tra giỏ hàng trước khi submit - sử dụng dữ liệu từ backend
         const cartItemsCount = {{ $cartItems->count() ?? 0 }};
-        
+
         // Kiểm tra xem có sản phẩm được chọn không
         if (cartItemsCount === 0) {
-            showToast('error', 'Không có sản phẩm nào được chọn. Vui lòng quay lại giỏ hàng và chọn sản phẩm.');
+            alert('Không có sản phẩm nào được chọn. Vui lòng quay lại giỏ hàng và chọn sản phẩm.');
             setTimeout(() => {
                 window.location.href = '{{ route("cart.index") }}';
             }, 2000);
-            return;
+            return false;
         }
-        
+
         // Hiển thị loading
         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
         button.disabled = true;
-        
+
         // Lấy dữ liệu form
         const formData = new FormData(this);
-        
+
         // Log form data để debug
         console.log('Form data:');
         for (let [key, value] of formData.entries()) {
             console.log(key, ':', value);
         }
-        
+
         // Lấy CSRF token
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
                           document.querySelector('input[name="_token"]')?.value;
-        
+
         console.log('CSRF Token:', csrfToken ? 'Found' : 'Not found');
-        
+
         if (!csrfToken) {
             console.error('CSRF token not found!');
-            showToast('error', 'Không tìm thấy token bảo mật. Vui lòng tải lại trang.');
+            alert('Không tìm thấy token bảo mật. Vui lòng tải lại trang.');
             button.innerHTML = originalText;
             button.disabled = false;
-            return;
+            return false;
         }
-        
+
         const orderUrl = '{{ route("orders.store") }}';
         console.log('Sending request to:', orderUrl);
-        
+
         // Gửi request
         fetch(orderUrl, {
             method: 'POST',
@@ -347,37 +346,37 @@
             console.log('Response status:', response.status);
             console.log('Response statusText:', response.statusText);
             console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-            
+
             // Kiểm tra content type
             const contentType = response.headers.get('content-type');
             console.log('Content-Type:', contentType);
-            
+
             if (!contentType || !contentType.includes('application/json')) {
                 const text = await response.text();
                 console.error('Response is not JSON:', text);
                 console.error('Response length:', text.length);
-                showToast('error', 'Phản hồi từ server không đúng định dạng. Vui lòng thử lại. Chi tiết: ' + text.substring(0, 200));
+                alert('Phản hồi từ server không đúng định dạng. Vui lòng thử lại.');
                 button.innerHTML = originalText;
                 button.disabled = false;
                 return;
             }
-            
+
             const data = await response.json();
             console.log('Response data:', data);
-            
+
             if (!response.ok) {
                 // Xử lý lỗi validation hoặc lỗi khác
                 let errorMessage = data.message || 'Có lỗi xảy ra';
-                
+
                 // Nếu có validation errors, hiển thị chi tiết
                 if (data.errors) {
                     const errorList = Object.values(data.errors).flat().join(', ');
                     errorMessage = errorList || errorMessage;
                 }
-                
+
                 console.error('Error response:', errorMessage);
-                showToast('error', errorMessage);
-                
+                alert(errorMessage);
+
                 // Nếu giỏ hàng trống, redirect về trang giỏ hàng
                 if (data.message && data.message.includes('trống')) {
                     if (data.redirect_url) {
@@ -395,36 +394,23 @@
                 }
                 return;
             }
-            
+
             if (data.success) {
                 console.log('Order created successfully!');
                 console.log('Order number:', data.order_number);
                 console.log('Redirect URL:', data.redirect_url);
-                showToast('success', data.message || 'Đặt hàng thành công!');
-                
-                // Redirect ngay lập tức với cache-busting
+                alert(data.message || 'Đặt hàng thành công!');
+
+                // Redirect ngay lập tức
                 const redirectUrl = data.redirect_url || '{{ route("orders.index") }}';
                 console.log('Redirecting to:', redirectUrl);
-                
-                // Force GET request - sử dụng window.location.replace để tránh history và cache
-                // Thêm timestamp để force reload và clear cache
-                // Sử dụng window.location.href để đảm bảo redirect hoạt động
+
                 setTimeout(() => {
-                    // Clear any cached data
-                    if ('caches' in window) {
-                        caches.keys().then(names => {
-                            names.forEach(name => caches.delete(name));
-                        });
-                    }
-                    
-                    // Redirect với cache-busting parameter
-                    const finalUrl = redirectUrl + '?_nocache=' + Date.now() + '&order=' + encodeURIComponent(data.order_number || '');
-                    console.log('Final redirect URL:', finalUrl);
-                    window.location.href = finalUrl;
-                }, 1000);
+                    window.location.href = redirectUrl;
+                }, 500);
             } else {
                 console.error('Order creation failed:', data.message);
-                showToast('error', data.message || 'Có lỗi xảy ra khi đặt hàng');
+                alert(data.message || 'Có lỗi xảy ra khi đặt hàng');
                 button.innerHTML = originalText;
                 button.disabled = false;
             }
@@ -434,7 +420,7 @@
             console.error('Error name:', error.name);
             console.error('Error message:', error.message);
             console.error('Error stack:', error.stack);
-            showToast('error', 'Có lỗi xảy ra khi kết nối đến server: ' + error.message);
+            alert('Có lỗi xảy ra khi kết nối đến server: ' + error.message);
             button.innerHTML = originalText;
             button.disabled = false;
         });
@@ -446,46 +432,7 @@
         // Form submit handler sẽ xử lý, không cần preventDefault ở đây
     });
 
-        // Hàm hiển thị toast
-        function showToast(type, message) {
-            try {
-                console.log('Showing toast:', type, message);
-                const toastElement = document.getElementById('orderToast');
-                const toastMessage = document.getElementById('toastMessage');
-                
-                if (!toastElement || !toastMessage) {
-                    console.error('Toast elements not found!');
-                    alert(message); // Fallback to alert
-                    return;
-                }
-                
-                toastMessage.textContent = message;
-                
-                const toastHeader = toastElement.querySelector('.toast-header');
-                if (toastHeader) {
-                    const icon = toastHeader.querySelector('i');
-                    if (icon) {
-                        if (type === 'success') {
-                            icon.className = 'fas fa-check-circle text-success me-2';
-                            toastElement.classList.remove('bg-danger');
-                        } else {
-                            icon.className = 'fas fa-exclamation-circle text-danger me-2';
-                            toastElement.classList.add('bg-danger');
-                        }
-                    }
-                }
-                
-                if (orderToast) {
-                    orderToast.show();
-                } else {
-                    console.error('Toast instance not found!');
-                    alert(message); // Fallback to alert
-                }
-            } catch (error) {
-                console.error('Error showing toast:', error);
-                alert(message); // Fallback to alert
-            }
-        }
+
         
         return true; // Đã khởi tạo thành công
     }
@@ -512,5 +459,9 @@
     }
 })();
 </script>
+
+<!-- AI Search Autocomplete -->
+<script src="{{ asset('js/ai-search.js') }}"></script>
+
 @endpush
 
