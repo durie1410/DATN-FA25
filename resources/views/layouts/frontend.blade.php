@@ -2067,3 +2067,11 @@
             loadCartCount();
         });
     </script>
+
+    <!-- AI Chat Widget -->
+    @auth
+        @include('components.ai-chat-widget')
+        <script src="{{ asset('js/ai-chat.js') }}"></script>
+    @endauth
+</body>
+</html>

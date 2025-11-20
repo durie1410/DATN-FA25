@@ -77,6 +77,13 @@ Route::post('/payment/vnpay/create', [App\Http\Controllers\PaymentController::cl
 Route::get('/payment/vnpay/return', [App\Http\Controllers\PaymentController::class, 'vnpayReturn'])->name('payment.vnpay.return');
 Route::post('/payment/momo/create', [App\Http\Controllers\PaymentController::class, 'createMoMoPayment'])->name('payment.momo.create')->middleware('auth');
 
+// AI Chat Routes
+Route::middleware('auth')->group(function () {
+    Route::post('/ai-chat/send', [App\Http\Controllers\AiChatController::class, 'sendMessage'])->name('ai-chat.send');
+    Route::get('/ai-chat/history', [App\Http\Controllers\AiChatController::class, 'getHistory'])->name('ai-chat.history');
+    Route::delete('/ai-chat/clear', [App\Http\Controllers\AiChatController::class, 'clearHistory'])->name('ai-chat.clear');
+});
+
 // Order Routes
 Route::get('/checkout', [App\Http\Controllers\OrderController::class, 'checkout'])->name('checkout')->middleware('auth');
 // Đặt GET routes trước POST để tránh conflict
