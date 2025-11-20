@@ -61,8 +61,10 @@
                                     <label for="payment_method" class="form-label">Phương thức thanh toán <span class="text-danger">*</span></label>
                                     <select class="form-select" id="payment_method" name="payment_method" required>
                                         <option value="">Chọn phương thức thanh toán</option>
-                                        <option value="cash_on_delivery">Thanh toán khi nhận hàng</option>
-                                        <option value="bank_transfer">Chuyển khoản ngân hàng</option>
+                                        <option value="cash_on_delivery">💵 Thanh toán khi nhận hàng (COD)</option>
+                                        <option value="bank_transfer">🏦 Chuyển khoản ngân hàng</option>
+                                        <option value="vnpay">💳 Thanh toán VNPay (ATM/Visa/MasterCard)</option>
+                                        <option value="momo">📱 Thanh toán MoMo (Đang phát triển)</option>
                                     </select>
                                 </div>
                             </div>
@@ -110,6 +112,23 @@
                                 <p class="mb-1"><i class="fas fa-check-circle text-success"></i> Bạn sẽ thanh toán khi nhận hàng</p>
                                 <p class="mb-1"><i class="fas fa-info-circle"></i> Đơn hàng sẽ được xử lý và giao hàng trong thời gian sớm nhất</p>
                                 <p class="mb-0"><i class="fas fa-shield-alt"></i> Bạn chỉ cần thanh toán khi đã kiểm tra và nhận hàng</p>
+                            </div>
+                        </div>
+
+                        <div id="vnpayInfo" class="mt-3" style="display: none;">
+                            <div class="alert alert-info">
+                                <h6><i class="fas fa-credit-card"></i> Thanh toán VNPay:</h6>
+                                <p class="mb-1"><i class="fas fa-check-circle text-success"></i> Hỗ trợ thanh toán qua thẻ ATM, Visa, MasterCard</p>
+                                <p class="mb-1"><i class="fas fa-shield-alt text-success"></i> Bảo mật cao với chuẩn quốc tế PCI-DSS</p>
+                                <p class="mb-0"><i class="fas fa-bolt text-warning"></i> Sau khi đặt hàng, bạn sẽ được chuyển đến trang thanh toán VNPay</p>
+                            </div>
+                        </div>
+
+                        <div id="momoInfo" class="mt-3" style="display: none;">
+                            <div class="alert alert-warning">
+                                <h6><i class="fas fa-mobile-alt"></i> Thanh toán MoMo:</h6>
+                                <p class="mb-1"><i class="fas fa-info-circle"></i> Chức năng đang được phát triển</p>
+                                <p class="mb-0"><i class="fas fa-clock"></i> Vui lòng chọn phương thức thanh toán khác</p>
                             </div>
                         </div>
                     </div>
@@ -234,16 +253,25 @@
 
     // Xử lý thay đổi phương thức thanh toán
     paymentMethodSelect.addEventListener('change', function() {
+        const vnpayInfo = document.getElementById('vnpayInfo');
+        const momoInfo = document.getElementById('momoInfo');
+
+        // Ẩn tất cả thông tin thanh toán
+        paymentInfo.style.display = 'none';
+        codInfo.style.display = 'none';
+        if (vnpayInfo) vnpayInfo.style.display = 'none';
+        if (momoInfo) momoInfo.style.display = 'none';
+
+        // Hiển thị thông tin tương ứng
         if (this.value === 'bank_transfer') {
             paymentInfo.style.display = 'block';
-            codInfo.style.display = 'none';
             transferContent.textContent = 'Thanh toan don hang - ' + new Date().toISOString().slice(0,10);
         } else if (this.value === 'cash_on_delivery') {
-            paymentInfo.style.display = 'none';
             codInfo.style.display = 'block';
-        } else {
-            paymentInfo.style.display = 'none';
-            codInfo.style.display = 'none';
+        } else if (this.value === 'vnpay') {
+            if (vnpayInfo) vnpayInfo.style.display = 'block';
+        } else if (this.value === 'momo') {
+            if (momoInfo) momoInfo.style.display = 'block';
         }
     });
 
@@ -398,10 +426,55 @@
             if (data.success) {
                 console.log('Order created successfully!');
                 console.log('Order number:', data.order_number);
-                console.log('Redirect URL:', data.redirect_url);
-                alert(data.message || 'Đặt hàng thành công!');
+                console.log('Payment method:', data.payment_method);
+                console.log('Redirect to payment:', data.redirect_to_payment);
 
-                // Redirect ngay lập tức
+                // Cập nhật số lượng giỏ hàng về 0 (hoặc số lượng còn lại)
+                const cartCountElements = document.querySelectorAll('#cart-count, #cart-count-header, .cart-badge, .cart-count');
+                cartCountElements.forEach(el => {
+                    if (el) {
+                        el.textContent = '0';
+                        el.style.display = 'none';
+                    }
+                });
+
+                // Nếu là thanh toán online, redirect đến trang thanh toán
+                if (data.redirect_to_payment) {
+                    alert(data.message || 'Đơn hàng đã được tạo. Đang chuyển đến trang thanh toán...');
+
+                    let paymentUrl = '';
+                    if (data.payment_method === 'vnpay') {
+                        paymentUrl = '{{ route("payment.vnpay.create") }}?order_id=' + data.order_id;
+                    } else if (data.payment_method === 'momo') {
+                        paymentUrl = '{{ route("payment.momo.create") }}?order_id=' + data.order_id;
+                    }
+
+                    console.log('Redirecting to payment:', paymentUrl);
+
+                    // Tạo form để POST đến payment gateway
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = paymentUrl;
+
+                    const csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = '_token';
+                    csrfInput.value = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                    form.appendChild(csrfInput);
+
+                    const orderIdInput = document.createElement('input');
+                    orderIdInput.type = 'hidden';
+                    orderIdInput.name = 'order_id';
+                    orderIdInput.value = data.order_id;
+                    form.appendChild(orderIdInput);
+
+                    document.body.appendChild(form);
+                    form.submit();
+                    return;
+                }
+
+                // Nếu không phải thanh toán online, redirect về trang orders
+                alert(data.message || 'Đặt hàng thành công!');
                 const redirectUrl = data.redirect_url || '{{ route("orders.index") }}';
                 console.log('Redirecting to:', redirectUrl);
 

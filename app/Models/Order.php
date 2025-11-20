@@ -26,6 +26,8 @@ class Order extends Model
         'status',
         'payment_status',
         'payment_method',
+        'transaction_id',
+        'paid_at',
         'notes',
         'cancellation_reason',
     ];
@@ -35,6 +37,7 @@ class Order extends Model
         'tax_amount' => 'decimal:2',
         'shipping_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'paid_at' => 'datetime',
     ];
 
     /**

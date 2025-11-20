@@ -96,7 +96,7 @@ class OrderController extends Controller
                 'customer_email' => 'required|email|max:255',
                 'customer_phone' => 'nullable|string|max:20',
                 'customer_address' => 'nullable|string|max:500',
-                'payment_method' => 'required|in:cash_on_delivery,bank_transfer',
+                'payment_method' => 'required|in:cash_on_delivery,bank_transfer,vnpay,momo',
                 'notes' => 'nullable|string|max:1000',
             ], [
                 'customer_name.required' => 'Vui lòng nhập họ và tên',
@@ -272,8 +272,30 @@ class OrderController extends Controller
             \Log::info('Order created successfully', [
                 'order_id' => $order->id,
                 'order_number' => $order->order_number,
-                'user_id' => $order->user_id
+                'user_id' => $order->user_id,
+                'payment_method' => $order->payment_method
             ]);
+
+            // Nếu thanh toán online (VNPay, MoMo), redirect đến trang thanh toán
+            if (in_array($request->payment_method, ['vnpay', 'momo'])) {
+                if ($request->ajax() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Đơn hàng đã được tạo. Đang chuyển đến trang thanh toán...',
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'payment_method' => $request->payment_method,
+                        'redirect_to_payment' => true
+                    ], 200);
+                }
+
+                // Redirect đến trang thanh toán
+                if ($request->payment_method === 'vnpay') {
+                    return redirect()->route('payment.vnpay.create', ['order_id' => $order->id]);
+                } elseif ($request->payment_method === 'momo') {
+                    return redirect()->route('payment.momo.create', ['order_id' => $order->id]);
+                }
+            }
 
             // Nếu là AJAX request, trả JSON với redirect_url
             // Nếu không phải AJAX, redirect trực tiếp
@@ -288,7 +310,7 @@ class OrderController extends Controller
                   ->header('Pragma', 'no-cache')
                   ->header('Expires', '0');
             }
-            
+
             // Redirect trực tiếp cho non-AJAX requests
             return redirect()->route('orders.index')
                 ->with('success', 'Đặt hàng thành công! Mã đơn hàng: ' . $order->order_number);

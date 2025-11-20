@@ -72,6 +72,11 @@ Route::post('/books/{id}/comments', [CommentController::class, 'storePublic'])->
 Route::get('/api/search/suggest', [App\Http\Controllers\AiSearchController::class, 'suggest'])->name('search.suggest');
 Route::get('/api/search', [App\Http\Controllers\AiSearchController::class, 'search'])->name('search.ai');
 
+// Payment Routes
+Route::post('/payment/vnpay/create', [App\Http\Controllers\PaymentController::class, 'createVNPayPayment'])->name('payment.vnpay.create')->middleware('auth');
+Route::get('/payment/vnpay/return', [App\Http\Controllers\PaymentController::class, 'vnpayReturn'])->name('payment.vnpay.return');
+Route::post('/payment/momo/create', [App\Http\Controllers\PaymentController::class, 'createMoMoPayment'])->name('payment.momo.create')->middleware('auth');
+
 // Order Routes
 Route::get('/checkout', [App\Http\Controllers\OrderController::class, 'checkout'])->name('checkout')->middleware('auth');
 // Đặt GET routes trước POST để tránh conflict

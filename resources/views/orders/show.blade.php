@@ -72,18 +72,51 @@
                                     @endswitch
                                 </span>
                             </p>
-                            <p><strong>Phương thức:</strong> 
+                            <p><strong>Phương thức:</strong>
                                 @switch($order->payment_method)
                                     @case('cash_on_delivery')
-                                        Thanh toán khi nhận hàng
+                                        💵 Thanh toán khi nhận hàng (COD)
                                         @break
                                     @case('bank_transfer')
-                                        Chuyển khoản ngân hàng
+                                        🏦 Chuyển khoản ngân hàng
                                         @break
+                                    @case('vnpay')
+                                        💳 VNPay (ATM/Visa/MasterCard)
+                                        @break
+                                    @case('momo')
+                                        📱 MoMo
+                                        @break
+                                    @default
+                                        {{ $order->payment_method }}
                                 @endswitch
                             </p>
+                            @if($order->transaction_id)
+                            <p><strong>Mã giao dịch:</strong> <code>{{ $order->transaction_id }}</code></p>
+                            @endif
+                            @if($order->paid_at)
+                            <p><strong>Thời gian thanh toán:</strong> {{ $order->paid_at->format('d/m/Y H:i:s') }}</p>
+                            @endif
                         </div>
                     </div>
+
+                    @if($order->payment_status === 'pending' && in_array($order->payment_method, ['vnpay', 'momo']))
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i> Đơn hàng chưa được thanh toán. Vui lòng thanh toán để hoàn tất đơn hàng.
+                            </div>
+                            @if($order->payment_method === 'vnpay')
+                            <form action="{{ route('payment.vnpay.create') }}" method="POST" class="d-inline">
+                                @csrf
+                                <input type="hidden" name="order_id" value="{{ $order->id }}">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-credit-card"></i> Thanh toán ngay với VNPay
+                                </button>
+                            </form>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
                 </div>
             </div>
 

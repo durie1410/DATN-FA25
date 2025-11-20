@@ -942,6 +942,32 @@
             orderToast.show();
         }
     }
+
+    // Load cart count on page load
+    function loadCartCount() {
+        fetch('{{ route("cart.count") }}')
+            .then(response => response.json())
+            .then(data => {
+                const cartCountElement = document.getElementById('cart-count');
+                if (cartCountElement) {
+                    if (data.count > 0) {
+                        cartCountElement.textContent = data.count;
+                        cartCountElement.style.display = 'inline-block';
+                    } else {
+                        cartCountElement.textContent = '0';
+                        cartCountElement.style.display = 'none';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error loading cart count:', error);
+            });
+    }
+
+    // Load cart count when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadCartCount();
+    });
     </script>
 </body>
 </html>
