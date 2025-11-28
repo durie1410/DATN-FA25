@@ -34,7 +34,6 @@ class BookRequest extends FormRequest
             'hinh_anh' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'mo_ta' => 'nullable|string|max:2000',
             'gia' => 'nullable|numeric|min:0',
-            'dinh_dang' => 'required|in:Paperback,Hardcover,E-book',
             'trang_thai' => 'required|in:active,inactive',
         ];
     }
@@ -65,8 +64,6 @@ class BookRequest extends FormRequest
             'mo_ta.max' => 'Mô tả không được vượt quá 2000 ký tự.',
             'gia.numeric' => 'Giá phải là số.',
             'gia.min' => 'Giá không được âm.',
-            'dinh_dang.required' => 'Định dạng là bắt buộc.',
-            'dinh_dang.in' => 'Định dạng không hợp lệ.',
             'trang_thai.required' => 'Trạng thái là bắt buộc.',
             'trang_thai.in' => 'Trạng thái không hợp lệ.',
         ];

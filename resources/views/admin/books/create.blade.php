@@ -62,18 +62,6 @@
                     <input type="number" name="gia" class="form-control" min="0" step="1000" placeholder="Để trống nếu miễn phí">
                 </div>
             </div>
-            
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label class="form-label">Định dạng</label>
-                    <select name="dinh_dang" class="form-control" required>
-                        <option value="Sách giấy">Sách giấy</option>
-                        <option value="PDF">PDF</option>
-                        <option value="EPUB">EPUB</option>
-                        <option value="MOBI">MOBI</option>
-                    </select>
-                </div>
-            </div>
         </div>
 
         <div class="row">

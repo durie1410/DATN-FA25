@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Book;
+use App\Services\CacheService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
@@ -88,6 +89,10 @@ class CategoryController extends Controller
             'icon' => $request->icon,
         ]);
 
+        // Clear cache khi tạo category mới
+        CacheService::clearCategories();
+        CacheService::clearDashboard();
+
         return redirect()->route('admin.categories.index')->with('success', 'Thêm thể loại thành công!');
     }
 
@@ -146,6 +151,10 @@ class CategoryController extends Controller
             'icon' => $request->icon,
         ]);
 
+        // Clear cache khi cập nhật category
+        CacheService::clearCategories();
+        CacheService::clearDashboard();
+
         return redirect()->route('admin.categories.index')->with('success', 'Cập nhật thành công!');
     }
 
@@ -161,6 +170,11 @@ class CategoryController extends Controller
         }
 
         $category->delete();
+        
+        // Clear cache khi xóa category
+        CacheService::clearCategories();
+        CacheService::clearDashboard();
+        
         return redirect()->route('admin.categories.index')->with('success', 'Xóa thành công!');
     }
 

@@ -27,9 +27,18 @@ use App\Http\Controllers\Api\ReportController;
 |
 */
 
-// Public API routes
+// API Versioning
+// All new API routes should be in routes/api/v1.php
+// Legacy routes below will be deprecated in future versions
+
+// Public API routes (legacy - will be moved to v1)
 Route::get('/', [ApiController::class, 'index']);
 Route::get('/stats', [ApiController::class, 'stats']);
+
+// API v1 routes
+Route::prefix('v1')->group(function () {
+    require base_path('routes/api/v1.php');
+});
 
 // Books API
 Route::get('/books', [BookApiController::class, 'index']);

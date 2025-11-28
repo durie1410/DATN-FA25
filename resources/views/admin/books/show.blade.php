@@ -16,6 +16,20 @@
     <!-- Header với thông tin cơ bản -->
     <div class="row mb-4">
         <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2><i class="fas fa-book"></i> Chi tiết sách</h2>
+                <div class="btn-group">
+                    @can('edit-books')
+                    <a href="{{ route('admin.books.edit', $book->id) }}" class="btn btn-primary">
+                        <i class="fas fa-edit"></i> Chỉnh sửa
+                    </a>
+                    @endcan
+                    <a href="{{ route('admin.books.index') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Quay lại
+                    </a>
+                </div>
+            </div>
+            
             <div class="card">
                 <div class="card-body">
                     <div class="row">
@@ -84,38 +98,39 @@
                         <div class="col-md-3">
                             <div class="card bg-light">
                                 <div class="card-body">
-                                    <h5 class="card-title">Thống kê</h5>
+                                    <h5 class="card-title"><i class="fas fa-chart-bar"></i> Thống kê</h5>
                                     
-                                    <div class="row text-center">
-                                        <div class="col-6 mb-2">
+                                    <div class="row text-center mb-3">
+                                        <div class="col-6 mb-3">
                                             <div class="border-end">
-                                                <div class="h4 text-primary">{{ $stats['total_copies'] }}</div>
+                                                <div class="h3 text-primary mb-1">{{ $stats['total_copies'] }}</div>
                                                 <small class="text-muted">Tổng bản</small>
                                             </div>
                                         </div>
-                                        <div class="col-6 mb-2">
-                                            <div class="h4 text-success">{{ $stats['available_copies'] }}</div>
+                                        <div class="col-6 mb-3">
+                                            <div class="h3 text-success mb-1">{{ $stats['available_copies'] }}</div>
                                             <small class="text-muted">Có sẵn</small>
                                         </div>
-                                        <div class="col-6 mb-2">
-                                            <div class="h4 text-warning">{{ $stats['borrowed_copies'] }}</div>
-                                            <small class="text-muted">Đang mượn</small>
+                                        <div class="col-6 mb-3">
+                                            <div class="border-end">
+                                                <div class="h3 text-warning mb-1">{{ $stats['borrowed_copies'] }}</div>
+                                                <small class="text-muted">Đang mượn</small>
+                                            </div>
                                         </div>
-                                        <div class="col-6 mb-2">
-                                            <div class="h4 text-info">{{ $stats['total_borrows'] }}</div>
+                                        <div class="col-6 mb-3">
+                                            <div class="h3 text-info mb-1">{{ $stats['total_borrows'] ?? 0 }}</div>
                                             <small class="text-muted">Lượt mượn</small>
+                                        </div>
+                                        <div class="col-12 mb-2">
+                                            <div class="border-top pt-2">
+                                                <div class="h4 text-secondary mb-1">{{ $stats['total_reviews'] }}</div>
+                                                <small class="text-muted">Đánh giá</small>
+                                            </div>
                                         </div>
                                     </div>
 
                                     <!-- Hành động -->
-                                    <div class="mt-3">
-                                        @can('edit-books')
-                                        <a href="{{ route('admin.books.edit', $book->id) }}" 
-                                           class="btn btn-warning btn-sm w-100 mb-2">
-                                            <i class="fas fa-edit"></i> Chỉnh sửa
-                                        </a>
-                                        @endcan
-
+                                    <div class="mt-3 border-top pt-3">
                                         @if(auth()->check())
                                         <button class="btn btn-outline-danger btn-sm w-100 mb-2" 
                                                 onclick="toggleFavorite({{ $book->id }})">
@@ -219,16 +234,28 @@
                                             <td>{{ $inventory->location }}</td>
                                             <td>
                                                 @php
+                                                    // Map các giá trị cũ về 3 loại mới
+                                                    $condition = $inventory->condition;
+                                                    if ($condition == 'Tot') {
+                                                        $condition = 'Moi'; // Tốt -> Mới
+                                                    } elseif ($condition == 'Trung binh') {
+                                                        $condition = 'Cu'; // Trung bình -> Cũ
+                                                    }
+                                                    
+                                                    $conditionLabels = [
+                                                        'Moi' => 'Mới',
+                                                        'Cu' => 'Cũ',
+                                                        'Hong' => 'Hỏng'
+                                                    ];
+                                                    
                                                     $conditionColors = [
                                                         'Moi' => 'success',
-                                                        'Tot' => 'primary',
-                                                        'Trung binh' => 'warning',
                                                         'Cu' => 'secondary',
                                                         'Hong' => 'danger'
                                                     ];
                                                 @endphp
-                                                <span class="badge bg-{{ $conditionColors[$inventory->condition] ?? 'secondary' }}">
-                                                    {{ $inventory->condition }}
+                                                <span class="badge bg-{{ $conditionColors[$condition] ?? 'secondary' }}">
+                                                    {{ $conditionLabels[$condition] ?? $inventory->condition }}
                                                 </span>
                                             </td>
                                             <td>
@@ -260,12 +287,20 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                @can('edit-books')
-                                                <a href="{{ route('admin.inventory.edit', $inventory->id) }}" 
-                                                   class="btn btn-sm btn-outline-primary">
-                                                    <i class="fas fa-edit"></i>
-                                                </a>
-                                                @endcan
+                                                <div class="btn-group btn-group-sm">
+                                                    <a href="{{ route('admin.inventory.index') }}?inventory_id={{ $inventory->id }}" 
+                                                       class="btn btn-info" 
+                                                       title="Xem chi tiết">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                    @can('edit-books')
+                                                    <a href="{{ route('admin.inventory.edit', $inventory->id) }}" 
+                                                       class="btn btn-primary" 
+                                                       title="Chỉnh sửa">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    @endcan
+                                                </div>
                                             </td>
                                         </tr>
                                         @endforeach
@@ -374,30 +409,58 @@
 
                         <!-- Tab Lịch sử mượn -->
                         <div class="tab-pane fade" id="borrows" role="tabpanel">
-                            @if($book->borrows->count() > 0)
+                            @if(isset($borrowItems) && $borrowItems->count() > 0)
                             <div class="table-responsive">
                                 <table class="table table-striped">
                                     <thead>
                                         <tr>
                                             <th>Độc giả</th>
+                                            <th>Mã vạch</th>
                                             <th>Ngày mượn</th>
                                             <th>Ngày hẹn trả</th>
                                             <th>Ngày trả thực tế</th>
                                             <th>Trạng thái</th>
+                                            <th>Hành động</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach($book->borrows as $borrow)
+                                        @foreach($borrowItems as $item)
                                         <tr>
                                             <td>
-                                                <strong>{{ $borrow->reader->ho_ten }}</strong><br>
-                                                <small class="text-muted">{{ $borrow->reader->so_the_doc_gia }}</small>
+                                                @if($item->borrow && $item->borrow->reader)
+                                                    <strong>{{ $item->borrow->reader->ho_ten }}</strong><br>
+                                                    <small class="text-muted">{{ $item->borrow->reader->so_the_doc_gia }}</small>
+                                                @elseif($item->borrow)
+                                                    <strong>{{ $item->borrow->ten_nguoi_muon }}</strong><br>
+                                                    <small class="text-muted">{{ $item->borrow->so_dien_thoai }}</small>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
                                             </td>
-                                            <td>{{ \Carbon\Carbon::parse($borrow->ngay_muon)->format('d/m/Y') }}</td>
-                                            <td>{{ \Carbon\Carbon::parse($borrow->ngay_hen_tra)->format('d/m/Y') }}</td>
                                             <td>
-                                                @if($borrow->ngay_tra_thuc_te)
-                                                    {{ \Carbon\Carbon::parse($borrow->ngay_tra_thuc_te)->format('d/m/Y') }}
+                                                @if($item->inventory)
+                                                    <code>{{ $item->inventory->barcode }}</code>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($item->ngay_muon)
+                                                    {{ \Carbon\Carbon::parse($item->ngay_muon)->format('d/m/Y') }}
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($item->ngay_hen_tra)
+                                                    {{ \Carbon\Carbon::parse($item->ngay_hen_tra)->format('d/m/Y') }}
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($item->ngay_tra_thuc_te)
+                                                    {{ \Carbon\Carbon::parse($item->ngay_tra_thuc_te)->format('d/m/Y') }}
                                                 @else
                                                     <span class="text-muted">-</span>
                                                 @endif
@@ -410,9 +473,18 @@
                                                         'Qua han' => 'danger'
                                                     ];
                                                 @endphp
-                                                <span class="badge bg-{{ $statusColors[$borrow->trang_thai] ?? 'secondary' }}">
-                                                    {{ $borrow->trang_thai }}
+                                                <span class="badge bg-{{ $statusColors[$item->trang_thai] ?? 'secondary' }}">
+                                                    {{ $item->trang_thai }}
                                                 </span>
+                                            </td>
+                                            <td>
+                                                @if($item->borrow)
+                                                    <a href="{{ route('admin.borrows.show', $item->borrow->id) }}" 
+                                                       class="btn btn-sm btn-info" 
+                                                       title="Xem chi tiết phiếu mượn">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                @endif
                                             </td>
                                         </tr>
                                         @endforeach
@@ -492,9 +564,9 @@
                     <input type="hidden" name="book_id" value="{{ $book->id }}">
                     
                     <div class="mb-3">
-                        <label class="form-label">Chọn tác giả:</label>
+                        <label class="form-label">Chọn độc giả:</label>
                         <select class="form-select" name="reader_id" required>
-                            <option value="">-- Chọn tác giả --</option>
+                            <option value="">-- Chọn độc giả --</option>
                             <!-- Sẽ được load bằng AJAX -->
                         </select>
                     </div>
@@ -539,9 +611,9 @@
                     <input type="hidden" name="book_id" value="{{ $book->id }}">
                     
                     <div class="mb-3">
-                        <label class="form-label">Chọn tác giả:</label>
+                        <label class="form-label">Chọn độc giả:</label>
                         <select class="form-select" name="reader_id" required>
-                            <option value="">-- Chọn tác giả --</option>
+                            <option value="">-- Chọn độc giả --</option>
                             <!-- Sẽ được load bằng AJAX -->
                         </select>
                     </div>
@@ -590,8 +662,6 @@
                         <label class="form-label">Tình trạng sách:</label>
                         <select class="form-select" name="condition" required>
                             <option value="Moi">Mới</option>
-                            <option value="Tot">Tốt</option>
-                            <option value="Trung binh">Trung bình</option>
                             <option value="Cu">Cũ</option>
                             <option value="Hong">Hỏng</option>
                         </select>
@@ -699,7 +769,7 @@ function loadReaders(selector) {
     .then(response => response.json())
     .then(data => {
         const select = document.querySelector(selector);
-        select.innerHTML = '<option value="">-- Chọn tác giả --</option>';
+        select.innerHTML = '<option value="">-- Chọn độc giả --</option>';
         data.data.forEach(reader => {
             const option = document.createElement('option');
             option.value = reader.id;

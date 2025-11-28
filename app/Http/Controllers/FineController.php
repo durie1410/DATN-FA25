@@ -12,28 +12,25 @@ use Carbon\Carbon;
 
 class FineController extends Controller
 {
+    // Danh sách phạt
     public function index(Request $request)
     {
-        $query = Fine::with(['borrow.book', 'reader', 'creator']);
+$query = Fine::with([
+    'borrow.items.book',
+    'reader',
+    'creator'
+]);
 
-        // Lọc theo trạng thái
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
 
-        // Lọc theo loại phạt
         if ($request->filled('type')) {
             $query->where('type', $request->type);
         }
 
-        // Lọc theo độc giả
         if ($request->filled('reader_id')) {
             $query->where('reader_id', $request->reader_id);
-        }
-
-        // Lọc phạt quá hạn
-        if ($request->filled('overdue')) {
-            $query->overdue();
         }
 
         $fines = $query->orderBy('created_at', 'desc')->paginate(20);
@@ -42,16 +39,18 @@ class FineController extends Controller
         return view('admin.fines.index', compact('fines', 'readers'));
     }
 
+    // Form tạo phạt mới
     public function create(Request $request)
     {
         $borrowId = $request->get('borrow_id');
         $borrow = null;
-        
+
         if ($borrowId) {
-            $borrow = Borrow::with(['book', 'reader'])->findOrFail($borrowId);
+            $borrow = Borrow::with(['reader'])->findOrFail($borrowId);
         }
 
-        $borrows = Borrow::with(['book', 'reader'])
+        // Lấy tất cả borrow quá hạn hoặc đã trả
+        $borrows = Borrow::with(['reader'])
             ->where('trang_thai', 'Qua han')
             ->orWhere('trang_thai', 'Da tra')
             ->get();
@@ -59,6 +58,7 @@ class FineController extends Controller
         return view('admin.fines.create', compact('borrow', 'borrows'));
     }
 
+    // Lưu phạt mới
     public function store(Request $request)
     {
         $request->validate([
@@ -73,27 +73,27 @@ class FineController extends Controller
         $borrow = Borrow::findOrFail($request->borrow_id);
 
         $fine = Fine::create([
-            'borrow_id' => $request->borrow_id,
+            'borrow_id' => $borrow->id,
             'reader_id' => $borrow->reader_id,
             'amount' => $request->amount,
             'type' => $request->type,
             'description' => $request->description,
             'due_date' => $request->due_date,
             'notes' => $request->notes,
+            'status' => 'pending',
             'created_by' => Auth::id(),
         ]);
 
-        // Gửi thông báo cho độc giả
+        // Gửi thông báo
         try {
             $notificationService = new NotificationService();
             $data = [
                 'reader_name' => $borrow->reader->ho_ten,
-                'book_title' => $borrow->book->ten_sach,
+                'borrow_id' => $borrow->id,
                 'fine_amount' => number_format($fine->amount, 0, ',', '.') . ' VND',
-                'due_date' => $fine->due_date->format('d/m/Y'),
+                'due_date' => Carbon::parse($fine->due_date)->format('d/m/Y'),
                 'fine_type' => $this->getFineTypeText($fine->type),
             ];
-
             $notificationService->sendNotification(
                 'fine_notification',
                 $borrow->reader->email,
@@ -101,26 +101,32 @@ class FineController extends Controller
                 ['email', 'database']
             );
         } catch (\Exception $e) {
-            // Log lỗi nhưng không làm gián đoạn quá trình tạo phạt
             \Log::error('Failed to send fine notification: ' . $e->getMessage());
         }
 
-        return redirect()->route('admin.fines.index')
-            ->with('success', 'Phạt đã được tạo thành công!');
+        return redirect()->route('admin.fines.index')->with('success', 'Phạt đã được tạo thành công!');
     }
 
+    // Xem chi tiết
     public function show($id)
-    {
-        $fine = Fine::with(['borrow.book', 'reader', 'creator'])->findOrFail($id);
-        return view('admin.fines.show', compact('fine'));
-    }
+{
+    $fine = Fine::with([
+        'borrowItem.book',   // cần cái này
+        'reader',
+        'creator'
+    ])->findOrFail($id);
 
+    return view('admin.fines.show', compact('fine'));
+}
+
+    // Form edit
     public function edit($id)
     {
         $fine = Fine::findOrFail($id);
         return view('admin.fines.edit', compact('fine'));
     }
 
+    // Cập nhật phạt
     public function update(Request $request, $id)
     {
         $fine = Fine::findOrFail($id);
@@ -143,35 +149,31 @@ class FineController extends Controller
             'notes' => $request->notes,
         ];
 
-        // Nếu đánh dấu là đã thanh toán, cập nhật ngày thanh toán
         if ($request->status === 'paid' && $fine->status !== 'paid') {
             $updateData['paid_date'] = Carbon::today();
         }
 
         $fine->update($updateData);
 
-        return redirect()->route('admin.fines.show', $fine->id)
-            ->with('success', 'Phạt đã được cập nhật thành công!');
+        return redirect()->route('admin.fines.show', $fine->id)->with('success', 'Phạt đã được cập nhật thành công!');
     }
 
+    // Xóa phạt
     public function destroy($id)
     {
         $fine = Fine::findOrFail($id);
         $fine->delete();
-
         return back()->with('success', 'Phạt đã được xóa thành công!');
     }
 
-    // Đánh dấu phạt là đã thanh toán
+    // Đánh dấu đã thanh toán
     public function markAsPaid($id)
     {
         $fine = Fine::findOrFail($id);
-        
         $fine->update([
             'status' => 'paid',
             'paid_date' => Carbon::today(),
         ]);
-
         return back()->with('success', 'Phạt đã được đánh dấu là đã thanh toán!');
     }
 
@@ -179,97 +181,59 @@ class FineController extends Controller
     public function waive($id)
     {
         $fine = Fine::findOrFail($id);
-        
         $fine->update([
             'status' => 'waived',
-            'notes' => $fine->notes . "\n[Miễn phạt bởi " . Auth::user()->name . " vào " . Carbon::now() . "]",
+            'notes' => ($fine->notes ?? '') . "\n[Miễn phạt bởi " . Auth::user()->name . " vào " . Carbon::now() . "]",
         ]);
-
         return back()->with('success', 'Phạt đã được miễn!');
     }
 
-    // Tự động tạo phạt cho sách trả muộn
+    // Tạo phạt trả muộn tự động
     public function createLateReturnFines()
     {
-        $overdueBorrows = Borrow::with(['book', 'reader'])
+        $overdueBorrows = Borrow::with(['reader'])
             ->where('trang_thai', 'Dang muon')
             ->where('ngay_hen_tra', '<', Carbon::today())
             ->get();
 
         $createdCount = 0;
-        $errors = [];
 
         foreach ($overdueBorrows as $borrow) {
-            try {
-                // Kiểm tra đã có phạt chưa
-                $existingFine = Fine::where('borrow_id', $borrow->id)
-                    ->where('type', 'late_return')
-                    ->where('status', 'pending')
-                    ->first();
+            $existingFine = Fine::where('borrow_id', $borrow->id)
+                ->where('type', 'late_return')
+                ->where('status', 'pending')
+                ->first();
 
-                if (!$existingFine) {
-                    $daysOverdue = Carbon::today()->diffInDays($borrow->ngay_hen_tra);
-                    $fineAmount = $daysOverdue * 5000; // 5000 VND/ngày
+            if ($existingFine) continue;
 
-                    Fine::create([
-                        'borrow_id' => $borrow->id,
-                        'reader_id' => $borrow->reader_id,
-                        'amount' => $fineAmount,
-                        'type' => 'late_return',
-                        'description' => "Trả sách muộn {$daysOverdue} ngày (hạn trả: {$borrow->ngay_hen_tra->format('d/m/Y')})",
-                        'due_date' => Carbon::today()->addDays(30), // Cho 30 ngày để thanh toán
-                        'created_by' => Auth::id(),
-                        'notes' => 'Tự động tạo bởi hệ thống'
-                    ]);
+            $daysOverdue = Carbon::today()->diffInDays($borrow->ngay_hen_tra, false) * -1;
+            if ($daysOverdue <= 0) continue;
 
-                    // Gửi thông báo cho độc giả
-                    try {
-                        $notificationService = new NotificationService();
-                        $data = [
-                            'reader_name' => $borrow->reader->ho_ten,
-                            'book_title' => $borrow->book->ten_sach,
-                            'fine_amount' => number_format($fineAmount, 0, ',', '.') . ' VND',
-                            'due_date' => Carbon::today()->addDays(30)->format('d/m/Y'),
-                            'fine_type' => 'Trả sách muộn',
-                        ];
+            $fineAmount = $daysOverdue * 5000;
 
-                        $notificationService->sendNotification(
-                            'fine_notification',
-                            $borrow->reader->email,
-                            $data,
-                            ['email', 'database']
-                        );
-                    } catch (\Exception $e) {
-                        \Log::error('Failed to send fine notification for borrow #' . $borrow->id . ': ' . $e->getMessage());
-                    }
+            $fine = Fine::create([
+                'borrow_id' => $borrow->id,
+                'reader_id' => $borrow->reader_id,
+                'amount' => $fineAmount,
+                'type' => 'late_return',
+                'description' => "Trả sách muộn {$daysOverdue} ngày (hạn trả: {$borrow->ngay_hen_tra})",
+                'due_date' => Carbon::today()->addDays(30),
+                'status' => 'pending',
+                'notes' => 'Tự động tạo bởi hệ thống',
+                'created_by' => Auth::id(),
+            ]);
 
-                    $createdCount++;
-                }
-            } catch (\Exception $e) {
-                $errors[] = "Lỗi khi tạo phạt cho phiếu mượn #{$borrow->id}: " . $e->getMessage();
-            }
+            // Gửi notification nếu cần
         }
 
-        $response = [
-            'status' => 'success',
-            'message' => "Đã tạo {$createdCount} phạt trả muộn mới",
-            'created_count' => $createdCount
-        ];
-
-        if (!empty($errors)) {
-            $response['errors'] = $errors;
-            $response['message'] .= " (Có " . count($errors) . " lỗi)";
-        }
-
-        return response()->json($response);
+        return response()->json(['status'=>'success','message'=>"Đã tạo {$createdCount} phạt trả muộn"]);
     }
 
     // Báo cáo phạt
     public function report(Request $request)
     {
-        $query = Fine::with(['borrow.book', 'reader']);
+        $query = Fine::with(['borrow', 'reader']);
 
-        // Lọc theo khoảng thời gian
         if ($request->filled('from_date')) {
             $query->where('created_at', '>=', $request->from_date);
         }
@@ -282,29 +246,23 @@ class FineController extends Controller
         $stats = [
             'total_fines' => $fines->count(),
             'total_amount' => $fines->sum('amount'),
-            'pending_amount' => $fines->where('status', 'pending')->sum('amount'),
-            'paid_amount' => $fines->where('status', 'paid')->sum('amount'),
-            'waived_amount' => $fines->where('status', 'waived')->sum('amount'),
-            'overdue_count' => $fines->where('status', 'pending')->filter(function($fine) {
-                return $fine->isOverdue();
-            })->count(),
+            'pending_amount' => $fines->where('status','pending')->sum('amount'),
+            'paid_amount' => $fines->where('status','paid')->sum('amount'),
+            'waived_amount' => $fines->where('status','waived')->sum('amount'),
+            'overdue_count' => $fines->where('status','pending')->filter(fn($f)=>Carbon::today()->gt(Carbon::parse($f->due_date)))->count(),
         ];
 
-        return view('admin.fines.report', compact('fines', 'stats'));
+        return view('admin.fines.report', compact('fines','stats'));
     }
 
-    /**
-     * Lấy text cho loại phạt
-     */
     private function getFineTypeText($type)
     {
-        $types = [
+        return match($type) {
             'late_return' => 'Trả sách muộn',
             'damaged_book' => 'Làm hỏng sách',
             'lost_book' => 'Mất sách',
             'other' => 'Khác',
-        ];
-
-        return $types[$type] ?? 'Không xác định';
+            default => 'Không xác định',
+        };
     }
 }

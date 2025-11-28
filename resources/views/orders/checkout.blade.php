@@ -4,6 +4,50 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/checkout.css') }}">
+<style>
+    /* Force background gradient for checkout page */
+    html, body {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%) !important;
+        background-size: 400% 400% !important;
+        animation: gradientShift 15s ease infinite !important;
+        min-height: 100vh !important;
+    }
+    
+    @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    
+    body::before {
+        content: '';
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(248, 250, 252, 0.75);
+        z-index: 0;
+        pointer-events: none;
+    }
+    
+    .checkout-page {
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Bỏ mũi tên lặp lại trong select */
+    .checkout-page select.form-select {
+        background-image: none !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+        -moz-appearance: none !important;
+    }
+    
+    .checkout-page select.form-select::-ms-expand {
+        display: none !important;
+    }
+</style>
 @endpush
 
 @section('content')
@@ -23,7 +67,7 @@
         </div>
     </div>
 
-    <form id="checkoutForm">
+    <form id="checkoutForm" method="POST" action="{{ route('orders.store') }}" novalidate>
         @csrf
         <div class="row">
             <!-- Thông tin khách hàng -->
@@ -90,7 +134,6 @@
                             <h6><i class="fas fa-gift"></i> Ưu đãi đặc biệt:</h6>
                             <ul class="mb-0">
                                 <li><i class="fas fa-check text-success"></i> Miễn phí vận chuyển cho tất cả đơn hàng</li>
-                                <li><i class="fas fa-check text-success"></i> Giao hàng ngay lập tức (sách điện tử)</li>
                                 <li><i class="fas fa-check text-success"></i> Hỗ trợ khách hàng 24/7</li>
                             </ul>
                         </div>
@@ -102,6 +145,15 @@
                                 <p class="mb-1"><strong>Số tài khoản:</strong> 1234567890</p>
                                 <p class="mb-1"><strong>Chủ tài khoản:</strong> Thư Viện Online</p>
                                 <p class="mb-0"><strong>Nội dung:</strong> <span id="transferContent"></span></p>
+                            </div>
+                        </div>
+                        
+                        <div id="codInfo" class="mt-3" style="display: none;">
+                            <div class="alert alert-success">
+                                <h6><i class="fas fa-truck"></i> Thông tin thanh toán khi nhận hàng:</h6>
+                                <p class="mb-1"><i class="fas fa-check-circle text-success"></i> Bạn sẽ thanh toán khi nhận hàng</p>
+                                <p class="mb-1"><i class="fas fa-info-circle"></i> Đơn hàng sẽ được xử lý và giao hàng trong thời gian sớm nhất</p>
+                                <p class="mb-0"><i class="fas fa-shield-alt"></i> Bạn chỉ cần thanh toán khi đã kiểm tra và nhận hàng</p>
                             </div>
                         </div>
                     </div>
@@ -139,7 +191,7 @@
                         <div class="border-top pt-3">
                             <div class="d-flex justify-content-between mb-2">
                                 <span>Tạm tính:</span>
-                                <span>{{ number_format($cart->total_amount, 0, ',', '.') }} VNĐ</span>
+                                <span>{{ number_format($selectedTotal ?? $cart->total_amount, 0, ',', '.') }} VNĐ</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
                                 <span>Phí vận chuyển:</span>
@@ -152,7 +204,7 @@
                             <hr>
                             <div class="d-flex justify-content-between">
                                 <strong>Tổng cộng:</strong>
-                                <strong class="text-primary">{{ number_format($cart->total_amount, 0, ',', '.') }} VNĐ</strong>
+                                <strong class="text-primary">{{ number_format($selectedTotal ?? $cart->total_amount, 0, ',', '.') }} VNĐ</strong>
                             </div>
                         </div>
 
@@ -171,6 +223,7 @@
     </form>
 </div>
 
+
 <!-- Toast thông báo -->
 <div class="toast-container position-fixed bottom-0 end-0 p-3">
     <div id="orderToast" class="toast" role="alert">
@@ -188,30 +241,110 @@
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const checkoutForm = document.getElementById('checkoutForm');
-    const placeOrderBtn = document.getElementById('placeOrderBtn');
-    const paymentMethodSelect = document.getElementById('payment_method');
-    const paymentInfo = document.getElementById('paymentInfo');
-    const transferContent = document.getElementById('transferContent');
-    const orderToast = new bootstrap.Toast(document.getElementById('orderToast'));
+// Đảm bảo handler được attach ngay lập tức, không đợi DOMContentLoaded
+(function() {
+    function initCheckout() {
+        console.log('Initializing checkout...');
+        
+        const checkoutForm = document.getElementById('checkoutForm');
+        const placeOrderBtn = document.getElementById('placeOrderBtn');
+        const paymentMethodSelect = document.getElementById('payment_method');
+        const paymentInfo = document.getElementById('paymentInfo');
+        const codInfo = document.getElementById('codInfo');
+        const transferContent = document.getElementById('transferContent');
+        
+        // Kiểm tra các element có tồn tại không
+        if (!checkoutForm || !placeOrderBtn) {
+            console.log('Elements not ready yet, waiting...');
+            return false;
+        }
+        
+        console.log('All elements found:', {
+            form: !!checkoutForm,
+            button: !!placeOrderBtn,
+            paymentMethod: !!paymentMethodSelect
+        });
+        
+        // Khởi tạo toast
+        let orderToast;
+        try {
+            const toastElement = document.getElementById('orderToast');
+            if (toastElement) {
+                orderToast = new bootstrap.Toast(toastElement);
+            }
+        } catch (e) {
+            console.error('Error initializing toast:', e);
+        }
 
     // Xử lý thay đổi phương thức thanh toán
     paymentMethodSelect.addEventListener('change', function() {
         if (this.value === 'bank_transfer') {
             paymentInfo.style.display = 'block';
+            codInfo.style.display = 'none';
             transferContent.textContent = 'Thanh toan don hang - ' + new Date().toISOString().slice(0,10);
+        } else if (this.value === 'cash_on_delivery') {
+            paymentInfo.style.display = 'none';
+            codInfo.style.display = 'block';
         } else {
             paymentInfo.style.display = 'none';
+            codInfo.style.display = 'none';
         }
     });
 
     // Xử lý submit form
     checkoutForm.addEventListener('submit', function(e) {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
+        console.log('Form submitted! Event prevented.');
         
         const button = placeOrderBtn;
         const originalText = button.innerHTML;
+        
+        // Kiểm tra validation trước khi submit
+        const customerName = document.getElementById('customer_name').value.trim();
+        const customerEmail = document.getElementById('customer_email').value.trim();
+        const paymentMethod = document.getElementById('payment_method').value;
+        
+        // Validate các trường bắt buộc
+        if (!customerName) {
+            showToast('error', 'Vui lòng nhập họ và tên');
+            document.getElementById('customer_name').focus();
+            return;
+        }
+        
+        if (!customerEmail) {
+            showToast('error', 'Vui lòng nhập email');
+            document.getElementById('customer_email').focus();
+            return;
+        }
+        
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(customerEmail)) {
+            showToast('error', 'Email không hợp lệ');
+            document.getElementById('customer_email').focus();
+            return;
+        }
+        
+        if (!paymentMethod) {
+            showToast('error', 'Vui lòng chọn phương thức thanh toán');
+            document.getElementById('payment_method').focus();
+            return;
+        }
+        
+        // Kiểm tra giỏ hàng trước khi submit - sử dụng dữ liệu từ backend
+        const cartItemsCount = {{ $cartItems->count() ?? 0 }};
+        
+        // Kiểm tra xem có sản phẩm được chọn không
+        if (cartItemsCount === 0) {
+            showToast('error', 'Không có sản phẩm nào được chọn. Vui lòng quay lại giỏ hàng và chọn sản phẩm.');
+            setTimeout(() => {
+                window.location.href = '{{ route("cart.index") }}';
+            }, 2000);
+            return;
+        }
         
         // Hiển thị loading
         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
@@ -220,57 +353,208 @@ document.addEventListener('DOMContentLoaded', function() {
         // Lấy dữ liệu form
         const formData = new FormData(this);
         
+        // Log form data để debug
+        console.log('Form data:');
+        for (let [key, value] of formData.entries()) {
+            console.log(key, ':', value);
+        }
+        
+        // Lấy CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                          document.querySelector('input[name="_token"]')?.value;
+        
+        console.log('CSRF Token:', csrfToken ? 'Found' : 'Not found');
+        
+        if (!csrfToken) {
+            console.error('CSRF token not found!');
+            showToast('error', 'Không tìm thấy token bảo mật. Vui lòng tải lại trang.');
+            button.innerHTML = originalText;
+            button.disabled = false;
+            return;
+        }
+        
+        const orderUrl = '{{ route("orders.store") }}';
+        console.log('Sending request to:', orderUrl);
+        
         // Gửi request
-        fetch('{{ route("orders.store") }}', {
+        fetch(orderUrl, {
             method: 'POST',
             body: formData,
             headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                'Accept': 'application/json'
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(response => response.json())
-        .then(data => {
+        .then(async response => {
+            console.log('Response received!');
+            console.log('Response status:', response.status);
+            console.log('Response statusText:', response.statusText);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+            
+            // Kiểm tra content type
+            const contentType = response.headers.get('content-type');
+            console.log('Content-Type:', contentType);
+            
+            if (!contentType || !contentType.includes('application/json')) {
+                const text = await response.text();
+                console.error('Response is not JSON:', text);
+                console.error('Response length:', text.length);
+                showToast('error', 'Phản hồi từ server không đúng định dạng. Vui lòng thử lại. Chi tiết: ' + text.substring(0, 200));
+                button.innerHTML = originalText;
+                button.disabled = false;
+                return;
+            }
+            
+            const data = await response.json();
+            console.log('Response data:', data);
+            
+            if (!response.ok) {
+                // Xử lý lỗi validation hoặc lỗi khác
+                let errorMessage = data.message || 'Có lỗi xảy ra';
+                
+                // Nếu có validation errors, hiển thị chi tiết
+                if (data.errors) {
+                    const errorList = Object.values(data.errors).flat().join(', ');
+                    errorMessage = errorList || errorMessage;
+                }
+                
+                console.error('Error response:', errorMessage);
+                showToast('error', errorMessage);
+                
+                // Nếu giỏ hàng trống, redirect về trang giỏ hàng
+                if (data.message && data.message.includes('trống')) {
+                    if (data.redirect_url) {
+                        setTimeout(() => {
+                            window.location.href = data.redirect_url;
+                        }, 2000);
+                    } else {
+                        setTimeout(() => {
+                            window.location.href = '{{ route("cart.index") }}';
+                        }, 2000);
+                    }
+                } else {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }
+                return;
+            }
+            
             if (data.success) {
-                showToast('success', data.message);
+                console.log('Order created successfully!');
+                console.log('Order number:', data.order_number);
+                console.log('Redirect URL:', data.redirect_url);
+                showToast('success', data.message || 'Đặt hàng thành công!');
+                
+                // Redirect ngay lập tức với cache-busting
+                const redirectUrl = data.redirect_url || '{{ route("orders.index") }}';
+                console.log('Redirecting to:', redirectUrl);
+                
+                // Force GET request - sử dụng window.location.replace để tránh history và cache
+                // Thêm timestamp để force reload và clear cache
+                // Sử dụng window.location.href để đảm bảo redirect hoạt động
                 setTimeout(() => {
-                    window.location.href = data.redirect_url;
-                }, 1500);
+                    // Clear any cached data
+                    if ('caches' in window) {
+                        caches.keys().then(names => {
+                            names.forEach(name => caches.delete(name));
+                        });
+                    }
+                    
+                    // Redirect với cache-busting parameter
+                    const finalUrl = redirectUrl + '?_nocache=' + Date.now() + '&order=' + encodeURIComponent(data.order_number || '');
+                    console.log('Final redirect URL:', finalUrl);
+                    window.location.href = finalUrl;
+                }, 1000);
             } else {
-                showToast('error', data.message);
+                console.error('Order creation failed:', data.message);
+                showToast('error', data.message || 'Có lỗi xảy ra khi đặt hàng');
+                button.innerHTML = originalText;
+                button.disabled = false;
             }
         })
         .catch(error => {
-            console.error('Error:', error);
-            showToast('error', 'Có lỗi xảy ra, vui lòng thử lại');
-        })
-        .finally(() => {
+            console.error('Fetch Error:', error);
+            console.error('Error name:', error.name);
+            console.error('Error message:', error.message);
+            console.error('Error stack:', error.stack);
+            showToast('error', 'Có lỗi xảy ra khi kết nối đến server: ' + error.message);
             button.innerHTML = originalText;
             button.disabled = false;
         });
     });
+    
+    // Thêm event listener cho nút đặt hàng để log
+    placeOrderBtn.addEventListener('click', function(e) {
+        console.log('Place order button clicked!');
+        // Form submit handler sẽ xử lý, không cần preventDefault ở đây
+    });
 
-    // Hàm hiển thị toast
-    function showToast(type, message) {
-        const toastElement = document.getElementById('orderToast');
-        const toastMessage = document.getElementById('toastMessage');
-        
-        toastMessage.textContent = message;
-        
-        const toastHeader = toastElement.querySelector('.toast-header');
-        const icon = toastHeader.querySelector('i');
-        
-        if (type === 'success') {
-            icon.className = 'fas fa-check-circle text-success me-2';
-            toastElement.classList.remove('bg-danger');
-        } else {
-            icon.className = 'fas fa-exclamation-circle text-danger me-2';
-            toastElement.classList.add('bg-danger');
+        // Hàm hiển thị toast
+        function showToast(type, message) {
+            try {
+                console.log('Showing toast:', type, message);
+                const toastElement = document.getElementById('orderToast');
+                const toastMessage = document.getElementById('toastMessage');
+                
+                if (!toastElement || !toastMessage) {
+                    console.error('Toast elements not found!');
+                    alert(message); // Fallback to alert
+                    return;
+                }
+                
+                toastMessage.textContent = message;
+                
+                const toastHeader = toastElement.querySelector('.toast-header');
+                if (toastHeader) {
+                    const icon = toastHeader.querySelector('i');
+                    if (icon) {
+                        if (type === 'success') {
+                            icon.className = 'fas fa-check-circle text-success me-2';
+                            toastElement.classList.remove('bg-danger');
+                        } else {
+                            icon.className = 'fas fa-exclamation-circle text-danger me-2';
+                            toastElement.classList.add('bg-danger');
+                        }
+                    }
+                }
+                
+                if (orderToast) {
+                    orderToast.show();
+                } else {
+                    console.error('Toast instance not found!');
+                    alert(message); // Fallback to alert
+                }
+            } catch (error) {
+                console.error('Error showing toast:', error);
+                alert(message); // Fallback to alert
+            }
         }
         
-        orderToast.show();
+        return true; // Đã khởi tạo thành công
     }
-});
+    
+    // Thử khởi tạo ngay lập tức
+    if (document.readyState === 'loading') {
+        // DOM chưa load xong, đợi DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!initCheckout()) {
+                // Nếu vẫn chưa sẵn sàng, thử lại sau 100ms
+                setTimeout(function() {
+                    initCheckout();
+                }, 100);
+            }
+        });
+    } else {
+        // DOM đã load xong, khởi tạo ngay
+        if (!initCheckout()) {
+            // Nếu chưa sẵn sàng, thử lại sau 100ms
+            setTimeout(function() {
+                initCheckout();
+            }, 100);
+        }
+    }
+})();
 </script>
 @endpush
 

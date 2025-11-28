@@ -1,9 +1,11 @@
 <?php
 
 namespace App\Http\Controllers;
-
+ use App\Models\Book;
 use App\Services\AdvancedSearchService;
 use Illuminate\Http\Request;
+use App\Models\Inventory;
+
 use Illuminate\Support\Facades\Auth;
 
 class AdvancedSearchController extends Controller
@@ -197,21 +199,49 @@ class AdvancedSearchController extends Controller
         return response()->json($readers);
     }
 
-    public function autocompleteBooks(Request $request)
-    {
-        $query = $request->get('q', '');
-        
-        if (strlen($query) < 2) {
-            return response()->json([]);
-        }
+  
 
-        $books = \App\Models\Book::where(function($q) use ($query) {
-                $q->where('ten_sach', 'like', "%{$query}%")
-                  ->orWhere('tac_gia', 'like', "%{$query}%");
-            })
-            ->limit(10)
-            ->get(['id', 'ten_sach', 'tac_gia', 'nam_xuat_ban']);
+ // Autocomplete sách với tổng số lượng khả dụng
+public function autocompleteBooks(Request $request)
+{
+    $query = $request->get('q', '');
+    if (strlen($query) < 2) return response()->json([]);
 
-        return response()->json($books);
-    }
+    // Lấy các book có ít nhất 1 inventory
+    $books = Book::where('ten_sach', 'like', "%{$query}%")
+        ->orWhere('tac_gia', 'like', "%{$query}%")
+        ->limit(100)
+        ->get();
+
+    $result = $books->map(function ($book) {
+        // Tổng số lượng khả dụng
+        $availableQty = Inventory::where('book_id', $book->id)
+            ->where('status', 'Co san')
+            ->count(); // hoặc sum('so_luong') nếu inventory có nhiều cuốn
+
+        return [
+            'id' => $book->id,
+            'ten_sach' => $book->ten_sach,
+            'tac_gia' => $book->tac_gia,
+            'nam_xuat_ban' => $book->nam_xuat_ban,
+            'gia' => $book->gia,
+            'loai_sach' => $book->loai_sach,
+            'so_luong' => $availableQty,
+        ];
+    });
+
+    return response()->json($result);
+}
+
+// Lấy inventory của sách
+public function getBookInventories($bookId)
+{
+    $inventories = Inventory::where('book_id', $bookId)
+        ->get(['id', 'location', 'condition', 'status']);
+
+    return response()->json($inventories);
+}
+
+
+
 }

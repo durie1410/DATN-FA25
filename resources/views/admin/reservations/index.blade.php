@@ -1,467 +1,379 @@
 @extends('layouts.admin')
 
-@section('title', 'Quản Lý Đặt Trước')
+@section('title', 'Quản Lý Đặt Trước - WAKA Admin')
 
 @section('content')
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-0 text-gray-800">
-                <i class="fas fa-calendar-check me-2"></i>Quản Lý Đặt Trước
-            </h1>
-            <p class="text-muted mb-0">Quản lý các yêu cầu đặt trước sách của độc giả</p>
+<!-- Page Header -->
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <i class="fas fa-calendar-check"></i>
+            Quản lý đặt trước
+        </h1>
+        <p class="page-subtitle">Theo dõi và quản lý tất cả yêu cầu đặt trước sách</p>
+    </div>
+    <a href="{{ route('admin.reservations.create') }}" class="btn btn-primary">
+        <i class="fas fa-plus"></i>
+        Tạo đặt trước
+    </a>
+</div>
+
+<!-- Quick Stats -->
+<div class="stats-grid" style="margin-bottom: 25px;">
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-title">Đang chờ</div>
+            <div class="stat-icon warning">
+                <i class="fas fa-clock"></i>
+            </div>
         </div>
-        <div>
-            <a href="{{ route('admin.reservations.create') }}" class="btn btn-primary">
-                <i class="fas fa-plus me-1"></i>Tạo Đặt Trước
+        <div class="stat-value">{{ $reservations->where('status', 'pending')->count() }}</div>
+        <div class="stat-label">Chờ xử lý</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-title">Đã xác nhận</div>
+            <div class="stat-icon primary">
+                <i class="fas fa-check-circle"></i>
+            </div>
+        </div>
+        <div class="stat-value">{{ $reservations->where('status', 'confirmed')->count() }}</div>
+        <div class="stat-label">Đã được xác nhận</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-title">Sẵn sàng</div>
+            <div class="stat-icon success">
+                <i class="fas fa-hand-holding"></i>
+            </div>
+        </div>
+        <div class="stat-value">{{ $reservations->where('status', 'ready')->count() }}</div>
+        <div class="stat-label">Có thể nhận sách</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-title">Tổng số</div>
+            <div class="stat-icon info">
+                <i class="fas fa-list"></i>
+            </div>
+        </div>
+        <div class="stat-value">{{ $reservations->total() }}</div>
+        <div class="stat-label">Tất cả đặt trước</div>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="card" style="margin-bottom: 25px;">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-filter"></i>
+            Tìm kiếm & Lọc
+        </h3>
+    </div>
+    <form action="{{ route('admin.reservations.index') }}" method="GET" style="padding: 25px; display: flex; gap: 15px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 200px;">
+            <input type="text" 
+                   name="keyword" 
+                   value="{{ request('keyword') }}" 
+                   class="form-control" 
+                   placeholder="Tìm theo tên độc giả hoặc tên sách...">
+        </div>
+        <div style="flex: 1; min-width: 200px;">
+            <select name="status" class="form-select">
+                <option value="">-- Tất cả trạng thái --</option>
+                <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Đang chờ</option>
+                <option value="confirmed" {{ request('status') == 'confirmed' ? 'selected' : '' }}>Đã xác nhận</option>
+                <option value="ready" {{ request('status') == 'ready' ? 'selected' : '' }}>Sẵn sàng</option>
+                <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
+                <option value="expired" {{ request('status') == 'expired' ? 'selected' : '' }}>Hết hạn</option>
+            </select>
+        </div>
+        <div style="flex: 1; min-width: 200px;">
+            <select name="book_id" class="form-select">
+                <option value="">-- Tất cả sách --</option>
+                @foreach($books as $book)
+                    <option value="{{ $book->id }}" {{ request('book_id') == $book->id ? 'selected' : '' }}>
+                        {{ $book->ten_sach }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-search"></i>
+            Lọc
+        </button>
+        <a href="{{ route('admin.reservations.index') }}" class="btn btn-secondary">
+            <i class="fas fa-redo"></i>
+            Reset
+        </a>
+    </form>
+</div>
+
+<!-- Reservations List -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-list"></i>
+            Danh sách đặt trước
+        </h3>
+        <span class="badge badge-info">Tổng: {{ $reservations->total() }} đặt trước</span>
+    </div>
+    
+    @if($reservations->count() > 0)
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Mã đặt trước</th>
+                    <th>Độc giả</th>
+                    <th>Sách</th>
+                    <th>Ngày đặt</th>
+                    <th>Hết hạn</th>
+                    <th>Trạng thái</th>
+                    <th>Độ ưu tiên</th>
+                    <th>Hành động</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($reservations as $reservation)
+                <tr style="{{ $reservation->isExpired() && $reservation->status != 'cancelled' ? 'border-left: 3px solid #ff6b6b;' : '' }}">
+                    <td>
+                        <span class="badge badge-info">{{ $reservation->id }}</span>
+                    </td>
+                    <td>
+                        @if($reservation->reader)
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="width: 36px; height: 36px; border-radius: 50%; background: rgba(0, 255, 153, 0.15); display: flex; align-items: center; justify-content: center; color: var(--primary-color); font-weight: 600;">
+                                    {{ strtoupper(substr($reservation->reader->ho_ten, 0, 1)) }}
+                                </div>
+                                <div>
+                                    <div style="font-weight: 500; color: var(--text-primary);">
+                                        {{ $reservation->reader->ho_ten }}
+                                    </div>
+                                    <div style="font-size: 12px; color: #888;">
+                                        ID: {{ $reservation->reader->id }}
+                                    </div>
+                                </div>
+                            </div>
+                        @else
+                            <span>Không có thông tin</span>
+                        @endif
+                    </td>
+                    <td>
+                        @if($reservation->book)
+                            <div>
+                                <div style="font-weight: 500; color: var(--text-primary);">
+                                    {{ $reservation->book->ten_sach }}
+                                </div>
+                                <div style="font-size: 12px; color: #888;">
+                                    {{ $reservation->book->tac_gia }}
+                                </div>
+                            </div>
+                        @else
+                            <span>Không có thông tin</span>
+                        @endif
+                    </td>
+                    <td>
+                        {{ $reservation->reservation_date->format('d/m/Y') }}
+                    </td>
+                    <td>
+                        <div>
+                            <div>{{ $reservation->expiry_date->format('d/m/Y') }}</div>
+                            @if($reservation->isExpired())
+                                <small style="color: #ff6b6b;">
+                                    <i class="fas fa-exclamation-triangle"></i> Hết hạn
+                                </small>
+                            @elseif($reservation->expiry_date->diffInDays(now()) <= 1)
+                                <small style="color: #ffc107;">
+                                    <i class="fas fa-clock"></i> Sắp hết hạn
+                                </small>
+                            @endif
+                        </div>
+                    </td>
+                    <td>
+                        @if($reservation->status == 'ready')
+                            <span class="badge badge-success">
+                                <i class="fas fa-hand-holding"></i> Sẵn sàng
+                            </span>
+                        @elseif($reservation->status == 'confirmed')
+                            <span class="badge" style="background: rgba(0, 123, 255, 0.2); color: #007bff;">
+                                <i class="fas fa-check-circle"></i> Đã xác nhận
+                            </span>
+                        @elseif($reservation->status == 'pending')
+                            <span class="badge" style="background: rgba(255, 193, 7, 0.2); color: #ffc107;">
+                                <i class="fas fa-clock"></i> Đang chờ
+                            </span>
+                        @elseif($reservation->status == 'cancelled')
+                            <span class="badge badge-secondary">
+                                <i class="fas fa-times-circle"></i> Đã hủy
+                            </span>
+                        @elseif($reservation->status == 'expired')
+                            <span class="badge badge-danger">
+                                <i class="fas fa-exclamation-triangle"></i> Hết hạn
+                            </span>
+                        @endif
+                    </td>
+                    <td>
+                        <span class="badge" style="background: {{ $reservation->priority <= 2 ? '#dc3545' : ($reservation->priority == 3 ? '#ffc107' : '#6c757d') }}; color: white;">
+                            {{ $reservation->priority }}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                            <a href="{{ route('admin.reservations.show', $reservation->id) }}" 
+                               class="btn btn-sm btn-secondary"
+                               title="Xem chi tiết">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ route('admin.reservations.edit', $reservation->id) }}" 
+                               class="btn btn-sm btn-warning"
+                               title="Chỉnh sửa">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            @if($reservation->status === 'pending')
+                                <button type="button" 
+                                        class="btn btn-sm btn-success" 
+                                        onclick="confirmReservation({{ $reservation->id }})"
+                                        title="Xác nhận">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            @endif
+                            @if($reservation->status === 'confirmed')
+                                <button type="button" 
+                                        class="btn btn-sm btn-info" 
+                                        onclick="markReady({{ $reservation->id }})"
+                                        title="Đánh dấu sẵn sàng">
+                                    <i class="fas fa-hand-holding"></i>
+                                </button>
+                            @endif
+                            @if(in_array($reservation->status, ['pending', 'confirmed']))
+                                <button type="button" 
+                                        class="btn btn-sm btn-danger" 
+                                        onclick="cancelReservation({{ $reservation->id }})"
+                                        title="Hủy">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            @endif
+                            <form action="{{ route('admin.reservations.destroy', $reservation->id) }}" 
+                                  method="POST" 
+                                  style="display: inline;"
+                                  onsubmit="return confirm('Xóa đặt trước này?')">
+                                @csrf 
+                                @method('DELETE')
+                                <button type="submit" 
+                                        class="btn btn-sm btn-danger"
+                                        title="Xóa">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    <div style="padding: 20px;">
+        {{ $reservations->appends(request()->query())->links('vendor.pagination.admin') }}
+    </div>
+    @else
+        <div style="text-align: center; padding: 60px 20px;">
+            <div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(0, 255, 153, 0.1); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                <i class="fas fa-calendar-check" style="font-size: 36px; color: var(--primary-color);"></i>
+            </div>
+            <h3 style="color: var(--text-primary); margin-bottom: 10px;">Chưa có đặt trước nào</h3>
+            <p style="color: #888; margin-bottom: 25px;">Hãy tạo đặt trước đầu tiên để bắt đầu quản lý.</p>
+            <a href="{{ route('admin.reservations.create') }}" class="btn btn-primary btn-lg">
+                <i class="fas fa-plus"></i>
+                Tạo đặt trước đầu tiên
             </a>
-            <button type="button" class="btn btn-success" onclick="exportReservations()">
-                <i class="fas fa-download me-1"></i>Xuất Excel
-            </button>
         </div>
-    </div>
-
-    <!-- Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-primary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Tổng Đặt Trước</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $reservations->total() }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-calendar-check fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-warning shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                Đang Chờ</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $reservations->where('status', 'pending')->count() }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clock fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-info shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Đã Xác Nhận</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $reservations->where('status', 'confirmed')->count() }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-success shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Sẵn Sàng</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $reservations->where('status', 'ready')->count() }}</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-hand-holding fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Search and Filter Form -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-search me-2"></i>Tìm Kiếm và Lọc
-            </h6>
-        </div>
-        <div class="card-body">
-            <form method="GET" action="{{ route('admin.reservations.index') }}" class="row g-3">
-                <div class="col-md-3">
-                    <label for="status" class="form-label">Trạng thái</label>
-                    <select class="form-select" id="status" name="status">
-                        <option value="">Tất cả</option>
-                        <option value="pending" {{ request('status') == 'pending' ? 'selected' : '' }}>Đang chờ</option>
-                        <option value="confirmed" {{ request('status') == 'confirmed' ? 'selected' : '' }}>Đã xác nhận</option>
-                        <option value="ready" {{ request('status') == 'ready' ? 'selected' : '' }}>Sẵn sàng</option>
-                        <option value="cancelled" {{ request('status') == 'cancelled' ? 'selected' : '' }}>Đã hủy</option>
-                        <option value="expired" {{ request('status') == 'expired' ? 'selected' : '' }}>Hết hạn</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="book_id" class="form-label">Sách</label>
-                    <select class="form-select" id="book_id" name="book_id">
-                        <option value="">Tất cả sách</option>
-                        @foreach($books as $book)
-                            <option value="{{ $book->id }}" {{ request('book_id') == $book->id ? 'selected' : '' }}>
-                                {{ $book->ten_sach }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="reader_id" class="form-label">Độc giả</label>
-                    <select class="form-select" id="reader_id" name="reader_id">
-                        <option value="">Tất cả độc giả</option>
-                        @foreach($readers as $reader)
-                            <option value="{{ $reader->id }}" {{ request('reader_id') == $reader->id ? 'selected' : '' }}>
-                                {{ $reader->ho_ten }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary me-2">
-                        <i class="fas fa-search me-1"></i>Tìm kiếm
-                    </button>
-                    <a href="{{ route('admin.reservations.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-times me-1"></i>Xóa bộ lọc
-                    </a>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Reservations Table -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3 d-flex justify-content-between align-items-center">
-            <h6 class="m-0 font-weight-bold text-primary">
-                <i class="fas fa-list me-2"></i>Danh Sách Đặt Trước
-            </h6>
-            <div>
-                <button type="button" class="btn btn-sm btn-success" onclick="bulkAction('confirm')">
-                    <i class="fas fa-check me-1"></i>Xác nhận
-                </button>
-                <button type="button" class="btn btn-sm btn-info" onclick="bulkAction('mark-ready')">
-                    <i class="fas fa-hand-holding me-1"></i>Đánh dấu sẵn sàng
-                </button>
-                <button type="button" class="btn btn-sm btn-danger" onclick="bulkAction('cancel')">
-                    <i class="fas fa-times me-1"></i>Hủy
-                </button>
-            </div>
-        </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>
-                                <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
-                            </th>
-                            <th>#</th>
-                            <th>Thông tin sách</th>
-                            <th>Độc giả</th>
-                            <th>Ngày đặt</th>
-                            <th>Hết hạn</th>
-                            <th>Trạng thái</th>
-                            <th>Độ ưu tiên</th>
-                            <th>Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($reservations ?? [] as $reservation)
-                        <tr>
-                            <td>
-                                <input type="checkbox" class="reservation-checkbox" value="{{ $reservation->id }}">
-                            </td>
-                            <td>{{ $loop->iteration }}</td>
-                            <td>
-                                <div class="book-info">
-                                    <div class="book-title">{{ $reservation->book->ten_sach }}</div>
-                                    <div class="book-author">{{ $reservation->book->tac_gia }}</div>
-                                    <div class="book-isbn">{{ $reservation->book->isbn }}</div>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="reader-info">
-                                    <div class="reader-name">{{ $reservation->reader->ho_ten }}</div>
-                                    <div class="reader-card">{{ $reservation->reader->so_the_doc_gia }}</div>
-                                    <div class="reader-phone">{{ $reservation->reader->so_dien_thoai }}</div>
-                                </div>
-                            </td>
-                            <td>{{ $reservation->reservation_date->format('d/m/Y') }}</td>
-                            <td>
-                                <div class="expiry-info">
-                                    <div class="expiry-date">{{ $reservation->expiry_date->format('d/m/Y') }}</div>
-                                    @if($reservation->isExpired())
-                                        <small class="text-danger">
-                                            <i class="fas fa-exclamation-triangle"></i> Hết hạn
-                                        </small>
-                                    @elseif($reservation->expiry_date->diffInDays(now()) <= 1)
-                                        <small class="text-warning">
-                                            <i class="fas fa-clock"></i> Sắp hết hạn
-                                        </small>
-                                    @endif
-                                </div>
-                            </td>
-                            <td>
-                                <span class="status-badge status-{{ $reservation->status }}">
-                                    @switch($reservation->status)
-                                        @case('pending')
-                                            <i class="fas fa-clock me-1"></i>Đang chờ
-                                            @break
-                                        @case('confirmed')
-                                            <i class="fas fa-check-circle me-1"></i>Đã xác nhận
-                                            @break
-                                        @case('ready')
-                                            <i class="fas fa-hand-holding me-1"></i>Sẵn sàng
-                                            @break
-                                        @case('cancelled')
-                                            <i class="fas fa-times-circle me-1"></i>Đã hủy
-                                            @break
-                                        @case('expired')
-                                            <i class="fas fa-exclamation-triangle me-1"></i>Hết hạn
-                                            @break
-                                    @endswitch
-                                </span>
-                            </td>
-                            <td>
-                                <span class="priority-badge priority-{{ $reservation->priority }}">
-                                    {{ $reservation->priority }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{{ route('admin.reservations.show', $reservation) }}" 
-                                       class="btn btn-sm btn-info" title="Xem chi tiết">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    @if($reservation->status === 'pending')
-                                        <button type="button" class="btn btn-sm btn-success" 
-                                                onclick="confirmReservation({{ $reservation->id }})" title="Xác nhận">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                    @endif
-                                    @if($reservation->status === 'confirmed')
-                                        <button type="button" class="btn btn-sm btn-info" 
-                                                onclick="markReady({{ $reservation->id }})" title="Đánh dấu sẵn sàng">
-                                            <i class="fas fa-hand-holding"></i>
-                                        </button>
-                                    @endif
-                                    @if(in_array($reservation->status, ['pending', 'confirmed']))
-                                        <button type="button" class="btn btn-sm btn-danger" 
-                                                onclick="cancelReservation({{ $reservation->id }})" title="Hủy">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="9" class="text-center py-4">
-                                <div class="empty-state">
-                                    <i class="fas fa-calendar-check fa-3x text-muted mb-3"></i>
-                                    <h5 class="text-muted">Không có đặt trước nào</h5>
-                                    <p class="text-muted">Chưa có yêu cầu đặt trước nào trong hệ thống.</p>
-                                    <a href="{{ route('admin.reservations.create') }}" class="btn btn-primary">
-                                        <i class="fas fa-plus me-1"></i>Tạo đặt trước đầu tiên
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination -->
-            @if($reservations && $reservations->hasPages())
-            <div class="d-flex justify-content-center mt-4">
-                {{ $reservations->appends(request()->query())->links() }}
-            </div>
-            @endif
-        </div>
-    </div>
+    @endif
 </div>
 @endsection
 
-@section('styles')
+@push('styles')
 <style>
-.book-info, .reader-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.book-title, .reader-name {
-    font-weight: 600;
-    color: #2c3e50;
-    margin-bottom: 2px;
-}
-
-.book-author, .book-isbn, .reader-card, .reader-phone {
-    font-size: 0.875rem;
-    color: #6c757d;
-    margin-bottom: 1px;
-}
-
-.status-badge {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-.status-pending {
-    background-color: #fff3cd;
-    color: #856404;
-}
-
-.status-confirmed {
-    background-color: #d1ecf1;
-    color: #0c5460;
-}
-
-.status-ready {
-    background-color: #d4edda;
-    color: #155724;
-}
-
-.status-cancelled {
-    background-color: #f8d7da;
-    color: #721c24;
-}
-
-.status-expired {
-    background-color: #f5c6cb;
-    color: #721c24;
-}
-
-.priority-badge {
-    padding: 4px 8px;
-    border-radius: 50%;
-    font-size: 0.75rem;
-    font-weight: 600;
-    min-width: 24px;
-    text-align: center;
-    display: inline-block;
-}
-
-.priority-1 {
-    background-color: #dc3545;
-    color: white;
-}
-
-.priority-2 {
-    background-color: #fd7e14;
-    color: white;
-}
-
-.priority-3 {
-    background-color: #ffc107;
-    color: #212529;
-}
-
-.priority-4 {
-    background-color: #20c997;
-    color: white;
-}
-
-.priority-5 {
-    background-color: #6c757d;
-    color: white;
-}
-
-.expiry-info {
-    text-align: center;
-}
-
-.empty-state {
-    text-align: center;
-    padding: 2rem;
-}
+    .modal.fade {
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(5px);
+    }
+    
+    .modal-dialog {
+        animation: slideDown 0.3s ease-out;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-50px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
-@endsection
+@endpush
 
-@section('scripts')
+@push('scripts')
 <script>
-// Toggle select all
-function toggleSelectAll() {
-    const selectAll = document.getElementById('selectAll');
-    const checkboxes = document.querySelectorAll('.reservation-checkbox');
-    
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = selectAll.checked;
-    });
-}
-
-// Bulk actions
-function bulkAction(action) {
-    const checkboxes = document.querySelectorAll('.reservation-checkbox:checked');
-    const ids = Array.from(checkboxes).map(cb => cb.value);
-    
-    if (ids.length === 0) {
-        alert('Vui lòng chọn ít nhất một đặt trước!');
-        return;
-    }
-    
-    let confirmMessage = '';
-    switch(action) {
-        case 'confirm':
-            confirmMessage = `Bạn có chắc muốn xác nhận ${ids.length} đặt trước?`;
-            break;
-        case 'mark-ready':
-            confirmMessage = `Bạn có chắc muốn đánh dấu ${ids.length} đặt trước là sẵn sàng?`;
-            break;
-        case 'cancel':
-            confirmMessage = `Bạn có chắc muốn hủy ${ids.length} đặt trước?`;
-            break;
-    }
-    
-    if (confirm(confirmMessage)) {
-        // Implement bulk action logic here
-        alert(`Đã thực hiện ${action} cho ${ids.length} đặt trước!`);
-        location.reload();
-    }
+// Get CSRF token from meta tag or input
+function getCsrfToken() {
+    const token = document.querySelector('meta[name="csrf-token"]');
+    return token ? token.getAttribute('content') : '{{ csrf_token() }}';
 }
 
 // Confirm reservation
 function confirmReservation(reservationId) {
     if (confirm('Bạn có chắc muốn xác nhận đặt trước này?')) {
+        const formData = new FormData();
+        formData.append('_token', getCsrfToken());
+        
         fetch(`/admin/reservations/${reservationId}/confirm`, {
             method: 'POST',
+            body: formData,
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            return response.text().then(text => {
+                throw new Error(text || 'Có lỗi xảy ra');
+            });
+        })
         .then(data => {
             if (data.success) {
-                alert(data.message);
+                alert(data.message || 'Đặt trước đã được xác nhận!');
                 location.reload();
             } else {
-                alert(data.message);
+                alert(data.message || 'Có lỗi xảy ra!');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Có lỗi xảy ra!');
+            // Nếu là lỗi permission hoặc validation, thử submit form thông thường
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/reservations/${reservationId}/confirm`;
+            
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = getCsrfToken();
+            form.appendChild(csrfToken);
+            
+            document.body.appendChild(form);
+            form.submit();
         });
     }
 }
@@ -469,25 +381,48 @@ function confirmReservation(reservationId) {
 // Mark ready
 function markReady(reservationId) {
     if (confirm('Bạn có chắc muốn đánh dấu đặt trước này là sẵn sàng?')) {
+        const formData = new FormData();
+        formData.append('_token', getCsrfToken());
+        
         fetch(`/admin/reservations/${reservationId}/mark-ready`, {
             method: 'POST',
+            body: formData,
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            return response.text().then(text => {
+                throw new Error(text || 'Có lỗi xảy ra');
+            });
+        })
         .then(data => {
             if (data.success) {
-                alert(data.message);
+                alert(data.message || 'Sách đã sẵn sàng để nhận!');
                 location.reload();
             } else {
-                alert(data.message);
+                alert(data.message || 'Có lỗi xảy ra!');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Có lỗi xảy ra!');
+            // Nếu là lỗi permission hoặc validation, thử submit form thông thường
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/reservations/${reservationId}/mark-ready`;
+            
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = getCsrfToken();
+            form.appendChild(csrfToken);
+            
+            document.body.appendChild(form);
+            form.submit();
         });
     }
 }
@@ -495,25 +430,48 @@ function markReady(reservationId) {
 // Cancel reservation
 function cancelReservation(reservationId) {
     if (confirm('Bạn có chắc muốn hủy đặt trước này?')) {
+        const formData = new FormData();
+        formData.append('_token', getCsrfToken());
+        
         fetch(`/admin/reservations/${reservationId}/cancel`, {
             method: 'POST',
+            body: formData,
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (response.ok) {
+                return response.json();
+            }
+            return response.text().then(text => {
+                throw new Error(text || 'Có lỗi xảy ra');
+            });
+        })
         .then(data => {
             if (data.success) {
-                alert(data.message);
+                alert(data.message || 'Đặt trước đã được hủy!');
                 location.reload();
             } else {
-                alert(data.message);
+                alert(data.message || 'Có lỗi xảy ra!');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Có lỗi xảy ra!');
+            // Nếu là lỗi permission hoặc validation, thử submit form thông thường
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/admin/reservations/${reservationId}/cancel`;
+            
+            const csrfToken = document.createElement('input');
+            csrfToken.type = 'hidden';
+            csrfToken.name = '_token';
+            csrfToken.value = getCsrfToken();
+            form.appendChild(csrfToken);
+            
+            document.body.appendChild(form);
+            form.submit();
         });
     }
 }
@@ -523,4 +481,8 @@ function exportReservations() {
     window.open('{{ route("admin.reservations.export") }}', '_blank');
 }
 </script>
-@endsection
+@endpush
+
+
+
+

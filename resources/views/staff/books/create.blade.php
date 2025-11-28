@@ -102,18 +102,6 @@
                                     <input type="number" name="gia" class="form-control" value="{{ old('gia') }}" min="0" step="1000" placeholder="Để trống nếu miễn phí">
                                 </div>
                             </div>
-                            
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Định dạng</label>
-                                    <select name="dinh_dang" class="form-control">
-                                        <option value="Sách giấy" {{ old('dinh_dang', 'Sách giấy') == 'Sách giấy' ? 'selected' : '' }}>Sách giấy</option>
-                                        <option value="PDF" {{ old('dinh_dang') == 'PDF' ? 'selected' : '' }}>PDF</option>
-                                        <option value="EPUB" {{ old('dinh_dang') == 'EPUB' ? 'selected' : '' }}>EPUB</option>
-                                        <option value="MOBI" {{ old('dinh_dang') == 'MOBI' ? 'selected' : '' }}>MOBI</option>
-                                    </select>
-                                </div>
-                            </div>
                         </div>
 
                         <div class="mb-3">

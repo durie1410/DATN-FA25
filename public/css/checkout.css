@@ -17,10 +17,62 @@
     --checkout-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* Container chính */
-body,
+/* Container chính với gradient background đẹp - Áp dụng cho toàn bộ body */
+html,
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%) !important;
+    background-size: 400% 400% !important;
+    animation: gradientShift 15s ease infinite !important;
+    min-height: 100vh !important;
+    position: relative !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Áp dụng cho trang checkout */
 .checkout-page {
-    background-color: var(--checkout-bg) !important;
+    background: transparent !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+/* Animation cho gradient background */
+@keyframes gradientShift {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Overlay tinh tế để làm nổi bật nội dung - Áp dụng cho body */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(248, 250, 252, 0.75);
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Container chính của checkout */
+.checkout-page .container {
+    position: relative;
+    z-index: 1;
+    background: transparent;
+}
+
+/* Đảm bảo main content có z-index đúng */
+main {
+    position: relative;
+    z-index: 1;
 }
 
 /* Override dark theme styles */
@@ -229,9 +281,26 @@ body,
     color: var(--checkout-text) !important;
 }
 
-/* Select dropdown */
+/* Select dropdown - Bỏ hoàn toàn mũi tên lặp lại */
 .checkout-page select.form-select {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-image: none !important;
+    background-repeat: no-repeat !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    padding-right: 0.75rem !important;
+}
+
+/* Ẩn tất cả các mũi tên có thể xuất hiện */
+.checkout-page select.form-select::-ms-expand {
+    display: none !important;
+}
+
+/* Đảm bảo không có background image nào được áp dụng */
+.checkout-page select.form-select,
+.checkout-page select.form-select:focus,
+.checkout-page select.form-select:hover {
+    background-image: none !important;
 }
 
 /* Icon colors */

@@ -145,6 +145,7 @@
             }
         }
     </style>
+    @stack('styles')
 </head>
 
 <body>
@@ -174,11 +175,6 @@
                             <span>Quản lý sách</span>
                         </a>
                         
-                        <a class="nav-link {{ request()->routeIs('staff.categories*') ? 'active' : '' }}" href="{{ route('staff.categories.index') }}">
-                            <i class="fas fa-folder me-2"></i>
-                            <span>Danh mục</span>
-                        </a>
-                        
                         <a class="nav-link {{ request()->routeIs('staff.readers*') ? 'active' : '' }}" href="{{ route('staff.readers.index') }}">
                             <i class="fas fa-users me-2"></i>
                             <span>Quản lý độc giả</span>
@@ -202,11 +198,6 @@
                         <a class="nav-link {{ request()->routeIs('staff.fines*') ? 'active' : '' }}" href="{{ route('staff.fines.index') }}">
                             <i class="fas fa-exclamation-triangle me-2"></i>
                             <span>Phạt</span>
-                        </a>
-                        
-                        <a class="nav-link {{ request()->routeIs('staff.reports*') ? 'active' : '' }}" href="{{ route('staff.reports.index') }}">
-                            <i class="fas fa-chart-bar me-2"></i>
-                            <span>Báo cáo</span>
                         </a>
                         
                         <a class="nav-link {{ request()->routeIs('staff.notifications*') ? 'active' : '' }}" href="{{ route('staff.notifications.index') }}">
@@ -299,6 +290,7 @@
         });
     </script>
     
+    @stack('scripts')
     @yield('scripts')
 </body>
 </html>

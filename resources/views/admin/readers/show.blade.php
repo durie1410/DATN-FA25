@@ -41,6 +41,10 @@
                                 <td>{{ $reader->so_dien_thoai }}</td>
                             </tr>
                             <tr>
+                                <td><strong>Số CCCD:</strong></td>
+                                <td>{{ $reader->so_cccd ?? 'N/A' }}</td>
+                            </tr>
+                            <tr>
                                 <td><strong>Ngày sinh:</strong></td>
                                 <td>{{ $reader->ngay_sinh ? $reader->ngay_sinh->format('d/m/Y') : 'N/A' }}</td>
                             </tr>

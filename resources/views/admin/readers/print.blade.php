@@ -118,6 +118,7 @@
                 <th style="width: 20%;">Họ tên</th>
                 <th style="width: 15%;">Email</th>
                 <th style="width: 12%;">Số điện thoại</th>
+                <th style="width: 12%;">Số CCCD</th>
                 <th style="width: 8%;">Giới tính</th>
                 <th style="width: 10%;">Ngày sinh</th>
                 <th style="width: 8%;">Trạng thái</th>
@@ -132,6 +133,7 @@
                 <td>{{ $reader->ho_ten }}</td>
                 <td>{{ $reader->email }}</td>
                 <td>{{ $reader->so_dien_thoai }}</td>
+                <td>{{ $reader->so_cccd ?? 'N/A' }}</td>
                 <td class="text-center">{{ $reader->gioi_tinh }}</td>
                 <td class="text-center">{{ $reader->ngay_sinh ? $reader->ngay_sinh->format('d/m/Y') : 'N/A' }}</td>
                 <td class="text-center">

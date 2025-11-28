@@ -202,6 +202,181 @@
             opacity: 0.9;
         }
 
+        /* --- MODAL PHIẾU MƯỢN --- */
+        .borrow-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .borrow-modal-overlay.active {
+            display: flex;
+        }
+
+        .borrow-modal {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .borrow-modal-header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .borrow-modal-header h2 {
+            margin: 0;
+            color: #cc0000;
+            font-size: 1.8em;
+        }
+
+        .borrow-modal-header .subtitle {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .borrow-info-section {
+            margin-bottom: 20px;
+        }
+
+        .borrow-info-section h3 {
+            color: #333;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px dashed #eee;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .info-value {
+            color: #333;
+            font-weight: bold;
+            text-align: right;
+        }
+
+        .price-breakdown {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+
+        .price-row.total {
+            border-top: 2px solid #cc0000;
+            margin-top: 10px;
+            padding-top: 15px;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #cc0000;
+        }
+
+        .borrow-modal-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .btn-modal {
+            flex: 1;
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s;
+        }
+
+        .btn-modal-cancel {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-modal-cancel:hover {
+            background: #e0e0e0;
+        }
+
+        .btn-modal-confirm {
+            background: #cc0000;
+            color: white;
+        }
+
+        .btn-modal-confirm:hover {
+            background: #aa0000;
+        }
+
+        .btn-modal-confirm:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s;
+        }
+
+        .close-modal:hover {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .loading-spinner {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
         /* --- TABS --- */
         .tab-section {
             display: flex;
@@ -600,10 +775,98 @@
                     <span class="cart-badge" id="cart-count">0</span>
                 </a>
                 @auth
-                    <a href="{{ route('logout') }}" onclick="event.preventDefault(); document.getElementById('logout-form').submit();" class="auth-link">Đăng nhập</a>
-                    <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
-                        @csrf
-                    </form>
+                    <div class="user-menu-dropdown" style="position: relative;">
+                        <a href="#" class="auth-link user-menu-toggle">
+                            <span class="user-icon">👤</span>
+                            <span>{{ auth()->user()->name }}</span>
+                        </a>
+                        <div class="user-dropdown-menu">
+                            <div class="dropdown-header" style="padding: 12px 15px; border-bottom: 1px solid #eee; font-weight: 600; color: #333;">
+                                <span class="user-icon">👤</span>
+                                {{ auth()->user()->name }}
+                            </div>
+                            <a href="{{ route('account.purchased-books') }}" class="dropdown-item">
+                                <span>❤️</span> Sách đã mua
+                            </a>
+                            @if(auth()->user()->reader)
+                            <a href="{{ route('account.borrowed-books') }}" class="dropdown-item">
+                                <span>📚</span> Sách đang mượn
+                            </a>
+                            <a href="{{ route('account.reader-info') }}" class="dropdown-item">
+                                <span>👥</span> Thông tin độc giả
+                            </a>
+                            @endif
+                            <a href="{{ route('account') }}" class="dropdown-item">
+                                <span>👤</span> Thông tin tài khoản
+                            </a>
+                            <a href="{{ route('account.change-password') }}" class="dropdown-item">
+                                <span>🔒</span> Đổi mật khẩu
+                            </a>
+                            <a href="{{ route('orders.index') }}" class="dropdown-item">
+                                <span>⏰</span> Lịch sử mua hàng
+                            </a>
+                            @if(auth()->user()->role === 'admin' || auth()->user()->role === 'staff')
+                            <div style="border-top: 1px solid #eee; margin-top: 5px;"></div>
+                            <a href="{{ route('dashboard') }}" class="dropdown-item">
+                                <span>📊</span> Dashboard
+                            </a>
+                            @endif
+                            <form action="{{ route('logout') }}" method="POST" style="margin: 0;">
+                                @csrf
+                                <button type="submit" class="dropdown-item logout-btn">
+                                    <span>➡️</span> Đăng xuất
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <style>
+                        .user-menu-dropdown {
+                            position: relative;
+                        }
+                        .user-menu-dropdown .user-dropdown-menu {
+                            display: none;
+                            position: absolute;
+                            top: calc(100% + 5px);
+                            right: 0;
+                            background: white;
+                            border: 1px solid #ddd;
+                            border-radius: 8px;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                            min-width: 220px;
+                            z-index: 1000;
+                            overflow: hidden;
+                        }
+                        .user-menu-dropdown:hover .user-dropdown-menu {
+                            display: block;
+                        }
+                        .user-menu-dropdown .dropdown-item {
+                            display: block;
+                            padding: 10px 15px;
+                            color: #333;
+                            text-decoration: none;
+                            border-bottom: 1px solid #eee;
+                            transition: background-color 0.2s;
+                            cursor: pointer;
+                        }
+                        .user-menu-dropdown .dropdown-item:hover {
+                            background-color: #f5f5f5;
+                        }
+                        .user-menu-dropdown .dropdown-item.logout-btn {
+                            border: none;
+                            background: none;
+                            width: 100%;
+                            text-align: left;
+                            color: #d32f2f;
+                            border-top: 1px solid #eee;
+                            margin-top: 5px;
+                        }
+                        .user-menu-dropdown .dropdown-item.logout-btn:hover {
+                            background-color: #ffebee;
+                        }
+                        .user-menu-dropdown .dropdown-item span {
+                            margin-right: 8px;
+                        }
+                    </style>
                 @else
                     <a href="{{ route('login') }}" class="auth-link">Đăng nhập</a>
                 @endauth
@@ -655,49 +918,94 @@
                         </div>
 
                         <div class="buy-options">
-                            <label>Chọn sản phẩm</label>
+                            @php
+                                $isBorrowMode = isset($mode) && $mode === 'borrow';
+                            @endphp
                             
-                            <!-- Sách giấy -->
-                            <div class="option-row">
-                                <span class="type">📚 Sách giấy</span>
-                                <div style="display: flex; align-items: center; gap: 5px;">
-                                    <button type="button" onclick="changeQuantity('paper', -1)" style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">-</button>
-                                    <input type="number" id="paper-quantity" value="1" min="1" style="width: 50px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; text-align: center;" onchange="updateTotalPrice()">
-                                    <button type="button" onclick="changeQuantity('paper', 1)" style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">+</button>
+                            @if($isBorrowMode)
+                                <!-- Hiển thị thông tin số lượng sách có sẵn -->
+                                <div style="padding: 15px; background: #e8f5e9; border-radius: 4px; margin-bottom: 20px; border: 1px solid #4caf50;">
+                                    <strong style="font-size: 1.1em;">📚 Sách có sẵn:</strong> 
+                                    <span style="color: #2e7d32; font-weight: bold; font-size: 1.1em;">{{ $stats['available_copies'] ?? 0 }} cuốn</span>
+                                    @if(isset($hasActiveReservation) && $hasActiveReservation)
+                                        <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 4px; border: 1px solid #ffc107; color: #856404;">
+                                            ⚠️ Bạn đã có yêu cầu mượn sách này. Vui lòng chờ duyệt.
+                                        </div>
+                                    @endif
                                 </div>
-                                <span class="price" id="paper-price">{{ number_format($book->gia ?? 111000, 0, ',', '.') }}₫</span>
-                                <input type="checkbox" id="paper-checkbox" checked onchange="updateTotalPrice()" style="width: 20px; height: 20px; cursor: pointer;">
-                            </div>
-                            
-                            <!-- Sách điện tử (ebook) -->
-                            <div class="option-row">
-                                <span class="type" style="display: flex; flex-direction: column; align-items: flex-start;">
-                                    <span>📖 Sách điện tử</span>
-                                    <span style="font-size: 0.85em; color: #666; font-weight: normal;">(ebook)</span>
-                                </span>
-                                <select class="duration" id="ebook-duration" style="padding: 5px; border: 1px solid #ddd; border-radius: 4px; cursor: pointer;" onchange="updateTotalPrice()">
-                                    <option value="1">1 Tháng</option>
-                                    <option value="3">3 Tháng</option>
-                                    <option value="6">6 Tháng</option>
-                                    <option value="12">12 Tháng</option>
-                                </select>
-                                <span class="price" id="ebook-price">{{ number_format(($book->gia ?? 111000) * 0.21, 0, ',', '.') }}₫</span>
-                                <input type="checkbox" id="ebook-checkbox" onchange="updateTotalPrice()" style="width: 20px; height: 20px; cursor: pointer;">
-                            </div>
-                            
-                            <div class="total-price">
-                                <span>Thành tiền</span>
-                                <span class="final-price" id="total-price">{{ number_format($book->gia ?? 111000, 0, ',', '.') }}₫</span>
-                            </div>
 
-                            <div class="action-buttons">
-                                <button class="btn btn-buy" onclick="buyNow()">
-                                    <span style="font-size: 1.2em;">$</span> Mua ngay
-                                </button>
-                                <button class="btn btn-cart" onclick="addToCart()">
-                                    <span style="font-size: 1.2em;">🛒</span> Thêm vào giỏ
-                                </button>
-                            </div>
+                                <div class="action-buttons">
+                                    @auth
+                                        @if(isset($hasActiveReservation) && $hasActiveReservation)
+                                            <button class="btn btn-buy" disabled style="opacity: 0.6; cursor: not-allowed; width: 100%;">
+                                                <span style="font-size: 1.2em;">⏳</span> Đã gửi yêu cầu
+                                            </button>
+                                        @else
+                                            <button class="btn btn-buy" onclick="borrowNow()" style="flex: 1;">
+                                                <span style="font-size: 1.2em;">📖</span> Mượn sách
+                                            </button>
+                                            <button class="btn btn-cart" onclick="reserveBook()" style="flex: 1;">
+                                                <span style="font-size: 1.2em;">📋</span> Đặt trước
+                                            </button>
+                                        @endif
+                                    @else
+                                        <button class="btn btn-buy" onclick="alert('Vui lòng đăng nhập để mượn sách!'); window.location.href='{{ route('login') }}';" style="opacity: 0.7; cursor: pointer; flex: 1;">
+                                            <span style="font-size: 1.2em;">📖</span> Mượn sách
+                                        </button>
+                                        <button class="btn btn-cart" onclick="alert('Vui lòng đăng nhập để đặt trước sách!'); window.location.href='{{ route('login') }}';" style="opacity: 0.7; cursor: pointer; flex: 1;">
+                                            <span style="font-size: 1.2em;">📋</span> Đặt trước
+                                        </button>
+                                    @endauth
+                                </div>
+                            @else
+                                <label>Chọn sản phẩm</label>
+                                
+                                <!-- Sách giấy -->
+                                <div class="option-row">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span class="type">📚 Sách giấy</span>
+                                        <span style="font-size: 0.9em; color: #666; font-weight: normal;">
+                                            (Còn {{ $stats['stock_quantity'] ?? 0 }} cuốn trong kho)
+                                        </span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 5px;">
+                                        <button type="button" onclick="changeQuantity('paper', -1)" style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">-</button>
+                                        <input type="number" id="paper-quantity" value="1" min="1" max="{{ $stats['stock_quantity'] ?? 999 }}" style="width: 50px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; text-align: center;" onchange="updateTotalPrice()">
+                                        <button type="button" onclick="changeQuantity('paper', 1)" style="padding: 5px 10px; border: 1px solid #ddd; border-radius: 4px; background: white; cursor: pointer;">+</button>
+                                    </div>
+                                    <span class="price" id="paper-price">{{ number_format($book->gia ?? 111000, 0, ',', '.') }}₫</span>
+                                    <input type="checkbox" id="paper-checkbox" checked onchange="updateTotalPrice()" style="width: 20px; height: 20px; cursor: pointer;">
+                                </div>
+                                
+                                @if(($stats['stock_quantity'] ?? 0) == 0)
+                                    <div style="padding: 15px; background: #fff3cd; border-radius: 4px; margin: 15px 0; border: 1px solid #ffc107; color: #856404;">
+                                        <strong>⚠️ Hết hàng:</strong> Sách này hiện đã hết hàng. Vui lòng quay lại sau!
+                                    </div>
+                                @endif
+                                
+                                <div class="total-price">
+                                    <span>Thành tiền</span>
+                                    <span class="final-price" id="total-price">{{ number_format($book->gia ?? 111000, 0, ',', '.') }}₫</span>
+                                </div>
+
+                                <div class="action-buttons">
+                                    @auth
+                                        <button class="btn btn-buy" onclick="buyNow()" {{ ($stats['stock_quantity'] ?? 0) == 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : '' }}>
+                                            <span style="font-size: 1.2em;">$</span> Mua ngay
+                                        </button>
+                                        <button class="btn btn-cart" onclick="addToCart()" {{ ($stats['stock_quantity'] ?? 0) == 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : '' }}>
+                                            <span style="font-size: 1.2em;">🛒</span> Thêm vào giỏ
+                                        </button>
+                                    @else
+                                        <button class="btn btn-buy" onclick="alert('Vui lòng đăng nhập để mua hàng!'); window.location.href='{{ route('login') }}';" style="opacity: 0.7; cursor: pointer;" {{ ($stats['stock_quantity'] ?? 0) == 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : '' }}>
+                                            <span style="font-size: 1.2em;">$</span> Mua ngay
+                                        </button>
+                                        <button class="btn btn-cart" onclick="alert('Vui lòng đăng nhập để thêm vào giỏ hàng!'); window.location.href='{{ route('login') }}';" style="opacity: 0.7; cursor: pointer;" {{ ($stats['stock_quantity'] ?? 0) == 0 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : '' }}>
+                                            <span style="font-size: 1.2em;">🛒</span> Thêm vào giỏ
+                                        </button>
+                                    @endauth
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -852,12 +1160,41 @@
             let currentQuantity = parseInt(quantityInput.value) || 1;
             currentQuantity += change;
             if (currentQuantity < 1) currentQuantity = 1;
+            
+            // Kiểm tra giới hạn số lượng tồn kho
+            const isBorrowMode = {{ isset($mode) && $mode === 'borrow' ? 'true' : 'false' }};
+            const maxQuantity = parseInt(quantityInput.getAttribute('max')) || 999;
+            
+            if (isBorrowMode) {
+                // Chế độ mượn: sử dụng available_copies
+                const availableCopies = {{ $stats['available_copies'] ?? 0 }};
+                const maxBorrowQuantity = availableCopies;
+                if (currentQuantity > maxBorrowQuantity) {
+                    currentQuantity = maxBorrowQuantity;
+                    alert(`Chỉ còn ${maxBorrowQuantity} cuốn sách có sẵn.`);
+                }
+            } else {
+                // Chế độ mua: sử dụng stock_quantity
+                const stockQuantity = {{ $stats['stock_quantity'] ?? 0 }};
+                if (currentQuantity > stockQuantity) {
+                    currentQuantity = stockQuantity;
+                    alert(`Chỉ còn ${stockQuantity} cuốn sách trong kho.`);
+                }
+            }
+            
             quantityInput.value = currentQuantity;
             updateTotalPrice();
         }
 
         // Hàm cập nhật giá tổng
         function updateTotalPrice() {
+            // Kiểm tra chế độ mượn sách
+            const isBorrowMode = {{ isset($mode) && $mode === 'borrow' ? 'true' : 'false' }};
+            if (isBorrowMode) {
+                // Ở chế độ mượn, không cần tính giá
+                return;
+            }
+
             const basePrice = {{ $book->gia ?? 111000 }};
             let totalPrice = 0;
 
@@ -878,24 +1215,6 @@
                 }
             }
 
-            // Tính và cập nhật giá sách điện tử (luôn cập nhật giá hiển thị)
-            const ebookDurationSelect = document.getElementById('ebook-duration');
-            let ebookPrice = 0;
-            if (ebookDurationSelect) {
-                const ebookDuration = parseInt(ebookDurationSelect.value) || 1;
-                ebookPrice = basePrice * 0.21 * ebookDuration;
-                const ebookPriceElement = document.getElementById('ebook-price');
-                if (ebookPriceElement) {
-                    ebookPriceElement.textContent = new Intl.NumberFormat('vi-VN').format(Math.round(ebookPrice)) + '₫';
-                }
-                
-                // Chỉ tính vào tổng nếu checkbox được chọn
-                const ebookCheckbox = document.getElementById('ebook-checkbox');
-                if (ebookCheckbox && ebookCheckbox.checked) {
-                    totalPrice += ebookPrice;
-                }
-            }
-
             // Cập nhật giá tổng
             const totalPriceElement = document.getElementById('total-price');
             if (totalPriceElement) {
@@ -904,25 +1223,36 @@
         }
 
         function buyNow() {
+            // Kiểm tra đăng nhập
+            @guest
+                alert('Vui lòng đăng nhập để mua hàng!');
+                window.location.href = '{{ route("login") }}';
+                return;
+            @endguest
+
             const paperCheckbox = document.getElementById('paper-checkbox');
-            const ebookCheckbox = document.getElementById('ebook-checkbox');
             const paperChecked = paperCheckbox ? paperCheckbox.checked : false;
-            const ebookChecked = ebookCheckbox ? ebookCheckbox.checked : false;
             
-            if (!paperChecked && !ebookChecked) {
-                alert('Vui lòng chọn ít nhất một sản phẩm!');
+            if (!paperChecked) {
+                alert('Vui lòng chọn sản phẩm!');
                 return;
             }
 
-            let message = 'Bạn có chắc chắn muốn mua:\n';
-            if (paperChecked) {
-                const quantity = document.getElementById('paper-quantity')?.value || 1;
-                message += `- Sách giấy: ${quantity} cuốn\n`;
+            const quantity = parseInt(document.getElementById('paper-quantity')?.value) || 1;
+            const stockQuantity = {{ $stats['stock_quantity'] ?? 0 }};
+            
+            // Kiểm tra số lượng tồn kho
+            if (quantity > stockQuantity) {
+                alert(`Số lượng bạn chọn (${quantity} cuốn) vượt quá số lượng tồn kho (${stockQuantity} cuốn). Vui lòng chọn lại!`);
+                return;
             }
-            if (ebookChecked) {
-                const duration = document.getElementById('ebook-duration')?.value || 1;
-                message += `- Sách điện tử: ${duration} tháng\n`;
+            
+            if (stockQuantity === 0) {
+                alert('Sách này hiện đã hết hàng. Vui lòng quay lại sau!');
+                return;
             }
+
+            const message = `Bạn có chắc chắn muốn mua:\n- Sách giấy: ${quantity} cuốn\n`;
 
             if (!confirm(message)) {
                 return;
@@ -931,12 +1261,7 @@
             // Tạo URL với các tham số
             const params = new URLSearchParams();
             params.append('book_id', {{ $book->id }});
-            if (paperChecked) {
-                params.append('paper_quantity', document.getElementById('paper-quantity').value);
-            }
-            if (ebookChecked) {
-                params.append('ebook_duration', document.getElementById('ebook-duration').value);
-            }
+            params.append('paper_quantity', document.getElementById('paper-quantity').value);
             
             window.location.href = '{{ route("checkout") }}?' + params.toString();
         }
@@ -953,26 +1278,39 @@
         }
 
         function addToCart() {
+            // Kiểm tra đăng nhập
+            @guest
+                alert('Vui lòng đăng nhập để thêm vào giỏ hàng!');
+                window.location.href = '{{ route("login") }}';
+                return;
+            @endguest
+
             const paperCheckbox = document.getElementById('paper-checkbox');
-            const ebookCheckbox = document.getElementById('ebook-checkbox');
             const paperChecked = paperCheckbox ? paperCheckbox.checked : false;
-            const ebookChecked = ebookCheckbox ? ebookCheckbox.checked : false;
             
-            if (!paperChecked && !ebookChecked) {
-                alert('Vui lòng chọn ít nhất một sản phẩm!');
+            if (!paperChecked) {
+                alert('Vui lòng chọn sản phẩm!');
+                return;
+            }
+
+            const quantity = parseInt(document.getElementById('paper-quantity')?.value) || 1;
+            const stockQuantity = {{ $stats['stock_quantity'] ?? 0 }};
+            
+            // Kiểm tra số lượng tồn kho
+            if (quantity > stockQuantity) {
+                alert(`Số lượng bạn chọn (${quantity} cuốn) vượt quá số lượng tồn kho (${stockQuantity} cuốn). Vui lòng chọn lại!`);
+                return;
+            }
+            
+            if (stockQuantity === 0) {
+                alert('Sách này hiện đã hết hàng. Vui lòng quay lại sau!');
                 return;
             }
 
             const cartData = {
-                book_id: {{ $book->id }}
+                book_id: {{ $book->id }},
+                paper_quantity: quantity
             };
-
-            if (paperChecked) {
-                cartData.paper_quantity = parseInt(document.getElementById('paper-quantity')?.value) || 1;
-            }
-            if (ebookChecked) {
-                cartData.ebook_duration = parseInt(document.getElementById('ebook-duration')?.value) || 1;
-            }
             
             fetch('{{ route("cart.add") }}', {
                 method: 'POST',
@@ -982,8 +1320,24 @@
                 },
                 body: JSON.stringify(cartData)
             })
-            .then(response => response.json())
+            .then(response => {
+                // Kiểm tra nếu response là 401 (Unauthorized)
+                if (response.status === 401) {
+                    return response.json().then(data => {
+                        alert(data.message || 'Vui lòng đăng nhập để thêm vào giỏ hàng!');
+                        if (data.redirect_url) {
+                            window.location.href = data.redirect_url;
+                        } else {
+                            window.location.href = '{{ route("login") }}';
+                        }
+                        return;
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
+                if (!data) return; // Đã xử lý redirect ở trên
+                
                 if (data.success) {
                     alert('Đã thêm vào giỏ hàng!');
                     const cartCount = document.getElementById('cart-count');
@@ -992,6 +1346,10 @@
                     }
                 } else {
                     alert(data.message || 'Có lỗi xảy ra!');
+                    // Nếu có redirect_url, chuyển hướng đến trang đăng nhập
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    }
                 }
             })
             .catch(error => {
@@ -1002,6 +1360,782 @@
 
         // Khởi tạo giá khi trang load
         updateTotalPrice();
+
+        // Load cart count on page load
+        function loadCartCount() {
+            fetch('{{ route("cart.count") }}')
+                .then(response => response.json())
+                .then(data => {
+                    const cartCountElement = document.getElementById('cart-count');
+                    if (cartCountElement) {
+                        if (data.count > 0) {
+                            cartCountElement.textContent = data.count;
+                            cartCountElement.style.display = 'inline-block';
+                        } else {
+                            cartCountElement.textContent = '0';
+                            cartCountElement.style.display = 'none';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading cart count:', error);
+                });
+        }
+
+        // Kiểm tra chế độ mượn sách
+        const isBorrowMode = {{ isset($mode) && $mode === 'borrow' ? 'true' : 'false' }};
+
+        // Hàm mượn sách ngay
+        function borrowNow() {
+            @guest
+                alert('Vui lòng đăng nhập để mượn sách!');
+                window.location.href = '{{ route("login") }}';
+                return;
+            @endguest
+
+            const availableCopies = {{ $stats['available_copies'] ?? 0 }};
+            
+            if (availableCopies <= 0) {
+                alert('Hiện tại không còn sách có sẵn để mượn. Vui lòng thử lại sau.');
+                return;
+            }
+
+            // Hiển thị modal để nhập số ngày mượn
+            showBorrowModal();
+        }
+
+        // Hiển thị modal phiếu mượn
+        function showBorrowModal() {
+            const modal = document.getElementById('borrowModal');
+            const daysInput = document.getElementById('borrowDaysInput');
+            const distanceInput = document.getElementById('distanceInput');
+            daysInput.value = '14';
+            distanceInput.value = '0';
+            modal.classList.add('active');
+            
+            // Reset thông tin
+            document.getElementById('borrowModalContent').innerHTML = '<div class="loading-spinner">Đang tải thông tin...</div>';
+            
+            // Load thông tin giá khi người dùng nhập số ngày
+            updateBorrowQuote();
+        }
+
+        // Đóng modal
+        function closeBorrowModal() {
+            document.getElementById('borrowModal').classList.remove('active');
+        }
+
+        // Cập nhật thông tin giá khi thay đổi số ngày hoặc khoảng cách
+        function updateBorrowQuote() {
+            const days = parseInt(document.getElementById('borrowDaysInput').value) || 14;
+            const distance = parseFloat(document.getElementById('distanceInput').value) || 0;
+            
+            if (days < 1 || days > 30) {
+                document.getElementById('borrowModalContent').innerHTML = 
+                    '<div style="text-align: center; padding: 20px; color: #cc0000;">Số ngày mượn phải từ 1 đến 30 ngày.</div>';
+                return;
+            }
+
+            // Sử dụng KYC status từ server
+            const kycStatus = '{{ $kycStatus ?? "unverified" }}';
+            const userId = {{ auth()->id() ?? 'null' }};
+            
+            // Xác định delivery_type: nếu có khoảng cách > 0 thì là ship, ngược lại là pickup
+            const deliveryType = distance > 0 ? 'ship' : 'pickup';
+            
+            // Gọi API để lấy thông tin giá (truyền tham số days để tính phí thuê theo số ngày)
+            const apiUrl = `/api/pricing/quote?book_ids[]={{ $book->id }}&kyc_status=${kycStatus}&delivery_type=${deliveryType}&distance=${distance}&days=${days}`;
+            const finalUrl = userId ? `${apiUrl}&user_id=${userId}` : apiUrl;
+            
+            fetch(finalUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.items && data.items.length > 0) {
+                        displayBorrowQuote(data, days);
+                    } else {
+                        // Fallback nếu API không trả về đúng format
+                        displayBorrowQuoteFallback(days, kycStatus);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching pricing:', error);
+                    // Fallback nếu API lỗi
+                    displayBorrowQuoteFallback(days, kycStatus);
+                });
+        }
+
+        // Hiển thị phiếu mượn với thông tin từ API
+        function displayBorrowQuote(pricingData, days) {
+            const item = pricingData.items[0];
+            const rentalFee = item.rental_fee || 10000;
+            const deposit = item.deposit || 50000;
+            const shippingFee = pricingData.shipping_fee || 0;
+            const totalRental = pricingData.total_rental_fee || rentalFee;
+            const totalDeposit = pricingData.total_deposit || deposit;
+            const payableNow = pricingData.payable_now || (totalDeposit + shippingFee);
+
+            const today = new Date();
+            const returnDate = new Date(today);
+            returnDate.setDate(today.getDate() + days);
+
+            const formatDate = (date) => {
+                return date.toLocaleDateString('vi-VN', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric' 
+                });
+            };
+
+            const formatCurrency = (amount) => {
+                return new Intl.NumberFormat('vi-VN').format(amount) + '₫';
+            };
+
+            const content = `
+                <div class="borrow-info-section">
+                    <h3>📚 Thông tin sách</h3>
+                    <div class="info-row">
+                        <span class="info-label">Tên sách:</span>
+                        <span class="info-value">{{ $book->ten_sach }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Tác giả:</span>
+                        <span class="info-value">{{ $book->tac_gia ?? 'N/A' }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Nhà xuất bản:</span>
+                        <span class="info-value">{{ $book->publisher->ten_nha_xuat_ban ?? 'N/A' }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Năm xuất bản:</span>
+                        <span class="info-value">{{ $book->nam_xuat_ban ?? 'N/A' }}</span>
+                    </div>
+                </div>
+
+                <div class="borrow-info-section">
+                    <h3>📅 Thông tin mượn</h3>
+                    <div class="info-row">
+                        <span class="info-label">Ngày mượn:</span>
+                        <span class="info-value">${formatDate(today)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Số ngày mượn:</span>
+                        <span class="info-value">${days} ngày</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Ngày trả dự kiến:</span>
+                        <span class="info-value" style="color: #cc0000;">${formatDate(returnDate)}</span>
+                    </div>
+                </div>
+
+                <div class="borrow-info-section">
+                    <h3>💰 Chi phí mượn sách</h3>
+                    <div class="price-breakdown">
+                        <div class="price-row">
+                            <span>Phí thuê sách (${days} ngày):</span>
+                            <span>${formatCurrency(totalRental)}</span>
+                        </div>
+                        <div class="price-row">
+                            <span>Tiền cọc:</span>
+                            <span>${formatCurrency(totalDeposit)}</span>
+                        </div>
+                        ${shippingFee > 0 ? `
+                        <div class="price-row">
+                            <span>Phí vận chuyển:</span>
+                            <span>${formatCurrency(shippingFee)}</span>
+                        </div>
+                        ` : ''}
+                        <div class="price-row total">
+                            <span>Tổng tiền phải trả ngay:</span>
+                            <span>${formatCurrency(payableNow)}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 4px; border: 1px solid #ffc107; color: #856404; font-size: 0.9em;">
+                        <strong>Lưu ý:</strong> Tiền cọc sẽ được hoàn lại khi bạn trả sách đúng hạn và sách không bị hư hỏng. Phí thuê sẽ được tính khi bạn nhận sách.
+                    </div>
+                </div>
+
+                <div class="borrow-modal-actions">
+                    <button class="btn-modal btn-modal-cancel" onclick="closeBorrowModal()">Hủy</button>
+                    <button class="btn-modal btn-modal-confirm" onclick="confirmBorrow(${days})">Xác nhận mượn sách</button>
+                </div>
+            `;
+
+            document.getElementById('borrowModalContent').innerHTML = content;
+        }
+
+        // Fallback nếu API không hoạt động
+        function displayBorrowQuoteFallback(days, kycStatus = 'unverified') {
+            const rentalFeePerDay = 10000; // Phí thuê mỗi ngày
+            const rentalFee = rentalFeePerDay * days; // Phí thuê tổng = phí mỗi ngày * số ngày
+            // Deposit phụ thuộc vào KYC status
+            const deposit = kycStatus === 'verified' ? 50000 : 100000;
+            const shippingFee = 0;
+            const total = deposit + shippingFee;
+
+            const today = new Date();
+            const returnDate = new Date(today);
+            returnDate.setDate(today.getDate() + days);
+
+            const formatDate = (date) => {
+                return date.toLocaleDateString('vi-VN', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric' 
+                });
+            };
+
+            const formatCurrency = (amount) => {
+                return new Intl.NumberFormat('vi-VN').format(amount) + '₫';
+            };
+
+            const content = `
+                <div class="borrow-info-section">
+                    <h3>📚 Thông tin sách</h3>
+                    <div class="info-row">
+                        <span class="info-label">Tên sách:</span>
+                        <span class="info-value">{{ $book->ten_sach }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Tác giả:</span>
+                        <span class="info-value">{{ $book->tac_gia ?? 'N/A' }}</span>
+                    </div>
+                </div>
+
+                <div class="borrow-info-section">
+                    <h3>📅 Thông tin mượn</h3>
+                    <div class="info-row">
+                        <span class="info-label">Ngày mượn:</span>
+                        <span class="info-value">${formatDate(today)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Số ngày mượn:</span>
+                        <span class="info-value">${days} ngày</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Ngày trả dự kiến:</span>
+                        <span class="info-value" style="color: #cc0000;">${formatDate(returnDate)}</span>
+                    </div>
+                </div>
+
+                <div class="borrow-info-section">
+                    <h3>💰 Chi phí mượn sách</h3>
+                    <div class="price-breakdown">
+                        <div class="price-row">
+                            <span>Phí thuê sách (${days} ngày):</span>
+                            <span>${formatCurrency(rentalFee)}</span>
+                        </div>
+                        <div class="price-row">
+                            <span>Tiền cọc:</span>
+                            <span>${formatCurrency(deposit)}</span>
+                        </div>
+                        <div class="price-row total">
+                            <span>Tổng tiền phải trả ngay:</span>
+                            <span>${formatCurrency(total)}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 4px; border: 1px solid #ffc107; color: #856404; font-size: 0.9em;">
+                        <strong>Lưu ý:</strong> Tiền cọc sẽ được hoàn lại khi bạn trả sách đúng hạn và sách không bị hư hỏng. Phí thuê sẽ được tính khi bạn nhận sách.
+                    </div>
+                </div>
+
+                <div class="borrow-modal-actions">
+                    <button class="btn-modal btn-modal-cancel" onclick="closeBorrowModal()">Hủy</button>
+                    <button class="btn-modal btn-modal-confirm" onclick="confirmBorrow(${days})">Xác nhận mượn sách</button>
+                </div>
+            `;
+
+            document.getElementById('borrowModalContent').innerHTML = content;
+        }
+
+        // Xác nhận mượn sách
+        function confirmBorrow(days) {
+            const confirmBtn = event.target;
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Đang xử lý...';
+
+            // Lấy khoảng cách từ input
+            const distance = parseFloat(document.getElementById('distanceInput').value) || 0;
+
+            // Gửi yêu cầu mượn sách
+            fetch('{{ route("borrow.book") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    book_id: {{ $book->id }},
+                    borrow_days: days,
+                    distance: distance,
+                    note: `Yêu cầu mượn sách - ${days} ngày`
+                })
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (response.status === 401) {
+                    return response.json().then(data => {
+                        alert(data.message || 'Vui lòng đăng nhập để mượn sách!');
+                        if (data.redirect) {
+                            window.location.href = data.redirect;
+                        } else {
+                            window.location.href = '{{ route("login") }}';
+                        }
+                        return;
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+                if (!data) {
+                    console.error('No data returned from server');
+                    alert('Không nhận được phản hồi từ server!');
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = 'Xác nhận mượn sách';
+                    return;
+                }
+                
+                if (data.success) {
+                    console.log('Borrow created successfully:', data.data);
+                    closeBorrowModal();
+                    
+                    // Hiển thị thông báo thành công với thông tin chi tiết
+                    const message = (data.message || 'Đã gửi yêu cầu mượn sách thành công!') + 
+                        '\n\nMã phiếu mượn: ' + (data.data?.borrow_id || 'N/A') +
+                        '\nMã chi tiết: ' + (data.data?.borrow_item_id || 'N/A') +
+                        '\n\nYêu cầu đã được gửi và sẽ hiển thị trong trang "Quản lý mượn sách" của admin.';
+                    
+                    alert(message);
+                    
+                    // Redirect đến trang sách đang mượn để xem yêu cầu vừa tạo
+                    window.location.href = '{{ route("account.borrowed-books") }}';
+                } else {
+                    console.error('Borrow creation failed:', data.message);
+                    alert(data.message || 'Có lỗi xảy ra khi gửi yêu cầu mượn sách!');
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = 'Xác nhận mượn sách';
+                    if (data.redirect) {
+                        window.location.href = data.redirect;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Fetch Error:', error);
+                alert('Có lỗi xảy ra khi gửi yêu cầu mượn sách: ' + error.message);
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Xác nhận mượn sách';
+            });
+        }
+
+        // Hàm đặt trước sách
+        function reserveBook() {
+            @guest
+                alert('Vui lòng đăng nhập để đặt trước sách!');
+                window.location.href = '{{ route("login") }}';
+                return;
+            @endguest
+
+            const availableCopies = {{ $stats['available_copies'] ?? 0 }};
+            
+            if (availableCopies <= 0) {
+                alert('Hiện tại không còn sách có sẵn để đặt trước. Vui lòng thử lại sau.');
+                return;
+            }
+
+            // Hiển thị modal phiếu đặt trước
+            showReservationModal();
+        }
+
+        // Hiển thị modal phiếu đặt trước
+        function showReservationModal() {
+            const modal = document.getElementById('reservationModal');
+            const daysInput = document.getElementById('reservationDaysInput');
+            daysInput.value = '14';
+            modal.classList.add('active');
+            
+            // Reset thông tin
+            document.getElementById('reservationModalContent').innerHTML = '<div class="loading-spinner">Đang tải thông tin...</div>';
+            
+            // Load thông tin giá
+            updateReservationQuote();
+        }
+
+        // Đóng modal đặt trước
+        function closeReservationModal() {
+            document.getElementById('reservationModal').classList.remove('active');
+        }
+
+        // Cập nhật thông tin giá khi thay đổi số ngày đặt trước
+        function updateReservationQuote() {
+            const days = parseInt(document.getElementById('reservationDaysInput').value) || 14;
+            
+            if (days < 1 || days > 30) {
+                document.getElementById('reservationModalContent').innerHTML = 
+                    '<div style="text-align: center; padding: 20px; color: #cc0000;">Số ngày mượn phải từ 1 đến 30 ngày.</div>';
+                return;
+            }
+
+            // Sử dụng KYC status từ server
+            const kycStatus = '{{ $kycStatus ?? "unverified" }}';
+            const userId = {{ auth()->id() ?? 'null' }};
+            
+            // Gọi API để lấy thông tin giá (truyền tham số days để tính phí thuê theo số ngày)
+            const apiUrl = `/api/pricing/quote?book_ids[]={{ $book->id }}&kyc_status=${kycStatus}&delivery_type=pickup&days=${days}`;
+            const finalUrl = userId ? `${apiUrl}&user_id=${userId}` : apiUrl;
+            
+            fetch(finalUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.items && data.items.length > 0) {
+                        displayReservationQuote(data, days);
+                    } else {
+                        // Fallback nếu API không trả về đúng format
+                        displayReservationQuoteFallback(days, kycStatus);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching pricing:', error);
+                    // Fallback nếu API lỗi
+                    displayReservationQuoteFallback(days, kycStatus);
+                });
+        }
+
+        // Hiển thị phiếu đặt trước với thông tin từ API
+        function displayReservationQuote(pricingData, days) {
+            const item = pricingData.items[0];
+            const rentalFee = item.rental_fee || 10000;
+            const deposit = item.deposit || 50000;
+            const shippingFee = pricingData.shipping_fee || 0;
+            const totalRental = pricingData.total_rental_fee || rentalFee;
+            const totalDeposit = pricingData.total_deposit || deposit;
+            const payableNow = pricingData.payable_now || (totalDeposit + shippingFee);
+
+            const today = new Date();
+            const returnDate = new Date(today);
+            returnDate.setDate(today.getDate() + days);
+
+            const formatDate = (date) => {
+                return date.toLocaleDateString('vi-VN', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric' 
+                });
+            };
+
+            const formatCurrency = (amount) => {
+                return new Intl.NumberFormat('vi-VN').format(amount) + '₫';
+            };
+
+            const content = `
+                <div class="borrow-info-section">
+                    <h3>📚 Thông tin sách</h3>
+                    <div class="info-row">
+                        <span class="info-label">Tên sách:</span>
+                        <span class="info-value">{{ $book->ten_sach }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Tác giả:</span>
+                        <span class="info-value">{{ $book->tac_gia ?? 'N/A' }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Nhà xuất bản:</span>
+                        <span class="info-value">{{ $book->publisher->ten_nha_xuat_ban ?? 'N/A' }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Năm xuất bản:</span>
+                        <span class="info-value">{{ $book->nam_xuat_ban ?? 'N/A' }}</span>
+                    </div>
+                </div>
+
+                <div class="borrow-info-section">
+                    <h3>📅 Thông tin đặt trước</h3>
+                    <div class="info-row">
+                        <span class="info-label">Ngày đặt trước:</span>
+                        <span class="info-value">${formatDate(today)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Số ngày mượn dự kiến:</span>
+                        <span class="info-value">${days} ngày</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Ngày trả dự kiến:</span>
+                        <span class="info-value" style="color: #cc0000;">${formatDate(returnDate)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Trạng thái:</span>
+                        <span class="info-value" style="color: #ff9800;">⏳ Chờ duyệt</span>
+                    </div>
+                </div>
+
+                <div class="borrow-info-section">
+                    <h3>💰 Chi phí đặt trước</h3>
+                    <div class="price-breakdown">
+                        <div class="price-row">
+                            <span>Phí thuê sách (${days} ngày):</span>
+                            <span>${formatCurrency(totalRental)}</span>
+                        </div>
+                        <div class="price-row">
+                            <span>Tiền cọc:</span>
+                            <span>${formatCurrency(totalDeposit)}</span>
+                        </div>
+                        ${shippingFee > 0 ? `
+                        <div class="price-row">
+                            <span>Phí vận chuyển:</span>
+                            <span>${formatCurrency(shippingFee)}</span>
+                        </div>
+                        ` : ''}
+                        <div class="price-row total">
+                            <span>Tổng tiền phải trả ngay:</span>
+                            <span>${formatCurrency(payableNow)}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; padding: 10px; background: #e3f2fd; border-radius: 4px; border: 1px solid #2196f3; color: #1565c0; font-size: 0.9em;">
+                        <strong>Lưu ý về đặt trước:</strong> Yêu cầu đặt trước của bạn sẽ được xử lý và chờ quản trị viên duyệt. Khi được duyệt, bạn sẽ nhận được thông báo và có thể đến thư viện để nhận sách. Tiền cọc sẽ được hoàn lại khi bạn trả sách đúng hạn và sách không bị hư hỏng.
+                    </div>
+                </div>
+
+                <div class="borrow-modal-actions">
+                    <button class="btn-modal btn-modal-cancel" onclick="closeReservationModal()">Hủy</button>
+                    <button class="btn-modal btn-modal-confirm" onclick="confirmReservation(${days})">Xác nhận đặt trước</button>
+                </div>
+            `;
+
+            document.getElementById('reservationModalContent').innerHTML = content;
+        }
+
+        // Fallback nếu API không hoạt động cho đặt trước
+        function displayReservationQuoteFallback(days, kycStatus = 'unverified') {
+            const rentalFeePerDay = 10000; // Phí thuê mỗi ngày
+            const rentalFee = rentalFeePerDay * days; // Phí thuê tổng = phí mỗi ngày * số ngày
+            // Deposit phụ thuộc vào KYC status
+            const deposit = kycStatus === 'verified' ? 50000 : 100000;
+            const shippingFee = 0;
+            const total = deposit + shippingFee;
+
+            const today = new Date();
+            const returnDate = new Date(today);
+            returnDate.setDate(today.getDate() + days);
+
+            const formatDate = (date) => {
+                return date.toLocaleDateString('vi-VN', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric' 
+                });
+            };
+
+            const formatCurrency = (amount) => {
+                return new Intl.NumberFormat('vi-VN').format(amount) + '₫';
+            };
+
+            const content = `
+                <div class="borrow-info-section">
+                    <h3>📚 Thông tin sách</h3>
+                    <div class="info-row">
+                        <span class="info-label">Tên sách:</span>
+                        <span class="info-value">{{ $book->ten_sach }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Tác giả:</span>
+                        <span class="info-value">{{ $book->tac_gia ?? 'N/A' }}</span>
+                    </div>
+                </div>
+
+                <div class="borrow-info-section">
+                    <h3>📅 Thông tin đặt trước</h3>
+                    <div class="info-row">
+                        <span class="info-label">Ngày đặt trước:</span>
+                        <span class="info-value">${formatDate(today)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Số ngày mượn dự kiến:</span>
+                        <span class="info-value">${days} ngày</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Ngày trả dự kiến:</span>
+                        <span class="info-value" style="color: #cc0000;">${formatDate(returnDate)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Trạng thái:</span>
+                        <span class="info-value" style="color: #ff9800;">⏳ Chờ duyệt</span>
+                    </div>
+                </div>
+
+                <div class="borrow-info-section">
+                    <h3>💰 Chi phí đặt trước</h3>
+                    <div class="price-breakdown">
+                        <div class="price-row">
+                            <span>Phí thuê sách (${days} ngày):</span>
+                            <span>${formatCurrency(rentalFee)}</span>
+                        </div>
+                        <div class="price-row">
+                            <span>Tiền cọc:</span>
+                            <span>${formatCurrency(deposit)}</span>
+                        </div>
+                        <div class="price-row total">
+                            <span>Tổng tiền phải trả ngay:</span>
+                            <span>${formatCurrency(total)}</span>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; padding: 10px; background: #e3f2fd; border-radius: 4px; border: 1px solid #2196f3; color: #1565c0; font-size: 0.9em;">
+                        <strong>Lưu ý về đặt trước:</strong> Yêu cầu đặt trước của bạn sẽ được xử lý và chờ quản trị viên duyệt. Khi được duyệt, bạn sẽ nhận được thông báo và có thể đến thư viện để nhận sách. Tiền cọc sẽ được hoàn lại khi bạn trả sách đúng hạn và sách không bị hư hỏng.
+                    </div>
+                </div>
+
+                <div class="borrow-modal-actions">
+                    <button class="btn-modal btn-modal-cancel" onclick="closeReservationModal()">Hủy</button>
+                    <button class="btn-modal btn-modal-confirm" onclick="confirmReservation(${days})">Xác nhận đặt trước</button>
+                </div>
+            `;
+
+            document.getElementById('reservationModalContent').innerHTML = content;
+        }
+
+        // Xác nhận đặt trước sách
+        function confirmReservation(days) {
+            const confirmBtn = event.target;
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Đang xử lý...';
+
+            // Gửi yêu cầu đặt trước sách
+            fetch('{{ route("borrow.book") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    book_id: {{ $book->id }},
+                    borrow_days: days,
+                    note: 'Đặt trước sách'
+                })
+            })
+            .then(response => {
+                if (response.status === 401) {
+                    return response.json().then(data => {
+                        alert(data.message || 'Vui lòng đăng nhập để đặt trước sách!');
+                        if (data.redirect) {
+                            window.location.href = data.redirect;
+                        } else {
+                            window.location.href = '{{ route("login") }}';
+                        }
+                        return;
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (!data) return;
+                
+                if (data.success) {
+                    alert(data.message || 'Đã gửi yêu cầu đặt trước sách thành công! Vui lòng chờ quản trị viên duyệt.');
+                    closeReservationModal();
+                    // Redirect đến trang sách đang mượn để xem yêu cầu vừa tạo
+                    window.location.href = '{{ route("account.borrowed-books") }}';
+                } else {
+                    alert(data.message || 'Có lỗi xảy ra khi gửi yêu cầu đặt trước sách!');
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = 'Xác nhận đặt trước';
+                    if (data.redirect) {
+                        window.location.href = data.redirect;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi gửi yêu cầu đặt trước sách!');
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Xác nhận đặt trước';
+            });
+        }
+
+
+        // Load cart count when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCartCount();
+        });
+
+        // Đóng modal khi click bên ngoài
+        document.getElementById('borrowModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeBorrowModal();
+            }
+        });
+
+        document.getElementById('reservationModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeReservationModal();
+            }
+        });
     </script>
+
+    <!-- Modal Phiếu Mượn -->
+    <div id="borrowModal" class="borrow-modal-overlay">
+        <div class="borrow-modal">
+            <button class="close-modal" onclick="closeBorrowModal()">&times;</button>
+            <div class="borrow-modal-header">
+                <h2>📖 PHIẾU MƯỢN SÁCH</h2>
+                <div class="subtitle">Vui lòng kiểm tra thông tin trước khi xác nhận</div>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label for="borrowDaysInput" style="display: block; margin-bottom: 8px; font-weight: bold;">Số ngày mượn:</label>
+                <input type="number" 
+                       id="borrowDaysInput" 
+                       min="1" 
+                       max="30" 
+                       value="14" 
+                       onchange="updateBorrowQuote()" 
+                       oninput="updateBorrowQuote()"
+                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
+                <small style="color: #666; display: block; margin-top: 5px;">Nhập số ngày từ 1 đến 30</small>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label for="distanceInput" style="display: block; margin-bottom: 8px; font-weight: bold;">Khoảng cách (km):</label>
+                <input type="number" 
+                       id="distanceInput" 
+                       min="0" 
+                       step="0.1"
+                       value="0" 
+                       onchange="updateBorrowQuote()" 
+                       oninput="updateBorrowQuote()"
+                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
+                <small style="color: #666; display: block; margin-top: 5px;">Nhập khoảng cách từ thư viện đến địa chỉ nhận sách (km). Nếu > 5km, mỗi km trên 5km sẽ tính thêm 5.000₫ phí ship.</small>
+            </div>
+
+            <div id="borrowModalContent">
+                <div class="loading-spinner">Đang tải thông tin...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Phiếu Đặt Trước -->
+    <div id="reservationModal" class="borrow-modal-overlay">
+        <div class="borrow-modal">
+            <button class="close-modal" onclick="closeReservationModal()">&times;</button>
+            <div class="borrow-modal-header">
+                <h2>📋 PHIẾU ĐẶT TRƯỚC SÁCH</h2>
+                <div class="subtitle">Vui lòng kiểm tra thông tin trước khi xác nhận</div>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label for="reservationDaysInput" style="display: block; margin-bottom: 8px; font-weight: bold;">Số ngày mượn dự kiến:</label>
+                <input type="number" 
+                       id="reservationDaysInput" 
+                       min="1" 
+                       max="30" 
+                       value="14" 
+                       onchange="updateReservationQuote()" 
+                       oninput="updateReservationQuote()"
+                       style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1em;">
+                <small style="color: #666; display: block; margin-top: 5px;">Nhập số ngày từ 1 đến 30</small>
+            </div>
+
+            <div id="reservationModalContent">
+                <div class="loading-spinner">Đang tải thông tin...</div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

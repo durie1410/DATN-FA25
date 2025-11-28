@@ -172,6 +172,10 @@
                                     <td><strong>Số điện thoại:</strong></td>
                                     <td>{{ $fine->reader->so_dien_thoai ?? 'Chưa có' }}</td>
                                 </tr>
+                                <tr>
+                                    <td><strong>Số CCCD:</strong></td>
+                                    <td>{{ $fine->reader->so_cccd ?? 'Chưa có' }}</td>
+                                </tr>
                             </table>
                             <div class="text-center">
                                 <a href="{{ route('admin.readers.show', $fine->reader->id) }}" class="btn btn-primary btn-sm">
@@ -180,37 +184,83 @@
                             </div>
                         </div>
 
-                        @if($fine->borrow && $fine->borrow->book)
-                            <div class="fines-filter mt-3">
-                                <h3><i class="fas fa-book"></i> Thông tin sách</h3>
-                                <div class="text-center mb-3">
-                                    <i class="fas fa-book fa-3x text-success"></i>
-                                </div>
-                                <table class="table table-borderless">
-                                    <tr>
-                                        <td><strong>Tên sách:</strong></td>
-                                        <td>{{ $fine->borrow->book->ten_sach }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Mã sách:</strong></td>
-                                        <td>{{ $fine->borrow->book->ma_sach }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Tác giả:</strong></td>
-                                        <td>{{ $fine->borrow->book->tac_gia ?? 'Chưa có' }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Nhà xuất bản:</strong></td>
-                                        <td>{{ $fine->borrow->book->nha_xuat_ban ?? 'Chưa có' }}</td>
-                                    </tr>
-                                </table>
-                                <div class="text-center">
-                                    <a href="{{ route('admin.books.show', $fine->borrow->book->id) }}" class="btn btn-success btn-sm">
-                                        <i class="fas fa-eye"></i> Xem chi tiết sách
-                                    </a>
-                                </div>
-                            </div>
-                        @endif
+                        @if($fine->borrowItem && $fine->borrowItem->book)
+    <div class="fines-filter mt-3">
+        <h3><i class="fas fa-book"></i> Thông tin sách</h3>
+
+        <div class="text-center mb-3">
+            <i class="fas fa-book fa-3x text-success"></i>
+        </div>
+
+        <table class="table table-borderless">
+            <tr>
+                <td><strong>Tên sách:</strong></td>
+                <td>{{ $fine->borrowItem->book->ten_sach }}</td>
+            </tr>
+            <tr>
+                <td><strong>Loại sách:</strong></td>
+<td>
+    @switch($fine->borrowItem->book->loai_sach)
+        @case('binh_thuong')
+            phổ thông
+            @break
+
+        @case('quy')
+            Sách quý
+            @break
+
+        @case('tham_khao')
+            Tham khảo
+            @break
+
+        @default
+            Không xác định
+    @endswitch
+</td>
+
+            </tr>
+            <tr>
+                <td><strong>tình trạng :</strong></td>
+                <td>@switch( $fine->borrowItem->inventory->condition)
+                    @case('Moi')
+                        Mới
+                        @break
+                    @case('Trung binh')
+                        Trung bình
+                        @break
+                    @case('Tot')
+                        Tốt
+                        @break                  
+                    @case('Cu')
+                        Cũ
+                        @break
+                    @case('Hong')
+                        Hỏng
+                        @break
+                    @default
+                        
+                @endswitch</td>
+
+            </tr>
+            <tr>
+                <td><strong>Tác giả:</strong></td>
+                <td>{{ $fine->borrowItem->book->tac_gia ?? 'Chưa có' }}</td>
+            </tr>
+            <tr>
+                <td><strong>Nhà xuất bản:</strong></td>
+                <td>{{ $fine->borrowItem->book->nha_xuat_ban ?? 'Chưa có' }}</td>
+            </tr>
+        </table>
+
+        <div class="text-center">
+            <a href="{{ route('admin.books.show', $fine->borrowItem->book->id) }}"
+               class="btn btn-success btn-sm">
+                <i class="fas fa-eye"></i> Xem chi tiết sách
+            </a>
+        </div>
+    </div>
+@endif
+
                     </div>
                 </div>
 

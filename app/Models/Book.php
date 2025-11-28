@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Services\CacheService;
+use Illuminate\Support\Facades\Storage;
 
 class Book extends Model
 {
@@ -18,12 +20,14 @@ class Book extends Model
         'hinh_anh',
         'mo_ta',
         'gia',
-        'dinh_dang',
         'trang_thai',
         'danh_gia_trung_binh',
         'so_luong_ban',
         'so_luot_xem',
+        'so_luong',
         'is_featured',
+       'loai_sach'
+
     ];
 
     public function category()
@@ -31,15 +35,13 @@ class Book extends Model
         return $this->belongsTo(Category::class);
     }
 
+
     public function publisher()
     {
         return $this->belongsTo(Publisher::class, 'nha_xuat_ban_id');
     }
 
-    public function borrows()
-    {
-        return $this->hasMany(Borrow::class);
-    }
+ 
 
     public function reviews()
     {
@@ -94,22 +96,27 @@ class Book extends Model
         return $this->hasMany(Reservation::class)->where('status', 'pending');
     }
 
-    // Kiểm tra sách có sẵn sàng để mượn không
-    public function isAvailable()
+    // Relationship với BorrowItem
+    public function borrowItems()
     {
-        $activeBorrows = $this->borrows()->where('trang_thai', 'Dang muon')->count();
-        $activeReservations = $this->activeReservations()->count();
-        
-        // Giả sử mỗi sách có 1 bản copy
-        return $activeBorrows === 0 && $activeReservations === 0;
+        return $this->hasMany(BorrowItem::class, 'book_id');
     }
 
-    // Kiểm tra sách có thể đặt trước không
-    public function canBeReserved()
+    // Relationship với Borrow thông qua BorrowItem (hasManyThrough)
+    // Book -> BorrowItem -> Borrow
+    public function borrows()
     {
-        $activeBorrows = $this->borrows()->where('trang_thai', 'Dang muon')->count();
-        return $activeBorrows > 0; // Chỉ đặt trước khi sách đang được mượn
+        return $this->hasManyThrough(
+            Borrow::class,      // Model đích (Borrow)
+            BorrowItem::class,  // Model trung gian (BorrowItem)
+            'book_id',          // Foreign key trên BorrowItem trỏ tới Book
+            'id',               // Local key trên Borrow (id)
+            'id',               // Local key trên Book (id)
+            'borrow_id'         // Foreign key trên BorrowItem trỏ tới Borrow
+        );
     }
+
+  
 
     public function inventories()
     {
@@ -163,9 +170,73 @@ class Book extends Model
         return "<span class='badge {$class}'>{$this->status_text}</span>";
     }
 
+    // Get image URL - simple and reliable
+    public function getImageUrlAttribute()
+    {
+        if (!$this->hinh_anh) {
+            return null;
+        }
+
+        // Check if it's already a full URL
+        if (filter_var($this->hinh_anh, FILTER_VALIDATE_URL)) {
+            return $this->hinh_anh;
+        }
+
+        // Clean path - normalize slashes and remove leading slashes
+        $path = ltrim(str_replace(['\\', '//'], '/', $this->hinh_anh), '/');
+        
+        // Use asset() - most reliable and consistent way
+        return asset('storage/' . $path);
+    }
+
+    // Get image URL with fallback
+    public function getImageUrlOrPlaceholderAttribute()
+    {
+        $url = $this->image_url;
+        if ($url && Storage::disk('public')->exists($this->hinh_anh)) {
+            return $url;
+        }
+        return asset('images/placeholder-book.png'); // Placeholder image path
+    }
+
     // Scope để lấy sách đang hoạt động
     public function scopeActive($query)
     {
         return $query->where('trang_thai', 'active');
+    }
+
+    // Kiểm tra sách có thể đặt trước không
+    public function canBeReserved()
+    {
+        // Sách có thể đặt trước nếu:
+        // 1. Sách đang hoạt động
+        // 2. Có ít nhất một bản copy trong kho (có thể đặt trước ngay cả khi tất cả đang được mượn)
+        return $this->trang_thai === 'active' && $this->total_copies > 0;
+    }
+
+    // Scope để lấy sách có thể đặt trước
+    public function scopeCanBeReserved($query)
+    {
+        return $query->where('trang_thai', 'active')
+            ->whereHas('inventories');
+    }
+
+    /**
+     * Boot the model.
+     */
+    protected static function booted()
+    {
+        // Clear cache when book is created, updated, or deleted
+        static::created(function ($book) {
+            CacheService::clearDashboard();
+        });
+
+        static::updated(function ($book) {
+            CacheService::clearDashboard();
+        });
+
+        static::deleted(function ($book) {
+            CacheService::clearDashboard();
+        });
     }
 }

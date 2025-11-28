@@ -36,11 +36,10 @@ class BulkOperationController extends Controller
             'book_ids.*' => 'exists:books,id',
             'category_id' => 'nullable|exists:categories,id',
             'trang_thai' => 'nullable|in:active,inactive',
-            'dinh_dang' => 'nullable|in:print,ebook,audiobook',
         ]);
 
         $bookIds = $request->input('book_ids');
-        $data = $request->only(['category_id', 'trang_thai', 'dinh_dang']);
+        $data = $request->only(['category_id', 'trang_thai']);
         $data = array_filter($data); // Remove null values
 
         $result = $this->bulkOperationService->bulkUpdateBooks($bookIds, $data);
@@ -285,7 +284,7 @@ class BulkOperationController extends Controller
             // Headers
             fputcsv($file, [
                 'ID', 'Tên sách', 'Tác giả', 'Thể loại', 'Nhà xuất bản',
-                'Năm xuất bản', 'Định dạng', 'Trạng thái', 'Giá', 'Mô tả'
+                'Năm xuất bản', 'Trạng thái', 'Giá', 'Mô tả'
             ]);
             
             // Data
@@ -297,7 +296,6 @@ class BulkOperationController extends Controller
                     $book->category->ten_the_loai ?? 'N/A',
                     $book->publisher->ten_nha_xuat_ban ?? 'N/A',
                     $book->nam_xuat_ban,
-                    $book->dinh_dang,
                     $book->trang_thai,
                     $book->gia,
                     $book->mo_ta

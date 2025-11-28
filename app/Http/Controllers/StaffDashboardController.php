@@ -22,7 +22,10 @@ class StaffDashboardController extends Controller
             'active_borrows' => Borrow::where('trang_thai', 'Dang muon')->count(),
             'pending_reservations' => Reservation::where('status', 'pending')->count(),
             'overdue_books' => Borrow::where('trang_thai', 'Dang muon')
-                ->where('ngay_hen_tra', '<', now())
+                ->whereHas('items', function($q) {
+                    $q->where('trang_thai', 'Dang muon')
+                      ->where('ngay_hen_tra', '<', now());
+                })
                 ->count(),
             'total_fines' => Fine::where('status', 'pending')->sum('amount'),
         ];
@@ -40,12 +43,17 @@ class StaffDashboardController extends Controller
             ->get();
 
         // Sách sắp đến hạn trả
-        $upcoming_returns = Borrow::with(['book', 'reader'])
+        $upcoming_returns = Borrow::with(['items.book', 'reader'])
             ->where('trang_thai', 'Dang muon')
-            ->where('ngay_hen_tra', '<=', now()->addDays(3))
-            ->orderBy('ngay_hen_tra')
-            ->limit(10)
-            ->get();
+            ->whereHas('items', function($q) {
+                $q->where('trang_thai', 'Dang muon')
+                  ->where('ngay_hen_tra', '<=', now()->addDays(3));
+            })
+            ->get()
+            ->sortBy(function($borrow) {
+                return $borrow->items->where('trang_thai', 'Dang muon')->min('ngay_hen_tra');
+            })
+            ->take(10);
 
         // Đặt chỗ chờ xử lý
         $pending_reservations = Reservation::with(['book', 'reader'])

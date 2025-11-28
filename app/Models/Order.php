@@ -27,6 +27,7 @@ class Order extends Model
         'payment_status',
         'payment_method',
         'notes',
+        'cancellation_reason',
     ];
 
     protected $casts = [
@@ -82,10 +83,12 @@ class Order extends Model
 
     /**
      * Kiểm tra đơn hàng có thể hủy không
+     * Cho phép hủy ở tất cả trạng thái trừ: delivered, delivery_failed, cancelled
      */
     public function canBeCancelled()
     {
-        return in_array($this->status, ['pending', 'processing']);
+        $nonCancellableStatuses = ['delivered', 'delivery_failed', 'cancelled'];
+        return !in_array($this->status, $nonCancellableStatuses);
     }
 
     /**

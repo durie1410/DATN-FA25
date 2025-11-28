@@ -34,13 +34,20 @@
             
             <div class="col-md-6">
                 <div class="mb-3">
-                    <label class="form-label">Ngày sinh</label>
-                    <input type="date" name="ngay_sinh" class="form-control" required>
+                    <label class="form-label">Số CCCD <span class="text-danger">*</span></label>
+                    <input type="text" name="so_cccd" class="form-control" placeholder="Nhập số CCCD đầy đủ" required>
                 </div>
             </div>
         </div>
 
         <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Ngày sinh</label>
+                    <input type="date" name="ngay_sinh" class="form-control" required>
+                </div>
+            </div>
+            
             <div class="col-md-6">
                 <div class="mb-3">
                     <label class="form-label">Giới tính</label>
@@ -52,7 +59,9 @@
                     </select>
                 </div>
             </div>
-            
+        </div>
+
+        <div class="row">
             <div class="col-md-6">
                 <div class="mb-3">
                     <label class="form-label">Số thẻ tác giả</label>

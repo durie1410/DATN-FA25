@@ -14,8 +14,7 @@
     </div>
         <a href="{{ route('admin.borrows.create') }}" class="btn btn-primary">
         <i class="fas fa-plus"></i>
-        Cho mượn sách mới
-    </a>
+tạo phiếu mượn    </a>
 </div>
 
 <!-- Quick Stats -->
@@ -84,6 +83,7 @@
         <div style="flex: 1; min-width: 200px;">
             <select name="trang_thai" class="form-select">
                 <option value="">-- Tất cả trạng thái --</option>
+                <option value="Cho duyet" {{ request('trang_thai') == 'Cho duyet' ? 'selected' : '' }}>Chờ duyệt</option>
                 <option value="Dang muon" {{ request('trang_thai') == 'Dang muon' ? 'selected' : '' }}>Đang mượn</option>
                 <option value="Da tra" {{ request('trang_thai') == 'Da tra' ? 'selected' : '' }}>Đã trả</option>
                 <option value="Qua han" {{ request('trang_thai') == 'Qua han' ? 'selected' : '' }}>Quá hạn</option>
@@ -106,7 +106,7 @@
     <div class="card-header">
         <h3 class="card-title">
             <i class="fas fa-list"></i>
-            Danh sách mượn/trả
+            Danh sách phiếu mượn
         </h3>
         <span class="badge badge-info">Tổng: {{ $borrows->total() }} phiếu</span>
     </div>
@@ -116,156 +116,201 @@
             <table class="table">
             <thead>
                 <tr>
-                    <th>ID</th>
+                    <th>Mã phiếu</th>
                     <th>Độc giả</th>
-                    <th>Sách</th>
-                    <th>Ngày mượn</th>
-                    <th>Hạn trả</th>
-                    <th>Ngày trả</th>
-                    <th>Gia hạn</th>
+                    <th>tên khách hàng</th>
+                    <th>Tiền cọc</th>
+                    <th>Tiền ship</th>
+                    <th>Tiền thuê</th>
+                    <th>Voucher</th>
                     <th>Trạng thái</th>
+                    <th>Tổng tiền</th>
                     <th>Hành động</th>
                 </tr>
             </thead>
-            <tbody>
-                    @foreach($borrows as $borrow)
-                        <tr style="{{ $borrow->isOverdue() ? 'border-left: 3px solid #ff6b6b;' : '' }}">
-                            <td>
-                                <span class="badge badge-info">{{ $borrow->id }}</span>
-                            </td>
-                            <td>
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <div style="width: 36px; height: 36px; border-radius: 50%; background: rgba(0, 255, 153, 0.15); display: flex; align-items: center; justify-content: center; color: var(--primary-color); font-weight: 600;">
-                                        {{ strtoupper(substr($borrow->reader->ho_ten, 0, 1)) }}
-                                    </div>
-                                    <div>
-                                        <div style="font-weight: 500; color: var(--text-primary);">
-                                            {{ $borrow->reader->ho_ten }}
-                                        </div>
-                                        <div style="font-size: 12px; color: #888;">
-                                            ID: {{ $borrow->reader->id }}
-                                        </div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <div style="font-weight: 500; color: var(--primary-color); margin-bottom: 3px;">
-                                    {{ $borrow->book->ten_sach }}
-                                </div>
-                                <div style="font-size: 12px; color: #888;">
-                                    {{ $borrow->book->tac_gia }}
-                                </div>
-                            </td>
-                            <td>
-                                <div style="font-size: 13px; color: var(--text-secondary);">
-                                    <i class="fas fa-calendar" style="color: #888; font-size: 11px;"></i>
-                                    {{ $borrow->ngay_muon->format('d/m/Y') }}
-                                </div>
-                            </td>
-                            <td>
-                                <div style="font-size: 13px; color: var(--text-secondary);">
-                                    <i class="fas fa-clock" style="color: #888; font-size: 11px;"></i>
-                                    {{ $borrow->ngay_hen_tra->format('d/m/Y') }}
-                                </div>
-                            </td>
-                            <td>
-                                @if($borrow->ngay_tra_thuc_te)
-                                    <div style="font-size: 13px; color: #28a745;">
-                                        <i class="fas fa-check-circle" style="font-size: 11px;"></i>
-                                        {{ $borrow->ngay_tra_thuc_te->format('d/m/Y') }}
-                                    </div>
-                                @else
-                                    <span style="color: #666;">Chưa trả</span>
-                        @endif
-                    </td>
-                            <td>
-                                <div style="display: flex; flex-direction: column; gap: 3px;">
-                                    <span class="badge" style="background: rgba(0, 255, 153, 0.2); color: var(--primary-color); width: fit-content;">
-                                        {{ $borrow->so_lan_gia_han }}/2 lần
-                                    </span>
-                                    @if($borrow->ngay_gia_han_cuoi)
-                                        <span style="font-size: 11px; color: #888;">
-                                            {{ $borrow->ngay_gia_han_cuoi->format('d/m/Y') }}
-                                        </span>
-                                    @endif
-                                </div>
-                            </td>
-                    <td>
-                        @if($borrow->trang_thai == 'Dang muon')
-                                    <span class="badge" style="background: rgba(0, 123, 255, 0.2); color: #007bff;">
-                                        <i class="fas fa-book-reader"></i>
-                                        Đang mượn
-                                    </span>
-                        @elseif($borrow->trang_thai == 'Da tra')
-                                    <span class="badge badge-success">
-                                        <i class="fas fa-check"></i>
-                                        Đã trả
-                                    </span>
-                        @elseif($borrow->trang_thai == 'Qua han')
-                                    <span class="badge badge-danger">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                        Quá hạn
-                                    </span>
-                        @else
-                                    <span class="badge badge-warning">
-                                        <i class="fas fa-times"></i>
-                                        Mất sách
-                                    </span>
-                        @endif
-                                @if($borrow->isOverdue() && $borrow->trang_thai != 'Da tra')
-                                    <br>
-                                    <span class="badge badge-danger" style="margin-top: 5px;">
-                                        <i class="fas fa-bell"></i>
-                                        Quá hạn
-                                    </span>
-                        @endif
-                    </td>
-                    <td>
-                                <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                            @if($borrow->trang_thai == 'Dang muon')
-                                        <a href="{{ route('admin.borrows.return', $borrow->id) }}" 
-                                           class="btn btn-sm btn-success" 
-                                           onclick="return confirm('Xác nhận trả sách?')"
-                                           title="Trả sách">
-                                            <i class="fas fa-undo"></i>
-                                </a>
-                                @if($borrow->canExtend())
-                                            <button type="button" 
-                                                    class="btn btn-sm btn-warning" 
-                                                    data-bs-toggle="modal" 
-                                                    data-bs-target="#extendModal{{ $borrow->id }}"
-                                                    title="Gia hạn">
-                                                <i class="fas fa-clock"></i>
-                                    </button>
-                                @endif
-                            @endif
-                                    <a href="{{ route('admin.borrows.show', $borrow->id) }}" 
-                                       class="btn btn-sm btn-secondary"
-                                       title="Xem chi tiết">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="{{ route('admin.borrows.edit', $borrow->id) }}" 
-                                       class="btn btn-sm btn-warning"
-                                       title="Chỉnh sửa">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    <form action="{{ route('admin.borrows.destroy', $borrow->id) }}" 
-                                          method="POST" 
-                                          style="display: inline;"
-                                          onsubmit="return confirm('Xóa phiếu mượn này?')">
-                                        @csrf 
-                                        @method('DELETE')
-                                        <button type="submit" 
-                                                class="btn btn-sm btn-danger"
-                                                title="Xóa">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                    @endforeach
-            </tbody>
+         <tbody>
+@foreach($borrows as $borrow)
+<tr style="{{ $borrow->isOverdue() && $borrow->trang_thai != 'Da tra' ? 'border-left: 3px solid #ff6b6b;' : '' }}">
+    <td>
+        <span class="badge badge-info">{{ $borrow->id }}</span>
+    </td>
+<td>
+    @if($borrow->reader)
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 36px; height: 36px; border-radius: 50%; background: rgba(0, 255, 153, 0.15); display: flex; align-items: center; justify-content: center; color: var(--primary-color); font-weight: 600;">
+                {{ strtoupper(substr($borrow->reader->ho_ten, 0, 1)) }}
+            </div>
+            <div>
+                <div style="font-weight: 500; color: var(--text-primary);">
+                    {{ $borrow->reader->ho_ten }}
+                </div>
+                <div style="font-size: 12px; color: #888;">
+                    ID: {{ $borrow->reader->id }}
+                </div>
+            </div>
+        </div>
+    @else
+        <span>Không có thẻ</span>
+    @endif
+</td>
+  @if($borrow->reader)
+    <td>{{ $borrow->reader->ho_ten }}</td>
+    @else
+<td>{{ $borrow->ten_nguoi_muon }}</td>
+    @endif
+   
+    @php
+        // Tính tổng từ items nếu có, nếu không thì dùng giá trị từ borrow
+        // Luôn ưu tiên tính từ items nếu items tồn tại
+        if ($borrow->relationLoaded('items') && $borrow->items && $borrow->items->count() > 0) {
+            // Tính từ items - sử dụng sum với giá trị mặc định 0 cho null
+            $tienCoc = $borrow->items->sum(function($item) {
+                return floatval($item->tien_coc ?? 0);
+            });
+            $tienShip = $borrow->items->sum(function($item) {
+                return floatval($item->tien_ship ?? 0);
+            });
+            $tienThue = $borrow->items->sum(function($item) {
+                return floatval($item->tien_thue ?? 0);
+            });
+        } else {
+            // Fallback về giá trị từ bảng borrow
+            $tienCoc = floatval($borrow->tien_coc ?? 0);
+            $tienShip = floatval($borrow->tien_ship ?? 0);
+            $tienThue = floatval($borrow->tien_thue ?? 0);
+        }
+        
+        // Tính tổng tiền từ các khoản đã tính
+        $tongTien = $tienCoc + $tienShip + $tienThue;
+        
+        // Áp dụng voucher nếu có
+        if ($borrow->relationLoaded('voucher') && $borrow->voucher) {
+            $voucher = $borrow->voucher;
+            if ($voucher->loai === 'phan_tram') {
+                $discount = $tongTien * $voucher->gia_tri / 100;
+            } else { // loai = 'tien_mat'
+                $discount = $voucher->gia_tri;
+            }
+            $tongTien = max(0, $tongTien - $discount);
+        }
+    @endphp
+    
+    <td>
+        {{ number_format($tienCoc) }}₫
+    </td>
+    <td>
+        {{ number_format($tienShip) }}₫
+    </td>
+    <td>
+        {{ number_format($tienThue) }}₫
+    </td>
+      {{-- voucher --}}
+    <td>
+        @if($borrow->voucher)
+            <span class="badge badge-info">{{ $borrow->voucher->ma }}</span>
+        @else
+            <span class="badge badge-secondary">Không có</span>
+        @endif
+@php
+// Kiểm tra nếu có items
+if ($borrow->items && $borrow->items->count() > 0) {
+    $statuses = $borrow->items->pluck('trang_thai')->toArray();
+    
+    if (in_array('Mat sach', $statuses)) {
+        $status = 'Mat sach';
+    } elseif (in_array('Qua han', $statuses)) {
+        $status = 'Qua han';
+    } elseif (in_array('Cho duyet', $statuses) || in_array('Chua nhan', $statuses)) {
+        $status = 'chua_hoan_tat';
+    } elseif (in_array('Dang muon', $statuses)) {
+        $status = 'Dang muon';
+    } else {
+        $status = 'Da tra';
+    }
+} else {
+    // Nếu không có items, sử dụng trạng thái của Borrow
+    $status = $borrow->trang_thai ?? 'Dang muon';
+}
+@endphp
+
+
+
+<td>
+    @if($status == 'Da tra')
+        <span class="badge badge-success">
+            <i class="fas fa-check"></i> Đã trả
+        </span>
+    @elseif($status == 'Dang muon')
+       <span class="badge" style="background: rgba(0, 123, 255, 0.2); color: #007bff;">
+            <i class="fas fa-book-reader"></i> Đang mượn
+        </span>
+    @elseif($status == 'chua_hoan_tat')
+        <span class="badge" style="background: rgba(0, 123, 255, 0.2); color: #ff3300;">
+            <i class="fas fa-book-reader"></i>  chưa hoàn tất
+        </span>
+    @elseif($status == 'Qua han')
+        <span class="badge badge-danger">
+            <i class="fas fa-bell"></i> Quá hạn
+        </span>
+    @elseif($status == 'Mat sach')
+        <span class="badge badge-warning">
+            <i class="fas fa-times"></i> Mất sách
+        </span>
+    @endif
+</td>
+
+      <td>
+        {{ number_format($tongTien) }}₫
+    </td>
+    <td>
+        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+            {{-- @if($borrow->trang_thai == 'Dang muon')
+                <a href="{{ route('admin.borrows.return', $borrow->id) }}" 
+                   class="btn btn-sm btn-success" 
+                   onclick="return confirm('Xác nhận trả sách?')"
+                   title="Trả sách">
+                    <i class="fas fa-undo"></i>
+                </a>
+                {{-- @if($borrow->canExtend())
+                    <button type="button" 
+                            class="btn btn-sm btn-warning" 
+                            data-bs-toggle="modal" 
+                            data-bs-target="#extendModal{{ $borrow->id }}"
+                            title="Gia hạn">
+                        <i class="fas fa-clock"></i>
+                    </button>
+                @endif 
+            @endif --}}
+            <a href="{{ route('admin.borrows.show', $borrow->id) }}" 
+               class="btn btn-sm btn-secondary"
+               title="Xem chi tiết">
+                <i class="fas fa-eye"></i>
+            </a>
+            <a href="{{ route('admin.borrows.edit', $borrow->id) }}" 
+               class="btn btn-sm btn-warning"
+               title="Chỉnh sửa">
+                <i class="fas fa-edit"></i>
+            </a>
+            
+            <form action="{{ route('admin.borrows.destroy', $borrow->id) }}" 
+                  method="POST" 
+                  style="display: inline;"
+                  onsubmit="return confirm('Xóa phiếu mượn này?')">
+                @csrf 
+                @method('DELETE')
+                <button type="submit" 
+                        class="btn btn-sm btn-danger"
+                        title="Xóa">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </form>
+            <a href="{{ route('admin.borrows.createitem', $borrow->id) }}" class="btn btn-sm btn-primary">mượn sách</a>
+        </div>
+    </td>
+</tr>
+@endforeach
+</tbody>
+
         </table>
     </div>
 
@@ -289,7 +334,7 @@
     </div>
 
 <!-- Extension Modals -->
-    @foreach($borrows as $borrow)
+    {{-- @foreach($borrows as $borrow)
         @if($borrow->canExtend())
     <div class="modal fade" id="extendModal{{ $borrow->id }}" tabindex="-1" style="display: none;">
         <div class="modal-dialog" style="max-width: 500px; margin: 100px auto;">
@@ -351,7 +396,7 @@
             </div>
         </div>
         @endif
-    @endforeach
+    @endforeach --}}
 @endsection
 
 @push('styles')

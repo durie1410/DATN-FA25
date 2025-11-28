@@ -1,10 +1,17 @@
+@php
+/**
+ * @var \Illuminate\Support\Collection $featured_books
+ * @var \App\Models\Book $book
+ * @var array $bannerImages
+ */
+@endphp
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Libhub - Thư viện Trực tuyến</title>
-    <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/style.css') }}?v={{ time() }}">
 </head>
 <body>
     <header class="main-header">
@@ -34,45 +41,97 @@
                 </a>
                 @auth
                     <div class="user-menu-dropdown" style="position: relative;">
-                        <a href="#" class="auth-link user-menu-toggle" onclick="event.preventDefault(); toggleUserMenu();">
+                        <a href="#" class="auth-link user-menu-toggle">
                             <span class="user-icon">👤</span>
                             <span>{{ auth()->user()->name }}</span>
                         </a>
-                        <div class="user-dropdown-menu" id="userDropdownMenu" style="display: none; position: absolute; top: 100%; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); min-width: 200px; z-index: 1000; margin-top: 5px;">
-                            <a href="{{ route('dashboard') }}" class="dropdown-item" style="display: block; padding: 10px 15px; color: #333; text-decoration: none; border-bottom: 1px solid #eee;">
-                                <span>📊</span> Dashboard
+                        <div class="user-dropdown-menu">
+                            <div class="dropdown-header" style="padding: 12px 15px; border-bottom: 1px solid #eee; font-weight: 600; color: #333;">
+                                <span class="user-icon">👤</span>
+                                {{ auth()->user()->name }}
+                            </div>
+                            <a href="{{ route('account.purchased-books') }}" class="dropdown-item">
+                                <span>❤️</span> Sách đã mua
+                            </a>
+                            @if(auth()->user()->reader)
+                            <a href="{{ route('account.borrowed-books') }}" class="dropdown-item">
+                                <span>📚</span> Sách đang mượn
+                            </a>
+                            <a href="{{ route('account.reader-info') }}" class="dropdown-item">
+                                <span>👥</span> Thông tin độc giả
+                            </a>
+                            @endif
+                            <a href="{{ route('account') }}" class="dropdown-item">
+                                <span>👤</span> Thông tin tài khoản
+                            </a>
+                            <a href="{{ route('account.change-password') }}" class="dropdown-item">
+                                <span>🔒</span> Đổi mật khẩu
+                            </a>
+                            <a href="{{ route('orders.index') }}" class="dropdown-item">
+                                <span>⏰</span> Lịch sử mua hàng
                             </a>
                             @if(auth()->user()->role === 'admin' || auth()->user()->role === 'staff')
-                            <a href="{{ route('admin.dashboard') }}" class="dropdown-item" style="display: block; padding: 10px 15px; color: #333; text-decoration: none; border-bottom: 1px solid #eee;">
-                                <span>⚙️</span> Quản trị
+                            <div style="border-top: 1px solid #eee; margin-top: 5px;"></div>
+                            <a href="{{ route('dashboard') }}" class="dropdown-item">
+                                <span>📊</span> Dashboard
                             </a>
                             @endif
                             <form action="{{ route('logout') }}" method="POST" style="margin: 0;">
                                 @csrf
-                                <button type="submit" class="dropdown-item" style="display: block; width: 100%; padding: 10px 15px; color: #d32f2f; text-decoration: none; border: none; background: none; text-align: left; cursor: pointer; border-top: 1px solid #eee;">
-                                    <span>🚪</span> Đăng xuất
+                                <button type="submit" class="dropdown-item logout-btn">
+                                    <span>➡️</span> Đăng xuất
                                 </button>
                             </form>
                         </div>
                     </div>
-                    <script>
-                        function toggleUserMenu() {
-                            const menu = document.getElementById('userDropdownMenu');
-                            if (menu.style.display === 'none') {
-                                menu.style.display = 'block';
-                            } else {
-                                menu.style.display = 'none';
-                            }
+                    <style>
+                        .user-menu-dropdown {
+                            position: relative;
                         }
-                        // Đóng menu khi click bên ngoài
-                        document.addEventListener('click', function(event) {
-                            const menu = document.getElementById('userDropdownMenu');
-                            const toggle = document.querySelector('.user-menu-toggle');
-                            if (menu && toggle && !menu.contains(event.target) && !toggle.contains(event.target)) {
-                                menu.style.display = 'none';
-                            }
-                        });
-                    </script>
+                        .user-menu-dropdown .user-dropdown-menu {
+                            display: none;
+                            position: absolute;
+                            top: calc(100% + 5px);
+                            right: 0;
+                            background: white;
+                            border: 1px solid #ddd;
+                            border-radius: 8px;
+                            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                            min-width: 220px;
+                            z-index: 1000;
+                            overflow: hidden;
+                        }
+                        .user-menu-dropdown:hover .user-dropdown-menu {
+                            display: block;
+                        }
+                        .user-menu-dropdown .dropdown-item {
+                            display: block;
+                            padding: 10px 15px;
+                            color: #333;
+                            text-decoration: none;
+                            border-bottom: 1px solid #eee;
+                            transition: background-color 0.2s;
+                            cursor: pointer;
+                        }
+                        .user-menu-dropdown .dropdown-item:hover {
+                            background-color: #f5f5f5;
+                        }
+                        .user-menu-dropdown .dropdown-item.logout-btn {
+                            border: none;
+                            background: none;
+                            width: 100%;
+                            text-align: left;
+                            color: #d32f2f;
+                            border-top: 1px solid #eee;
+                            margin-top: 5px;
+                        }
+                        .user-menu-dropdown .dropdown-item.logout-btn:hover {
+                            background-color: #ffebee;
+                        }
+                        .user-menu-dropdown .dropdown-item span {
+                            margin-right: 8px;
+                        }
+                    </style>
                 @else
                     <a href="{{ route('login') }}" class="auth-link">Đăng nhập</a>
                 @endauth
@@ -176,14 +235,6 @@
                         @endforeach
                     </div>
                     
-                    <!-- Navigation Arrows -->
-                    <button class="carousel-nav carousel-prev" onclick="changeSlide(-1)">
-                        <span>‹</span>
-                    </button>
-                    <button class="carousel-nav carousel-next" onclick="changeSlide(1)">
-                        <span>›</span>
-                    </button>
-                    
                     <!-- Dots Indicator -->
                     <div class="carousel-dots">
                         @foreach($bannerImages as $index => $banner)
@@ -266,12 +317,11 @@
                         <img src="{{ $cooperationImage }}" alt="LIÊN KẾT - HỢP TÁC XUẤT BẢN" class="cooperation-image">
                     @endif
                     <div class="coop-content">
-                        <div class="coop-image">👩‍💼</div>
                         <div class="coop-text">
                             <h2>LIÊN KẾT - HỢP TÁC XUẤT BẢN</h2>
                             <p>Hiện thực hóa cuốn sách của bạn</p>
                             <p class="coop-hotline">HOTLINE: 0327.888.669</p>
-                            <button class="coop-btn">XEM CHI TIẾT</button>
+                            <button class="coop-btn"><span>XEM CHI TIẾT</span></button>
                         </div>
                     </div>
                 </div>
@@ -326,7 +376,7 @@
                             </div>
                         @empty
                             @if(isset($featured_books) && $featured_books->count() > 0)
-                                @foreach($featured_books->take(6) as $book)
+                                @foreach($featured_books->take(10) as $book)
                                     <div class="book-item">
                                         <a href="{{ route('books.show', $book->id) }}" class="book-link">
                                             <div class="book-cover">
@@ -460,7 +510,7 @@
                             <div class="book-list sach-list-container" id="sach-moi-carousel">
                                 @forelse($new_books ?? [] as $book)
                                     <div class="book-item">
-                                        <a href="{{ route('books.show', $book->id) }}" class="book-link">
+                                        <a href="{{ route('books.show', $book->id) }}?mode=borrow" class="book-link">
                                             <div class="book-cover">
                                                 @if(isset($book->hinh_anh) && !empty($book->hinh_anh) && file_exists(public_path('storage/'.$book->hinh_anh)))
                                                     <img src="{{ asset('storage/'.$book->hinh_anh) }}" alt="{{ $book->ten_sach ?? 'Sách' }}">
@@ -487,9 +537,9 @@
                                     </div>
                                 @empty
                                     @if(isset($featured_books) && $featured_books->count() > 0)
-                                        @foreach($featured_books->take(6) as $book)
+                                        @foreach($featured_books->take(10) as $book)
                                             <div class="book-item">
-                                                <a href="{{ route('books.show', $book->id) }}" class="book-link">
+                                                <a href="{{ route('books.show', $book->id) }}?mode=borrow" class="book-link">
                                                     <div class="book-cover">
                                                         @if(isset($book->hinh_anh) && !empty($book->hinh_anh) && file_exists(public_path('storage/'.$book->hinh_anh)))
                                                             <img src="{{ asset('storage/'.$book->hinh_anh) }}" alt="{{ $book->ten_sach ?? 'Sách' }}">
@@ -530,7 +580,7 @@
                             <div class="book-list sach-list-container" id="co-the-ban-thich-carousel">
                                 @forelse($recommended_books ?? [] as $book)
                                     <div class="book-item">
-                                        <a href="{{ route('books.show', $book->id) }}" class="book-link">
+                                        <a href="{{ route('books.show', $book->id) }}?mode=borrow" class="book-link">
                                             <div class="book-cover">
                                                 @if(isset($book->hinh_anh) && !empty($book->hinh_anh) && file_exists(public_path('storage/'.$book->hinh_anh)))
                                                     <img src="{{ asset('storage/'.$book->hinh_anh) }}" alt="{{ $book->ten_sach ?? 'Sách' }}">
@@ -557,9 +607,9 @@
                                     </div>
                                 @empty
                                     @if(isset($featured_books) && $featured_books->count() > 0)
-                                        @foreach($featured_books->take(6) as $book)
+                                        @foreach($featured_books->take(10) as $book)
                                             <div class="book-item">
-                                                <a href="{{ route('books.show', $book->id) }}" class="book-link">
+                                                <a href="{{ route('books.show', $book->id) }}?mode=borrow" class="book-link">
                                                     <div class="book-cover">
                                                         @if(isset($book->hinh_anh) && !empty($book->hinh_anh) && file_exists(public_path('storage/'.$book->hinh_anh)))
                                                             <img src="{{ asset('storage/'.$book->hinh_anh) }}" alt="{{ $book->ten_sach ?? 'Sách' }}">
@@ -600,7 +650,7 @@
                             <div class="book-list sach-list-container" id="de-xuat-carousel">
                                 @forelse($suggested_books ?? [] as $book)
                                     <div class="book-item">
-                                        <a href="{{ route('books.show', $book->id) }}" class="book-link">
+                                        <a href="{{ route('books.show', $book->id) }}?mode=borrow" class="book-link">
                                             <div class="book-cover">
                                                 @if(isset($book->hinh_anh) && !empty($book->hinh_anh) && file_exists(public_path('storage/'.$book->hinh_anh)))
                                                     <img src="{{ asset('storage/'.$book->hinh_anh) }}" alt="{{ $book->ten_sach ?? 'Sách' }}">
@@ -627,9 +677,9 @@
                                     </div>
                                 @empty
                                     @if(isset($featured_books) && $featured_books->count() > 0)
-                                        @foreach($featured_books->take(3) as $book)
+                                        @foreach($featured_books->take(6) as $book)
                                             <div class="book-item">
-                                                <a href="{{ route('books.show', $book->id) }}" class="book-link">
+                                                <a href="{{ route('books.show', $book->id) }}?mode=borrow" class="book-link">
                                                     <div class="book-cover">
                                                         @if(isset($book->hinh_anh) && !empty($book->hinh_anh) && file_exists(public_path('storage/'.$book->hinh_anh)))
                                                             <img src="{{ asset('storage/'.$book->hinh_anh) }}" alt="{{ $book->ten_sach ?? 'Sách' }}">
@@ -745,7 +795,7 @@
                 </div>
                 <div class="book-carousel-wrapper">
                     <div class="book-list sach-list-container" id="sach-noi-bat-carousel">
-                        @foreach($featured_books->take(6) as $book)
+                        @foreach($featured_books->take(10) as $book)
                             <div class="book-item">
                                 <a href="{{ route('books.show', $book->id) }}" class="book-link">
                                     <div class="book-cover">
@@ -962,7 +1012,7 @@
                     <div class="diem-sach-left">
                         <div class="diem-sach-featured-wrapper">
                             @if(isset($diem_sach_featured) && $diem_sach_featured)
-                                <a href="{{ route('books.show', $diem_sach_featured->id) }}" class="diem-sach-featured-link">
+                                <a href="{{ route('diem-sach.show', $diem_sach_featured->id) }}" class="diem-sach-featured-link">
                                     <div class="diem-sach-featured-cover">
                                         @if($diemSachImages['featured'])
                                             <img src="{{ $diemSachImages['featured'] }}" alt="{{ $diem_sach_featured->ten_sach }}">
@@ -1035,7 +1085,7 @@
                                 @endphp
                                 <div class="diem-sach-item">
                                     @if($book)
-                                        <a href="{{ route('books.show', $book->id) }}" class="diem-sach-item-link">
+                                        <a href="{{ route('diem-sach.show', $book->id) }}" class="diem-sach-item-link">
                                     @else
                                         <div class="diem-sach-item-link" style="cursor: default;">
                                     @endif
@@ -1116,7 +1166,7 @@
                     <div class="news-featured">
                         @if(isset($featuredNews) && $featuredNews)
                             <div class="news-featured-card">
-                                <a href="{{ $featuredNews->link_url ?? '#' }}" class="news-featured-link">
+                                <a href="{{ route('tin-tuc.show', $featuredNews->id) }}" class="news-featured-link">
                                     <div class="news-featured-image">
                                         @if($newsImages['featured'])
                                             <img src="{{ $newsImages['featured'] }}" alt="{{ $featuredNews->title }}">
@@ -1165,8 +1215,8 @@
                                 $item = $otherNewsList->get($i - 1);
                             @endphp
                             <div class="news-item">
-                                @if($item && $item->link_url)
-                                    <a href="{{ $item->link_url }}" class="news-item-link">
+                                @if($item)
+                                    <a href="{{ route('tin-tuc.show', $item->id) }}" class="news-item-link">
                                 @else
                                     <div class="news-item-link" style="cursor: default;">
                                 @endif
@@ -1195,7 +1245,7 @@
                                             <p class="news-description-small"></p>
                                         @endif
                                     </div>
-                                @if($item && $item->link_url)
+                                @if($item)
                                     </a>
                                 @else
                                     </div>
@@ -1526,57 +1576,91 @@
     </main>
         
     <script>
-        let currentSlideIndex = 0;
-        const slides = document.querySelectorAll('.carousel-slide');
-        const dots = document.querySelectorAll('.dot');
-        let totalSlides = slides.length;
+        // Tự động scroll về đầu trang khi reload
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
         
-        function showSlide(index) {
-            // Ẩn tất cả slides
-            slides.forEach(slide => slide.classList.remove('active'));
-            if(dots.length > 0) {
-                dots.forEach(dot => dot.classList.remove('active'));
+        // Scroll về đầu trang khi trang load
+        window.addEventListener('load', () => {
+            window.scrollTo(0, 0);
+        });
+        
+        // Scroll về đầu trang khi DOM ready (đảm bảo scroll ngay cả khi load chậm)
+        document.addEventListener('DOMContentLoaded', () => {
+            window.scrollTo(0, 0);
+            
+            // Khởi tạo carousel slides sau khi DOM đã sẵn sàng
+            let currentSlideIndex = 0;
+            const slides = document.querySelectorAll('.carousel-slide');
+            const dots = document.querySelectorAll('.dot');
+            let totalSlides = slides.length;
+            
+            function showSlide(index) {
+                // Ẩn tất cả slides
+                slides.forEach(slide => slide.classList.remove('active'));
+                if(dots.length > 0) {
+                    dots.forEach(dot => dot.classList.remove('active'));
+                }
+                
+                // Đảm bảo index trong phạm vi hợp lệ
+                if (index >= totalSlides) {
+                    currentSlideIndex = 0;
+                } else if (index < 0) {
+                    currentSlideIndex = totalSlides - 1;
+                } else {
+                    currentSlideIndex = index;
+                }
+                
+                // Hiển thị slide hiện tại
+                if(slides[currentSlideIndex]) {
+                    slides[currentSlideIndex].classList.add('active');
+                }
+                if(dots[currentSlideIndex]) {
+                    dots[currentSlideIndex].classList.add('active');
+                }
             }
             
-            // Đảm bảo index trong phạm vi hợp lệ
-            if (index >= totalSlides) {
-                currentSlideIndex = 0;
-            } else if (index < 0) {
-                currentSlideIndex = totalSlides - 1;
-            } else {
-                currentSlideIndex = index;
+            function changeSlide(direction) {
+                showSlide(currentSlideIndex + direction);
             }
             
-            // Hiển thị slide hiện tại
-            if(slides[currentSlideIndex]) {
-                slides[currentSlideIndex].classList.add('active');
+            function currentSlide(index) {
+                showSlide(index - 1);
             }
-            if(dots[currentSlideIndex]) {
-                dots[currentSlideIndex].classList.add('active');
+            
+            // Tự động chuyển slide mỗi 5 giây
+            if(totalSlides > 1) {
+                setInterval(() => {
+                    changeSlide(1);
+                }, 5000);
             }
-        }
+            
+            // Khởi tạo slide đầu tiên
+            if(totalSlides > 0) {
+                showSlide(0);
+            }
+            
+            // Hiển thị/ẩn nút navigation khi hover
+            const bookCarouselWrappers = document.querySelectorAll('.book-carousel-wrapper');
+            bookCarouselWrappers.forEach(wrapper => {
+                const navButtons = wrapper.querySelectorAll('.book-nav');
+                wrapper.addEventListener('mouseenter', () => {
+                    navButtons.forEach(btn => {
+                        btn.style.opacity = '1';
+                        btn.style.pointerEvents = 'all';
+                    });
+                });
+                wrapper.addEventListener('mouseleave', () => {
+                    navButtons.forEach(btn => {
+                        btn.style.opacity = '0';
+                        btn.style.pointerEvents = 'none';
+                    });
+                });
+            });
+        });
         
-        function changeSlide(direction) {
-            showSlide(currentSlideIndex + direction);
-        }
-        
-        function currentSlide(index) {
-            showSlide(index - 1);
-        }
-        
-        // Tự động chuyển slide mỗi 5 giây
-        if(totalSlides > 1) {
-            setInterval(() => {
-                changeSlide(1);
-            }, 5000);
-        }
-        
-        // Khởi tạo slide đầu tiên
-        if(totalSlides > 0) {
-            showSlide(0);
-        }
-        
-        // Function scroll carousel cho phần Bảng Xếp Hạng
+        // Function scroll carousel cho phần Bảng Xếp Hạng (để global để có thể gọi từ HTML)
         function scrollCarousel(carouselId, direction) {
             const carousel = document.getElementById(carouselId);
             if (!carousel) return;
@@ -1590,24 +1674,6 @@
                 behavior: 'smooth'
             });
         }
-        
-        // Hiển thị/ẩn nút navigation khi hover
-        const bookCarouselWrappers = document.querySelectorAll('.book-carousel-wrapper');
-        bookCarouselWrappers.forEach(wrapper => {
-            const navButtons = wrapper.querySelectorAll('.book-nav');
-            wrapper.addEventListener('mouseenter', () => {
-                navButtons.forEach(btn => {
-                    btn.style.opacity = '1';
-                    btn.style.pointerEvents = 'all';
-                });
-            });
-            wrapper.addEventListener('mouseleave', () => {
-                navButtons.forEach(btn => {
-                    btn.style.opacity = '0';
-                    btn.style.pointerEvents = 'none';
-                });
-            });
-        });
         
     </script>
     

@@ -77,6 +77,19 @@
                             @enderror
                         </div>
 
+                        <div class="mb-3">
+                            <label for="so_luong" class="form-label">Số lượng sách</label>
+                            <input type="number" class="form-control @error('so_luong') is-invalid @enderror" 
+                                   id="so_luong" name="so_luong" value="{{ old('so_luong', $book->so_luong ?? 0) }}" 
+                                   min="0" required>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i> Số lượng có thể chỉnh sửa trực tiếp hoặc được cập nhật tự động khi duyệt phiếu nhập kho
+                            </small>
+                            @error('so_luong')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save me-2"></i>Cập nhật

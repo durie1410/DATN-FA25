@@ -75,6 +75,20 @@
                             
                             <div class="col-md-6">
                                 <div class="mb-3">
+                                    <label for="so_cccd" class="form-label">Số CCCD <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control @error('so_cccd') is-invalid @enderror" 
+                                           id="so_cccd" name="so_cccd" value="{{ old('so_cccd') }}" 
+                                           placeholder="Nhập số CCCD đầy đủ" required>
+                                    @error('so_cccd')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
                                     <label for="ngay_sinh" class="form-label">Ngày sinh <span class="text-danger">*</span></label>
                                     <input type="date" class="form-control @error('ngay_sinh') is-invalid @enderror" 
                                            id="ngay_sinh" name="ngay_sinh" value="{{ old('ngay_sinh') }}" required>
@@ -83,9 +97,7 @@
                                     @enderror
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="row">
+                            
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label for="gioi_tinh" class="form-label">Giới tính <span class="text-danger">*</span></label>
@@ -101,8 +113,10 @@
                                     @enderror
                                 </div>
                             </div>
-                            
-                            <div class="col-md-6">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
                                 <div class="mb-3">
                                     <label for="dia_chi" class="form-label">Địa chỉ <span class="text-danger">*</span></label>
                                     <textarea class="form-control @error('dia_chi') is-invalid @enderror" 

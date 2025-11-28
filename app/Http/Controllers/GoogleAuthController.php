@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 use App\Services\AuditService;
 use App\Notifications\WelcomeNotification;
+use App\Http\Controllers\CartController;
 
 class GoogleAuthController extends Controller
 {
@@ -75,11 +76,24 @@ class GoogleAuthController extends Controller
 
             DB::commit();
 
+            // Lưu session ID cũ trước khi login để tìm giỏ hàng session
+            $oldSessionId = session()->getId();
+            
+            // Lưu session ID cũ vào session để có thể dùng sau khi regenerate
+            request()->session()->put('old_session_id', $oldSessionId);
+
             // Login user
             Auth::login($user);
+            
+            // Regenerate session sau khi login
+            request()->session()->regenerate();
 
             // Log successful login
             AuditService::logLogin('User logged in via Google');
+            
+            // Chuyển giỏ hàng từ session sang user khi đăng nhập
+            $cartController = new CartController();
+            $cartController->transferToUser($user->id, $oldSessionId);
 
             // Redirect based on user role
             if ($user->role === 'admin') {

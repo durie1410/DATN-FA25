@@ -15,6 +15,18 @@ class ReservationController extends Controller
     {
         $query = Reservation::with(['book', 'reader', 'user']);
 
+        // Tìm kiếm theo tên độc giả hoặc tên sách
+        if ($request->filled('keyword')) {
+            $keyword = $request->keyword;
+            $query->where(function($q) use ($keyword) {
+                $q->whereHas('reader', function($q) use ($keyword) {
+                    $q->where('ho_ten', 'like', "%{$keyword}%");
+                })->orWhereHas('book', function($q) use ($keyword) {
+                    $q->where('ten_sach', 'like', "%{$keyword}%");
+                });
+            });
+        }
+
         // Lọc theo trạng thái
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -35,7 +47,7 @@ class ReservationController extends Controller
             $query->expired();
         }
 
-        $reservations = $query->orderBy('created_at', 'desc')->paginate(20);
+        $reservations = $query->orderBy('created_at', 'desc')->paginate(10);
         $books = Book::all();
         $readers = Reader::all();
 
@@ -51,7 +63,9 @@ class ReservationController extends Controller
             $book = Book::findOrFail($bookId);
         }
 
-        $books = Book::where('can_be_reserved', true)->get();
+        $books = Book::where('trang_thai', 'active')
+            ->whereHas('inventories')
+            ->get();
         $readers = Reader::where('trang_thai', 'Hoat dong')->get();
 
         return view('admin.reservations.create', compact('book', 'books', 'readers'));
@@ -74,14 +88,18 @@ class ReservationController extends Controller
             return back()->withErrors(['book_id' => 'Sách này hiện tại không thể đặt trước.']);
         }
 
-        // Kiểm tra user đã đặt trước sách này chưa
+        // Kiểm tra user đã đặt trước sách này chưa (kiểm tra tất cả reservation vì unique constraint)
         $existingReservation = Reservation::where('book_id', $request->book_id)
             ->where('user_id', Auth::id())
-            ->whereIn('status', ['pending', 'confirmed', 'ready'])
             ->first();
 
         if ($existingReservation) {
-            return back()->withErrors(['book_id' => 'Bạn đã đặt trước sách này rồi.']);
+            // Nếu reservation đang active, không cho phép tạo mới
+            if (in_array($existingReservation->status, ['pending', 'confirmed', 'ready'])) {
+                return back()->withErrors(['book_id' => 'Bạn đã đặt trước sách này rồi.']);
+            }
+            // Nếu reservation đã cancelled hoặc expired, xóa nó và cho phép tạo mới
+            $existingReservation->delete();
         }
 
         // Tính ngày hết hạn (7 ngày từ ngày đặt trước)
@@ -248,16 +266,21 @@ class ReservationController extends Controller
             ], 400);
         }
 
+        // Kiểm tra user đã đặt trước sách này chưa (kiểm tra tất cả reservation vì unique constraint)
         $existingReservation = Reservation::where('book_id', $request->book_id)
             ->where('user_id', Auth::id())
-            ->whereIn('status', ['pending', 'confirmed', 'ready'])
             ->first();
 
         if ($existingReservation) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Bạn đã đặt trước sách này rồi.'
-            ], 400);
+            // Nếu reservation đang active, không cho phép tạo mới
+            if (in_array($existingReservation->status, ['pending', 'confirmed', 'ready'])) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Bạn đã đặt trước sách này rồi.'
+                ], 400);
+            }
+            // Nếu reservation đã cancelled hoặc expired, xóa nó và cho phép tạo mới
+            $existingReservation->delete();
         }
 
         $reservation = Reservation::create([

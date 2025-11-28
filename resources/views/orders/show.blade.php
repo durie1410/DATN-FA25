@@ -176,11 +176,6 @@
                         <a href="{{ route('orders.index') }}" class="btn btn-outline-secondary">
                             <i class="fas fa-arrow-left"></i> Quay lại danh sách
                         </a>
-                        @if($order->canBeCancelled())
-                        <button class="btn btn-outline-danger" onclick="cancelOrder({{ $order->id }})">
-                            <i class="fas fa-times"></i> Hủy đơn hàng
-                        </button>
-                        @endif
                     </div>
                 </div>
             </div>
@@ -201,117 +196,71 @@
     </div>
 </div>
 
-<!-- Modal xác nhận hủy đơn hàng -->
-<div class="modal fade" id="cancelOrderModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Xác nhận hủy đơn hàng</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Bạn có chắc chắn muốn hủy đơn hàng <strong>{{ $order->order_number }}</strong>?</p>
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <strong>Lưu ý:</strong> Hành động này không thể hoàn tác.
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-danger" id="confirmCancelBtn">
-                    <i class="fas fa-times"></i> Xác nhận hủy
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Toast thông báo -->
-<div class="toast-container position-fixed bottom-0 end-0 p-3">
-    <div id="orderToast" class="toast" role="alert">
-        <div class="toast-header">
-            <i class="fas fa-shopping-cart text-success me-2"></i>
-            <strong class="me-auto">Thông báo</strong>
-            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-        </div>
-        <div class="toast-body" id="toastMessage">
-            <!-- Nội dung thông báo sẽ được thêm vào đây -->
-        </div>
-    </div>
-</div>
-@endsection
-
-@push('scripts')
-<script>
-let currentOrderId = null;
-const cancelOrderModal = new bootstrap.Modal(document.getElementById('cancelOrderModal'));
-const orderToast = new bootstrap.Toast(document.getElementById('orderToast'));
-
-// Hàm hủy đơn hàng
-function cancelOrder(orderId) {
-    currentOrderId = orderId;
-    cancelOrderModal.show();
-}
-
-// Xác nhận hủy đơn hàng
-document.getElementById('confirmCancelBtn').addEventListener('click', function() {
-    if (!currentOrderId) return;
-    
-    const button = this;
-    const originalText = button.innerHTML;
-    
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
-    button.disabled = true;
-    
-    fetch(`/orders/${currentOrderId}/cancel`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast('success', data.message);
-            cancelOrderModal.hide();
-            setTimeout(() => {
-                location.reload();
-            }, 1500);
-        } else {
-            showToast('error', data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showToast('error', 'Có lỗi xảy ra, vui lòng thử lại');
-    })
-    .finally(() => {
-        button.innerHTML = originalText;
-        button.disabled = false;
-    });
-});
-
-// Hàm hiển thị toast
-function showToast(type, message) {
-    const toastElement = document.getElementById('orderToast');
-    const toastMessage = document.getElementById('toastMessage');
-    
-    toastMessage.textContent = message;
-    
-    const toastHeader = toastElement.querySelector('.toast-header');
-    const icon = toastHeader.querySelector('i');
-    
-    if (type === 'success') {
-        icon.className = 'fas fa-check-circle text-success me-2';
-        toastElement.classList.remove('bg-danger');
-    } else {
-        icon.className = 'fas fa-exclamation-circle text-danger me-2';
-        toastElement.classList.add('bg-danger');
+@push('styles')
+<style>
+    /* Đổi nền sang màu trắng */
+    body {
+        background-color: #ffffff !important;
     }
     
-    orderToast.show();
-}
-</script>
+    .container {
+        background-color: #ffffff !important;
+    }
+    
+    /* Đảm bảo các card có nền trắng */
+    .card {
+        background-color: #ffffff !important;
+        border: 1px solid #e0e0e0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .card-header {
+        background-color: #f8f9fa !important;
+        border-bottom: 1px solid #e0e0e0;
+        color: #333 !important;
+    }
+    
+    .card-body {
+        background-color: #ffffff !important;
+        color: #333 !important;
+    }
+    
+    /* Đảm bảo text có màu tối để dễ đọc */
+    h2, h5, p, strong, span {
+        color: #333 !important;
+    }
+    
+    .breadcrumb {
+        background-color: transparent !important;
+    }
+    
+    .breadcrumb-item a {
+        color: #0d6efd !important;
+    }
+    
+    .breadcrumb-item.active {
+        color: #6c757d !important;
+    }
+    
+    /* Đảm bảo table có nền trắng */
+    .table {
+        background-color: #ffffff !important;
+        color: #333 !important;
+    }
+    
+    .table thead {
+        background-color: #f8f9fa !important;
+    }
+    
+    .table tbody tr {
+        background-color: #ffffff !important;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f8f9fa !important;
+    }
+</style>
 @endpush
+
+@endsection
 

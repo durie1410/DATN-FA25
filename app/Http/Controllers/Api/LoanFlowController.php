@@ -169,10 +169,12 @@ class LoanFlowController extends Controller
 
 		// mark items returned
 		$itemIds = DB::table('loan_items')->where('loan_id', $id)->pluck('id');
+		// SECURITY FIX: Validate lateFee is numeric before using in raw query
+		$lateFee = is_numeric($lateFee) ? (float) $lateFee : 0;
 		DB::table('loan_items')->whereIn('id', $itemIds)->update([
 			'returned_at' => Carbon::now(),
 			'condition_on_return' => $request->condition,
-			'late_fee' => DB::raw('late_fee + ' . $lateFee),
+			'late_fee' => DB::raw("late_fee + {$lateFee}"), // Safe: $lateFee is validated as numeric
 			'updated_at' => Carbon::now(),
 		]);
 

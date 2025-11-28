@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Services\CacheService;
 
 class Category extends Model
 {
@@ -66,5 +67,27 @@ class Category extends Model
     public function getIconAttribute($value)
     {
         return $value ?: 'fas fa-folder';
+    }
+
+    /**
+     * Boot the model.
+     */
+    protected static function booted()
+    {
+        // Clear cache when category is created, updated, or deleted
+        static::created(function ($category) {
+            CacheService::clearCategories();
+            CacheService::clearDashboard();
+        });
+
+        static::updated(function ($category) {
+            CacheService::clearCategories();
+            CacheService::clearDashboard();
+        });
+
+        static::deleted(function ($category) {
+            CacheService::clearCategories();
+            CacheService::clearDashboard();
+        });
     }
 }

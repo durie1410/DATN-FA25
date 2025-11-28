@@ -13,7 +13,7 @@ class Fine extends Model
     protected $fillable = [
         'borrow_id',
         'reader_id',
-        'amount',
+ 'borrow_item_id',        'amount',
         'type',
         'description',
         'status',
@@ -28,7 +28,10 @@ class Fine extends Model
         'due_date' => 'date',
         'paid_date' => 'date',
     ];
-
+public function borrowItem()
+    {
+        return $this->belongsTo(BorrowItem::class);
+    }
     public function borrow()
     {
         return $this->belongsTo(Borrow::class);

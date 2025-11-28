@@ -3,6 +3,7 @@
 @section('title', 'Giỏ hàng - Nhà xuất bản Xây dựng')
 
 @section('styles')
+<link rel="stylesheet" href="{{ asset('css/style.css') }}?v={{ time() }}">
 <style>
     /* Override layout CSS cho trang cart - Độ ưu tiên cao nhất */
     body .container-fluid {
@@ -262,6 +263,7 @@
         font-size: 18px;
         font-weight: bold;
         margin-top: 15px;
+        margin-bottom: 20px !important;
     }
 
     .price-value {
@@ -313,21 +315,33 @@
         background-color: #45a049;
     }
 
+    .checkout-button-wrapper {
+        width: 100%;
+        margin-top: 0;
+        margin-bottom: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
     .btn-mua-hang {
-        width: 100% !important;
+        min-width: 200px;
+        max-width: 300px;
+        width: auto !important;
         background-color: var(--accent-orange) !important;
         color: white !important;
-        padding: 15px 0 !important;
+        padding: 15px 30px !important;
         border: none !important;
         border-radius: 4px !important;
         font-size: 18px !important;
         font-weight: bold !important;
         cursor: pointer;
-        margin-top: 10px;
+        margin: 0 auto !important;
         text-decoration: none !important;
         transition: background-color 0.3s;
         display: block !important;
         text-align: center !important;
+        box-sizing: border-box !important;
     }
 
     .btn-mua-hang:hover {
@@ -424,6 +438,142 @@
 @endsection
 
 @section('content')
+<!-- Header -->
+<header class="main-header">
+    <div class="header-top">
+        <div class="logo-section">
+            <a href="{{ route('home') }}" style="display: flex; align-items: center; gap: 10px; text-decoration: none;">
+                <img src="{{ asset('favicon.ico') }}" alt="Logo" class="logo-img">
+                <div class="logo-text">
+                    <span class="logo-part1">THƯ VIỆN</span>
+                    <span class="logo-part2">LIBHUB</span>
+                </div>
+            </a>
+        </div>
+        <div class="hotline-section">
+            <div class="hotline-item">
+                <span class="hotline-label">Hotline khách lẻ:</span>
+                <a href="tel:0327888669" class="hotline-number">0327888669</a>
+            </div>
+            <div class="hotline-item">
+                <span class="hotline-label">Hotline khách sỉ:</span>
+                <a href="tel:02439741791" class="hotline-number">02439741791 - 0327888669</a>
+            </div>
+        </div>
+        <div class="user-actions">
+            <a href="{{ route('cart.index') }}" class="cart-link">
+                <span class="cart-icon">🛒</span>
+                <span>Giỏ sách</span>
+                <span class="cart-badge" id="cart-count-header">{{ $cart->total_items ?? 0 }}</span>
+            </a>
+            @auth
+                <div class="user-menu-dropdown" style="position: relative;">
+                    <a href="#" class="auth-link user-menu-toggle">
+                        <span class="user-icon">👤</span>
+                        <span>{{ auth()->user()->name }}</span>
+                    </a>
+                    <div class="user-dropdown-menu">
+                        <div class="dropdown-header" style="padding: 12px 15px; border-bottom: 1px solid #eee; font-weight: 600; color: #333;">
+                            <span class="user-icon">👤</span>
+                            {{ auth()->user()->name }}
+                        </div>
+                        <a href="{{ route('account.purchased-books') }}" class="dropdown-item">
+                            <span>❤️</span> Sách đã mua
+                        </a>
+                        @if(auth()->user()->reader)
+                        <a href="{{ route('account.borrowed-books') }}" class="dropdown-item">
+                            <span>📚</span> Sách đang mượn
+                        </a>
+                        <a href="{{ route('account.reader-info') }}" class="dropdown-item">
+                            <span>👥</span> Thông tin độc giả
+                        </a>
+                        @endif
+                        <a href="{{ route('account') }}" class="dropdown-item">
+                            <span>👤</span> Thông tin tài khoản
+                        </a>
+                        <a href="{{ route('account.change-password') }}" class="dropdown-item">
+                            <span>🔒</span> Đổi mật khẩu
+                        </a>
+                        <a href="{{ route('orders.index') }}" class="dropdown-item">
+                            <span>⏰</span> Lịch sử mua hàng
+                        </a>
+                        @if(auth()->user()->role === 'admin' || auth()->user()->role === 'staff')
+                        <div style="border-top: 1px solid #eee; margin-top: 5px;"></div>
+                        <a href="{{ route('dashboard') }}" class="dropdown-item">
+                            <span>📊</span> Dashboard
+                        </a>
+                        @endif
+                        <form action="{{ route('logout') }}" method="POST" style="margin: 0;">
+                            @csrf
+                            <button type="submit" class="dropdown-item logout-btn">
+                                <span>➡️</span> Đăng xuất
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <style>
+                    .user-menu-dropdown {
+                        position: relative;
+                    }
+                    .user-menu-dropdown .user-dropdown-menu {
+                        display: none;
+                        position: absolute;
+                        top: calc(100% + 5px);
+                        right: 0;
+                        background: white;
+                        border: 1px solid #ddd;
+                        border-radius: 8px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                        min-width: 220px;
+                        z-index: 1000;
+                        overflow: hidden;
+                    }
+                    .user-menu-dropdown:hover .user-dropdown-menu {
+                        display: block;
+                    }
+                    .user-menu-dropdown .dropdown-item {
+                        display: block;
+                        padding: 10px 15px;
+                        color: #333;
+                        text-decoration: none;
+                        border-bottom: 1px solid #eee;
+                        transition: background-color 0.2s;
+                        cursor: pointer;
+                    }
+                    .user-menu-dropdown .dropdown-item:hover {
+                        background-color: #f5f5f5;
+                    }
+                    .user-menu-dropdown .dropdown-item.logout-btn {
+                        border: none;
+                        background: none;
+                        width: 100%;
+                        text-align: left;
+                        color: #d32f2f;
+                        border-top: 1px solid #eee;
+                        margin-top: 5px;
+                    }
+                    .user-menu-dropdown .dropdown-item.logout-btn:hover {
+                        background-color: #ffebee;
+                    }
+                    .user-menu-dropdown .dropdown-item span {
+                        margin-right: 8px;
+                    }
+                </style>
+            @else
+                <a href="{{ route('login') }}" class="auth-link">Đăng nhập</a>
+            @endauth
+        </div>
+    </div>
+    <div class="header-nav">
+        <div class="search-bar">
+            <form action="{{ route('books.public') }}" method="GET" class="search-form">
+                <input type="text" name="keyword" placeholder="Tìm sách, tác giả, sản phẩm mong muốn..." value="{{ request('keyword') }}" class="search-input">
+                <button type="submit" class="search-button">🔍 Tìm kiếm</button>
+            </form>
+        </div>
+    </div>
+</header>
+
 <div class="cart-container">
     <div class="breadcrumbs">
         <a href="{{ route('home') }}">Trang chủ</a> / Giỏ hàng
@@ -438,9 +588,9 @@
             <div class="cart-table">
                 <div class="cart-header-row">
                     <div class="col-product-select">
-                        <input type="checkbox" checked>
+                        <input type="checkbox" id="select-all" checked>
                     </div>
-                    <div class="col-product-name">Tất cả ( {{ $cart->total_items }} sản phẩm )</div>
+                    <div class="col-product-name">Tất cả ( <span id="total-items-count">{{ $cart->total_items }}</span> sản phẩm )</div>
                     <div class="col-product-quantity">Số lượng</div>
                     <div class="col-product-total">Thành tiền</div>
                     <div class="col-product-delete">Xóa</div>
@@ -449,7 +599,7 @@
                 @foreach($cartItems as $item)
                 <div class="cart-item-row" data-item-id="{{ $item->id }}">
                     <div class="col-product-select">
-                        <input type="checkbox" checked>
+                        <input type="checkbox" class="item-checkbox" data-item-id="{{ $item->id }}" data-price="{{ $item->total_price }}" checked>
                     </div>
                     <div class="col-product-name item-detail">
                         <div class="item-cover">
@@ -537,9 +687,11 @@
                     <span>Thanh toán:</span>
                     <span class="price-value total-red" id="total-amount">{{ number_format($cart->total_amount, 0, ',', '.') }}₫</span>
                 </div>
-                <a href="{{ route('checkout') }}" class="btn-mua-hang" style="display: block; text-align: center; color: white; text-decoration: none;">
-                    <i class="fas fa-shopping-cart"></i> Mua hàng
-                </a>
+                <div class="checkout-button-wrapper">
+                    <button type="button" id="btn-checkout" class="btn-mua-hang">
+                        <i class="fas fa-shopping-cart"></i> Mua hàng
+                    </button>
+                </div>
                 <p class="commitment-text">
                     Bằng việc tiến hành đặt mua hàng, bạn đồng ý với điều khoản của <strong>Nhà Xuất Bản Xây Dựng</strong>.
                 </p>
@@ -587,6 +739,91 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (confirmDeleteModalElement) {
         confirmDeleteModal = new bootstrap.Modal(confirmDeleteModalElement);
+    }
+
+    // Xử lý checkbox "Chọn tất cả"
+    const selectAllCheckbox = document.getElementById('select-all');
+    const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+    
+    // Khởi tạo tổng tiền ban đầu
+    if (itemCheckboxes.length > 0) {
+        updateTotalPrice();
+    }
+    
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            itemCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateTotalPrice();
+        });
+    }
+
+    // Xử lý checkbox từng sản phẩm
+    itemCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateTotalPrice();
+            // Cập nhật trạng thái "Chọn tất cả"
+            if (selectAllCheckbox) {
+                const allChecked = Array.from(itemCheckboxes).every(cb => cb.checked);
+                const noneChecked = Array.from(itemCheckboxes).every(cb => !cb.checked);
+                selectAllCheckbox.checked = allChecked;
+                selectAllCheckbox.indeterminate = !allChecked && !noneChecked;
+            }
+        });
+    });
+
+    // Hàm cập nhật tổng tiền dựa trên sản phẩm được chọn
+    function updateTotalPrice() {
+        let total = 0;
+        let selectedCount = 0;
+        
+        itemCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                const price = parseFloat(checkbox.dataset.price) || 0;
+                total += price;
+                selectedCount++;
+            }
+        });
+        
+        // Cập nhật hiển thị tổng tiền
+        const subtotalElement = document.getElementById('subtotal');
+        const subtotalValueElement = document.getElementById('subtotal-value');
+        const totalAmountElement = document.getElementById('total-amount');
+        
+        const formattedTotal = new Intl.NumberFormat('vi-VN').format(total) + '₫';
+        
+        if (subtotalElement) subtotalElement.textContent = formattedTotal;
+        if (subtotalValueElement) subtotalValueElement.textContent = formattedTotal;
+        if (totalAmountElement) totalAmountElement.textContent = formattedTotal;
+        
+        // Cập nhật số lượng sản phẩm được chọn
+        const totalItemsCountElement = document.getElementById('total-items-count');
+        if (totalItemsCountElement) {
+            totalItemsCountElement.textContent = selectedCount;
+        }
+    }
+
+    // Xử lý nút "Mua hàng"
+    const btnCheckout = document.getElementById('btn-checkout');
+    if (btnCheckout) {
+        btnCheckout.addEventListener('click', function() {
+            const selectedItems = [];
+            itemCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    selectedItems.push(checkbox.dataset.itemId);
+                }
+            });
+            
+            if (selectedItems.length === 0) {
+                alert('Vui lòng chọn ít nhất một sản phẩm để mua hàng!');
+                return;
+            }
+            
+            // Chuyển đến trang checkout với danh sách sản phẩm được chọn
+            const checkoutUrl = '{{ route("checkout") }}?items=' + selectedItems.join(',');
+            window.location.href = checkoutUrl;
+        });
     }
 
     // Xử lý nút tăng/giảm số lượng (chỉ khi có sản phẩm)
@@ -650,11 +887,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (totalElement) {
                     totalElement.textContent = data.total_price;
                 }
+                
+                // Cập nhật data-price của checkbox để tính tổng chính xác
+                const checkbox = document.querySelector(`.item-checkbox[data-item-id="${itemId}"]`);
+                if (checkbox) {
+                    // Lấy giá từ response (format: "123.456₫")
+                    const priceMatch = data.total_price.match(/[\d,]+/);
+                    if (priceMatch) {
+                        const price = parseFloat(priceMatch[0].replace(/,/g, ''));
+                        checkbox.dataset.price = price;
+                    }
+                }
+                
+                // Cập nhật số lượng giỏ hàng trong header
+                const cartCountHeader = document.getElementById('cart-count-header');
+                if (cartCountHeader) {
+                    cartCountHeader.textContent = data.cart_count || 0;
+                }
 
-                // Reload trang để cập nhật tổng tiền
-                setTimeout(() => {
-                    location.reload();
-                }, 300);
+                // Cập nhật tổng tiền dựa trên sản phẩm được chọn
+                updateTotalPrice();
             } else {
                 alert('Có lỗi xảy ra: ' + data.message);
             }
@@ -676,6 +928,11 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                // Cập nhật số lượng giỏ hàng trong header
+                const cartCountHeader = document.getElementById('cart-count-header');
+                if (cartCountHeader) {
+                    cartCountHeader.textContent = data.cart_count || 0;
+                }
                 location.reload();
             } else {
                 alert('Có lỗi xảy ra: ' + data.message);

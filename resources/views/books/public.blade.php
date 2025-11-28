@@ -735,8 +735,6 @@
                 <div class="filter-format">
                     <button class="active-filter">Tất cả</button>
                     <button>Sách giấy</button>
-                    <button>Có ebook</button>
-                    <button>Có audio</button>
                 </div>
                 <div class="sort-dropdown">
                     <label for="sort-by">Sắp xếp theo:</label>

@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Quản Lý Người Dùng - Admin')
+@section('title', 'Người Dùng - Admin')
 
 @section('content')
 <div class="page-header">
@@ -8,66 +8,14 @@
         <div class="col-md-6">
             <h1 class="page-title">
                 <i class="fas fa-users-cog me-3"></i>
-                Quản Lý Người Dùng
+                Người Dùng
             </h1>
             <p class="page-subtitle">Quản lý tài khoản và phân quyền người dùng trong hệ thống</p>
         </div>
         <div class="col-md-6 text-end">
-            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-                <i class="fas fa-user-plus me-2"></i>
-                Thêm Người Dùng
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Stats Cards -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="stats-card blue">
-            <div class="stats-icon">
-                <i class="fas fa-users"></i>
-            </div>
-            <div class="stats-content">
-                <h3>Tổng Người Dùng</h3>
-                <div class="number">{{ $totalUsers ?? 0 }} <span class="unit">Người</span></div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="stats-card green">
-            <div class="stats-icon">
-                <i class="fas fa-user-shield"></i>
-            </div>
-            <div class="stats-content">
-                <h3>Quản Trị Viên</h3>
-                <div class="number">{{ $adminUsers ?? 0 }} <span class="unit">Người</span></div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="stats-card orange">
-            <div class="stats-icon">
-                <i class="fas fa-user-tie"></i>
-            </div>
-            <div class="stats-content">
-                <h3>Nhân Viên</h3>
-                <div class="number">{{ $staffUsers ?? 0 }} <span class="unit">Người</span></div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="stats-card purple">
-            <div class="stats-icon">
-                <i class="fas fa-user-friends"></i>
-            </div>
-            <div class="stats-content">
-                <h3>Người Dùng</h3>
-                <div class="number">{{ $regularUsers ?? 0 }} <span class="unit">Người</span></div>
-            </div>
+            <a href="{{ route('admin.users.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Thêm Người Dùng
+            </a>
         </div>
     </div>
 </div>
@@ -164,11 +112,11 @@
                     <td>{{ $user->updated_at->diffForHumans() }}</td>
                     <td>
                         <div class="btn-group" role="group">
+                            <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-warning btn-sm" title="Sửa">
+                                <i class="fas fa-edit"></i>
+                            </a>
                             <button class="btn btn-info btn-sm" onclick="viewUser({{ $user->id }})" title="Xem chi tiết">
                                 <i class="fas fa-eye"></i>
-                            </button>
-                            <button class="btn btn-warning btn-sm" onclick="editUser({{ $user->id }})" title="Chỉnh sửa">
-                                <i class="fas fa-edit"></i>
                             </button>
                             <button class="btn btn-danger btn-sm" onclick="deleteUser({{ $user->id }})" title="Xóa">
                                 <i class="fas fa-trash"></i>
@@ -193,175 +141,10 @@
     
     <!-- Pagination -->
     @if(isset($users) && $users->hasPages())
-    <div class="d-flex justify-content-between align-items-center mt-4">
-        <div class="text-muted">
-            Hiển thị {{ $users->firstItem() }} - {{ $users->lastItem() }} trong tổng số {{ $users->total() }} kết quả
-        </div>
-        <div>
-            {{ $users->links() }}
-        </div>
+    <div class="d-flex justify-content-center mt-4">
+        {{ $users->links() }}
     </div>
     @endif
-</div>
-
-<!-- Add User Modal -->
-<div class="modal fade" id="addUserModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-user-plus me-2"></i>
-                    Thêm Người Dùng Mới
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ route('admin.users.store') }}" method="POST">
-                @csrf
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Họ và tên <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="name" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Email <span class="text-danger">*</span></label>
-                                <input type="email" class="form-control" name="email" required>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Mật khẩu <span class="text-danger">*</span></label>
-                                <input type="password" class="form-control" name="password" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Xác nhận mật khẩu <span class="text-danger">*</span></label>
-                                <input type="password" class="form-control" name="password_confirmation" required>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Vai trò <span class="text-danger">*</span></label>
-                                <select class="form-select" name="role" required>
-                                    <option value="">Chọn vai trò</option>
-                                    <option value="admin">Quản trị viên</option>
-                                    <option value="staff">Nhân viên</option>
-                                    <option value="user">Người dùng</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Trạng thái</label>
-                                <select class="form-select" name="status">
-                                    <option value="active">Hoạt động</option>
-                                    <option value="inactive">Không hoạt động</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-2"></i>
-                        Lưu Người Dùng
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Edit User Modal -->
-<div class="modal fade" id="editUserModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-user-edit me-2"></i>
-                    Chỉnh Sửa Người Dùng
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="editUserForm" method="POST">
-                @csrf
-                @method('PUT')
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Họ và tên <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="name" id="edit_name" required>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Email <span class="text-danger">*</span></label>
-                                <input type="email" class="form-control" name="email" id="edit_email" required>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Mật khẩu mới</label>
-                                <input type="password" class="form-control" name="password">
-                                <small class="form-text text-muted">Để trống nếu không muốn thay đổi</small>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Xác nhận mật khẩu mới</label>
-                                <input type="password" class="form-control" name="password_confirmation">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Vai trò <span class="text-danger">*</span></label>
-                                <select class="form-select" name="role" id="edit_role" required>
-                                    <option value="">Chọn vai trò</option>
-                                    <option value="admin">Quản trị viên</option>
-                                    <option value="staff">Nhân viên</option>
-                                    <option value="user">Người dùng</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Trạng thái</label>
-                                <select class="form-select" name="status" id="edit_status">
-                                    <option value="active">Hoạt động</option>
-                                    <option value="inactive">Không hoạt động</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-2"></i>
-                        Cập Nhật Người Dùng
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
 </div>
 @endsection
 
@@ -483,92 +266,12 @@
     .modal-header .btn-close {
         filter: invert(1);
     }
-
-/* --- Bổ sung/ghi đè style các stats card hiển thị tổng số người dùng --- */
-.stats-card {
-    border-radius: 18px !important;
-    box-shadow: 0 6px 26px 0 rgba(0,255,153,0.14) !important;
-    border: none !important;
-    padding: 38px 28px 32px 28px !important;
-    background: linear-gradient(127deg, #142d2d 40%, #00ff99 185%) !important;
-    display: flex !important;
-    align-items: center;
-    gap: 22px;
-    transition: transform 0.19s cubic-bezier(0.4,0,0.2,1), box-shadow 0.22s cubic-bezier(0.4,0,0.2,1);
-    position: relative;
-}
-.stats-card:hover {
-    transform: scale(1.05) translateY(-7px) !important;
-    box-shadow: 0 18px 38px 0 rgba(0,255,153,0.26) !important;
-    z-index: 1;
-}
-.stats-card .stats-icon {
-    font-size: 2.6rem !important;
-    background: linear-gradient(135deg,#00ff99 65%,#338c81 95%);
-    border-radius: 16px;
-    width: 60px;
-    height: 60px;
-    display: flex; align-items: center; justify-content: center;
-    color: #fff !important;
-    box-shadow: 0 2px 12px #00ff99cc, 0 1.5px 5px #3333;
-    margin-right: 14px;
-}
-.stats-content h3 {
-    font-size: 1.21rem !important;
-    font-weight: 800;
-    color: #fff !important;
-    margin-bottom: 7px;
-    letter-spacing:.03em;
-}
-.stats-content .number {
-    font-size: 2.35rem !important;
-    font-weight: 900;
-    color: #fffb70 !important;
-    margin-top: 8px;
-    text-shadow: 0 2px 8px #050 0.22;
-}
-.stats-content .unit {
-    font-size: 1rem;
-    color: #f0f0f0;
-    opacity: 0.75;
-    margin-left: 3px;
-}
-/* Hiệu ứng phần stats-card theo màu vai trò */
-.stats-card.blue {background:linear-gradient(120deg,#184c4a 55%,#067 160%)!important;}
-.stats-card.green {background:linear-gradient(130deg,#035949 66%,#00ff99 186%)!important;}
-.stats-card.orange {background:linear-gradient(130deg,#7e4a15 77%,#ffb86c 186%)!important;}
-.stats-card.purple {background:linear-gradient(120deg,#2e194d 55%,#9067ff 190%)!important;}
-.stats-card .stats-icon {
-    border: 2.8px solid #fff3 !important;
-}
-/* --- END custom section đẹp --- */
 </style>
 
 <script>
     function viewUser(userId) {
         // Implement view user functionality
         console.log('View user:', userId);
-    }
-    
-    function editUser(userId) {
-        // Fetch user data and populate edit form
-        fetch(`/admin/users/${userId}`)
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('edit_name').value = data.name;
-                document.getElementById('edit_email').value = data.email;
-                document.getElementById('edit_role').value = data.role;
-                document.getElementById('edit_status').value = data.status;
-                
-                document.getElementById('editUserForm').action = `/admin/users/${userId}`;
-                
-                const editModal = new bootstrap.Modal(document.getElementById('editUserModal'));
-                editModal.show();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Có lỗi xảy ra khi tải thông tin người dùng');
-            });
     }
     
     function deleteUser(userId) {

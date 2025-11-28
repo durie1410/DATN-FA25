@@ -6,6 +6,7 @@ use App\Models\Book;
 use App\Models\Category;
 use App\Models\Reader;
 use App\Models\Borrow;
+use App\Models\BorrowItem;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -19,14 +20,17 @@ class ReportController extends Controller
         $totalBorrows = Borrow::count();
         $activeBorrows = Borrow::where('trang_thai', 'Dang muon')->count();
         $overdueBorrows = Borrow::where('trang_thai', 'Dang muon')
-            ->where('ngay_hen_tra', '<', now()->toDateString())
+            ->whereHas('items', function($q) {
+                $q->where('trang_thai', 'Dang muon')
+                  ->where('ngay_hen_tra', '<', now()->toDateString());
+            })
             ->count();
 
         // Thống kê theo tháng
         $monthlyStats = $this->getMonthlyStats();
         
         // Top sách được mượn nhiều nhất
-        $topBooks = Borrow::with('book')
+        $topBooks = BorrowItem::with('book')
             ->selectRaw('book_id, count(*) as borrow_count')
             ->groupBy('book_id')
             ->orderBy('borrow_count', 'desc')
@@ -129,8 +133,9 @@ class ReportController extends Controller
                 'borrows' => Borrow::whereYear('ngay_muon', $date->year)
                     ->whereMonth('ngay_muon', $date->month)
                     ->count(),
-                'returns' => Borrow::whereYear('ngay_tra_thuc_te', $date->year)
+                'returns' => BorrowItem::whereYear('ngay_tra_thuc_te', $date->year)
                     ->whereMonth('ngay_tra_thuc_te', $date->month)
+                    ->whereNotNull('ngay_tra_thuc_te')
                     ->count(),
             ];
         }

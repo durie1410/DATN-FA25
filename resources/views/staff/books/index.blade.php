@@ -46,9 +46,6 @@
                                         <a href="{{ route('staff.books.show', $book->id) }}" class="btn btn-sm btn-info">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <a href="{{ route('staff.books.edit', $book->id) }}" class="btn btn-sm btn-warning">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
                                     </td>
                                 </tr>
                                 @empty

@@ -17,6 +17,8 @@ class PricingController extends Controller
 			'user_id' => 'nullable|integer',
 			'kyc_status' => 'nullable|string|in:verified,unverified,guest',
 			'delivery_type' => 'nullable|string|in:pickup,ship',
+			'distance' => 'nullable|numeric|min:0',
+			'days' => 'nullable|integer|min:1|max:30',
 		]);
 		if ($validator->fails()) {
 			return response()->json(['message' => 'Invalid data', 'errors' => $validator->errors()], 422);
@@ -68,17 +70,32 @@ class PricingController extends Controller
 				: (int) config('library.deposit_unverified', 100000);
 		}
 
-		$shipFee = ($data['delivery_type'] ?? 'pickup') === 'ship' ? (int) config('library.ship_fee_default', 15000) : 0;
+		// Tính phí thuê theo số ngày (nếu có tham số days)
+		$days = isset($data['days']) ? (int) $data['days'] : 1;
+		$rentalPerBookPerDay = $rentalPerBook; // Phí thuê mỗi ngày
+		$rentalPerBookTotal = $rentalPerBookPerDay * $days; // Tổng phí thuê = phí mỗi ngày * số ngày
+
+		// Tính tiền ship dựa trên khoảng cách
+		$shipFee = 0;
+		if (($data['delivery_type'] ?? 'pickup') === 'ship') {
+			$distance = floatval($data['distance'] ?? 0);
+			if ($distance > 5) {
+				// Nếu > 5km, mỗi km trên 5km thêm 5.000₫
+				$extraKm = $distance - 5;
+				$shipFee = (int) ($extraKm * 5000);
+			}
+		}
 
 		$items = [];
 		foreach ($data['book_ids'] as $bookId) {
 			$items[] = [
 				'book_id' => $bookId,
-				'rental_fee' => $rentalPerBook,
+				'rental_fee' => $rentalPerBookTotal, // Phí thuê đã tính theo số ngày
+				'rental_fee_per_day' => $rentalPerBookPerDay, // Phí thuê mỗi ngày
 				'deposit' => $depositPerBook,
 			];
 		}
-		$totalRental = $rentalPerBook * count($items);
+		$totalRental = $rentalPerBookTotal * count($items);
 		$totalDeposit = $depositPerBook * count($items);
 
 		return response()->json([

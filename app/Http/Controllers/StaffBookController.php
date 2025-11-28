@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Book;
 use App\Models\Category;
+use App\Services\CacheService;
+use App\Services\FileUploadService;
 
 class StaffBookController extends Controller
 {
@@ -16,7 +18,7 @@ class StaffBookController extends Controller
 
     public function create()
     {
-        $categories = Category::all();
+        $categories = CacheService::getActiveCategories();
         return view('staff.books.create', compact('categories'));
     }
 
@@ -29,7 +31,6 @@ class StaffBookController extends Controller
             'category_id' => 'required|exists:categories,id',
             'mo_ta' => 'nullable|string',
             'gia' => 'nullable|numeric|min:0',
-            'dinh_dang' => 'nullable|string',
             'trang_thai' => 'required|in:active,inactive',
             'hinh_anh' => 'nullable|file|image|mimes:jpeg,png,jpg|max:2048',
         ]);
@@ -37,19 +38,22 @@ class StaffBookController extends Controller
         $path = null;
         if ($request->hasFile('hinh_anh')) {
             try {
-                $file = $request->file('hinh_anh');
-                $filename = time() . '_' . $file->getClientOriginalName();
-                $destinationPath = storage_path('app/public/books');
-                
-                if (!file_exists($destinationPath)) {
-                    mkdir($destinationPath, 0755, true);
-                }
-                
-                $file->move($destinationPath, $filename);
-                $path = 'books/' . $filename;
+                $result = FileUploadService::uploadImage(
+                    $request->file('hinh_anh'),
+                    'books',
+                    [
+                        'max_size' => 2048, // 2MB
+                        'resize' => true,
+                        'width' => 800,
+                        'height' => 800,
+                    ]
+                );
+                $path = $result['path'];
             } catch (\Exception $e) {
                 \Log::error('Upload error:', ['message' => $e->getMessage()]);
-                return redirect()->back()->with('error', 'Lỗi khi upload ảnh: ' . $e->getMessage())->withInput();
+                return redirect()->back()
+                    ->withErrors(['hinh_anh' => $e->getMessage()])
+                    ->withInput();
             }
         }
 
@@ -62,7 +66,6 @@ class StaffBookController extends Controller
                 'hinh_anh' => $path,
                 'mo_ta' => $request->mo_ta,
                 'gia' => $request->gia ?? 0,
-                'dinh_dang' => $request->dinh_dang ?? 'Sách giấy',
                 'trang_thai' => $request->trang_thai,
                 'danh_gia_trung_binh' => 0,
                 'so_luong_ban' => 0,
@@ -88,7 +91,7 @@ class StaffBookController extends Controller
     public function edit($id)
     {
         $book = Book::findOrFail($id);
-        $categories = Category::all();
+        $categories = CacheService::getActiveCategories();
         return view('staff.books.edit', compact('book', 'categories'));
     }
 
@@ -102,9 +105,17 @@ class StaffBookController extends Controller
             'nam_xuat_ban' => 'required|integer|min:1900|max:' . date('Y'),
             'category_id' => 'required|exists:categories,id',
             'mo_ta' => 'nullable|string',
+            'so_luong' => 'required|integer|min:0',
         ]);
 
-        $book->update($request->all());
+        $book->update([
+            'ten_sach' => $request->ten_sach,
+            'tac_gia' => $request->tac_gia,
+            'nam_xuat_ban' => $request->nam_xuat_ban,
+            'category_id' => $request->category_id,
+            'mo_ta' => $request->mo_ta,
+            'so_luong' => $request->so_luong ?? 0,
+        ]);
 
         return redirect()->route('staff.books.index')
             ->with('success', 'Cập nhật sách thành công!');

@@ -200,6 +200,7 @@
                         <h5 class="reader-name">{{ $reservation->reader->ho_ten }}</h5>
                         <p class="reader-card"><strong>Mã thẻ:</strong> {{ $reservation->reader->so_the_doc_gia }}</p>
                         <p class="reader-phone"><strong>Số điện thoại:</strong> {{ $reservation->reader->so_dien_thoai }}</p>
+                        <p class="reader-cccd"><strong>Số CCCD:</strong> {{ $reservation->reader->so_cccd ?? 'N/A' }}</p>
                         <p class="reader-email"><strong>Email:</strong> {{ $reservation->reader->email }}</p>
                         <p class="reader-address"><strong>Địa chỉ:</strong> {{ $reservation->reader->dia_chi }}</p>
                         <p class="reader-status">

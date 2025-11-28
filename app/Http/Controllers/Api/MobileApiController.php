@@ -216,7 +216,6 @@ class MobileApiController extends Controller
                 'is_available' => $book->isAvailable(),
                 'can_reserve' => $book->canBeReserved(),
                 'published_year' => $book->nam_xuat_ban,
-                'format' => $book->dinh_dang,
             ];
         });
 
@@ -254,7 +253,6 @@ class MobileApiController extends Controller
             'rating' => $book->danh_gia_trung_binh,
             'reviews_count' => $book->reviews->count(),
             'published_year' => $book->nam_xuat_ban,
-            'format' => $book->dinh_dang,
             'price' => $book->gia,
             'is_available' => $book->isAvailable(),
             'can_reserve' => $book->canBeReserved(),
@@ -537,17 +535,21 @@ class MobileApiController extends Controller
             ], 400);
         }
 
-        // Check if already reserved
+        // Check if already reserved (kiểm tra tất cả reservation vì unique constraint trên book_id và user_id)
         $existingReservation = Reservation::where('book_id', $book->id)
-            ->where('reader_id', $reader->id)
-            ->whereIn('status', ['pending', 'confirmed', 'ready'])
+            ->where('user_id', $user->id)
             ->first();
 
         if ($existingReservation) {
-            return response()->json([
-                'success' => false,
-                'message' => 'You already have a reservation for this book'
-            ], 400);
+            // Nếu reservation đang active, không cho phép tạo mới
+            if (in_array($existingReservation->status, ['pending', 'confirmed', 'ready'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You already have a reservation for this book'
+                ], 400);
+            }
+            // Nếu reservation đã cancelled hoặc expired, xóa nó và cho phép tạo mới
+            $existingReservation->delete();
         }
 
         $reservation = Reservation::create([

@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'Quản Lý Sách - WAKA Admin')
+@section('title', 'Quản Lý Sách - LIBHUB Admin')
 
 @section('content')
 <!-- Page Header -->
@@ -12,10 +12,47 @@
         </h1>
         <p class="page-subtitle">Quản lý và theo dõi tất cả sách trong thư viện</p>
     </div>
-    <a href="{{ route('admin.books.create') }}" class="btn btn-primary">
-        <i class="fas fa-plus"></i>
-        Thêm sách mới
-    </a>
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <a href="{{ route('admin.inventory.receipts.create') }}" class="btn btn-warning">
+            <i class="fas fa-warehouse"></i>
+            Nhập sách vào kho
+        </a>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <span class="badge badge-success" style="font-size: 12px; padding: 6px 12px;">
+                <i class="fas fa-check-circle"></i> Có trong kho: {{ $booksWithInventory ?? 0 }}
+            </span>
+            <span class="badge badge-warning" style="font-size: 12px; padding: 6px 12px;">
+                <i class="fas fa-exclamation-triangle"></i> Chưa có trong kho: {{ $booksWithoutInventory ?? 0 }}
+            </span>
+            @if(($booksWithoutInventory ?? 0) > 0)
+                <form action="{{ route('admin.books.delete-without-inventory') }}" 
+                      method="POST" 
+                      style="display: inline;"
+                      onsubmit="return confirm('Bạn có chắc chắn muốn xóa tất cả {{ $booksWithoutInventory }} sách không có trong kho?\\n\\n⚠️ CẢNH BÁO: Hành động này không thể hoàn tác!');">
+                    @csrf
+                    <button type="submit" 
+                            class="btn btn-danger btn-sm" 
+                            title="Xóa tất cả sách không có trong kho">
+                        <i class="fas fa-trash"></i> Xóa sách không có trong kho
+                    </button>
+                </form>
+            @endif
+            <form action="{{ route('admin.books.reset-ids') }}" 
+                  method="POST" 
+                  style="display: inline;"
+                  onsubmit="return confirm('⚠️ CẢNH BÁO: Lệnh này sẽ sắp xếp lại ID của tất cả sách để liên tục từ 1 đến {{ $totalBooks ?? 0 }}.\\n\\nHãy đảm bảo bạn đã backup database trước!\\n\\nBạn có chắc chắn muốn tiếp tục?');">
+                @csrf
+                <button type="submit" 
+                        class="btn btn-info btn-sm" 
+                        title="Sắp xếp lại ID sách để liên tục từ 1">
+                    <i class="fas fa-sort-numeric-up"></i> Sắp xếp lại ID
+                </button>
+            </form>
+        </div>
+        <span class="text-muted" style="font-size: 12px;">
+            <i class="fas fa-info-circle"></i> Sách mới sẽ được tạo tự động khi nhập vào kho
+        </span>
+    </div>
 </div>
 
 <!-- Search and Filter -->
@@ -42,6 +79,17 @@
                         {{ $cate->ten_the_loai }}
                     </option>
                 @endforeach
+            </select>
+        </div>
+        <div style="flex: 1; min-width: 200px;">
+            <select name="inventory_status" class="form-select">
+                <option value="">-- Tất cả sách --</option>
+                <option value="has_inventory" {{ request('inventory_status') == 'has_inventory' ? 'selected' : '' }}>
+                    Có trong kho
+                </option>
+                <option value="no_inventory" {{ request('inventory_status') == 'no_inventory' ? 'selected' : '' }}>
+                    Chưa có trong kho
+                </option>
             </select>
         </div>
         <button type="submit" class="btn btn-primary">
@@ -75,7 +123,6 @@
                         <th>Thông tin sách</th>
                         <th>Tác giả</th>
                         <th>Giá</th>
-                        <th>Định dạng</th>
                         <th>Trạng thái</th>
                         <th>Loại</th>
                         <th>Thao tác</th>
@@ -89,11 +136,21 @@
                             </td>
                             <td>
                                 @if($book->hinh_anh)
-                                    <img src="{{ asset('storage/' . $book->hinh_anh) }}" 
+                                    @php
+                                        // Clean path and build URL directly
+                                        $imagePath = ltrim(str_replace('\\', '/', $book->hinh_anh), '/');
+                                        $imageUrl = asset('storage/' . $imagePath);
+                                    @endphp
+                                    <img src="{{ $imageUrl }}" 
                                          width="50" 
                                          height="70" 
                                          style="object-fit: cover; border-radius: 8px; border: 1px solid rgba(0, 255, 153, 0.2);"
-                                         alt="{{ $book->ten_sach }}">
+                                         alt="{{ $book->ten_sach }}"
+                                         loading="lazy"
+                                         onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                    <div style="display: none; width: 50px; height: 70px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); align-items: center; justify-content: center; border: 1px solid rgba(0, 255, 153, 0.2);">
+                                        <i class="fas fa-book" style="color: #666;"></i>
+                                    </div>
                                 @else
                                     <div style="width: 50px; height: 70px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 255, 153, 0.2);">
                                         <i class="fas fa-book" style="color: #666;"></i>
@@ -121,9 +178,6 @@
                                 <span class="badge badge-success">{{ $book->formatted_price }}</span>
                             </td>
                             <td>
-                                <span class="badge badge-info">{{ $book->dinh_dang ?? 'Sách giấy' }}</span>
-                            </td>
-                            <td>
                                 @if($book->trang_thai === 'active')
                                     <span class="badge badge-success">
                                         <i class="fas fa-check-circle"></i>
@@ -137,10 +191,20 @@
                                 @endif
                             </td>
                             <td>
-                                <span class="badge" style="background: rgba(0, 255, 153, 0.2); color: var(--primary-color);">
-                                    <i class="fas fa-hand-holding"></i>
-                                    Mượn
-                                </span>
+                                @php
+                                    $hasInventory = $book->inventories()->exists();
+                                @endphp
+                                @if($hasInventory)
+                                    <span class="badge badge-success">
+                                        <i class="fas fa-warehouse"></i>
+                                        Có trong kho
+                                    </span>
+                                @else
+                                    <span class="badge badge-warning">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                        Chưa có trong kho
+                                    </span>
+                                @endif
                             </td>
                             <td>
                                 <div style="display: flex; gap: 5px;">
@@ -150,22 +214,35 @@
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     <a href="{{ route('admin.books.edit', $book->id) }}" 
-                                       class="btn btn-sm btn-warning" 
+                                       class="btn btn-sm btn-primary" 
                                        title="Chỉnh sửa">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    <form action="{{ route('admin.books.destroy', $book->id) }}" 
-                                          method="POST" 
-                                          style="display: inline;"
-                                          onsubmit="return confirm('Bạn có chắc chắn muốn xóa sách này?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" 
-                                                class="btn btn-sm btn-danger" 
-                                                title="Xóa">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
+                                    @if($book->trang_thai === 'active')
+                                        <form action="{{ route('admin.books.hide', $book->id) }}" 
+                                              method="POST" 
+                                              style="display: inline;"
+                                              onsubmit="return confirm('Bạn có chắc chắn muốn ẩn sách này?')">
+                                            @csrf
+                                            <button type="submit" 
+                                                    class="btn btn-sm btn-danger" 
+                                                    title="Ẩn">
+                                                <i class="fas fa-eye-slash"></i>
+                                            </button>
+                                        </form>
+                                    @else
+                                        <form action="{{ route('admin.books.unhide', $book->id) }}" 
+                                              method="POST" 
+                                              style="display: inline;"
+                                              onsubmit="return confirm('Bạn có chắc chắn muốn hiển thị sách này?')">
+                                            @csrf
+                                            <button type="submit" 
+                                                    class="btn btn-sm btn-success" 
+                                                    title="Hiện">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </form>
+                                    @endif
                                 </div>
                             </td>
                         </tr>

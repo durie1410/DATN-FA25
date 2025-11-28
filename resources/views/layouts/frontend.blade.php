@@ -1750,11 +1750,6 @@
                                 <i class="fas fa-user"></i> {{ Auth::user()->name }}
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                @if(Auth::user()->role === 'admin')
-                                    <li><a class="dropdown-item" href="{{ route('admin.dashboard') }}">
-                                        <i class="fas fa-cog"></i> Quản trị
-                                    </a></li>
-                                @endif
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <form action="{{ route('logout') }}" method="POST" class="d-inline">
