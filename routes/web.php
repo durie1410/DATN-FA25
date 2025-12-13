@@ -227,6 +227,7 @@ Route::delete('/shipping-logs/{id}', [ShippingLogController::class, 'destroy'])
 
 
 Route::resource('vouchers', VoucherController::class);
+Route::post('vouchers/validate', [VoucherController::class, 'validateCode'])->name('vouchers.validate');
 
       Route::get('vouchers/{id}/restore', [VoucherController::class, 'restore'])->name('admin.vouchers.restore');
       Route::delete('vouchers/{id}/force-delete', [VoucherController::class, 'forceDelete'])->name('admin.vouchers.forceDelete');
@@ -459,63 +460,64 @@ Route::prefix('vnpay')->name('vnpay.')->middleware('auth')->group(function () {
 // VnPay Callback (không cần auth vì VnPay gọi trực tiếp)
 Route::get('vnpay/callback', [VnPayController::class, 'callback'])->name('vnpay.callback');
 
-// Debug VnPay Payment URL
-Route::get('debug-vnpay-payment', function() {
-    $vnpayService = app(\App\Services\VnPayService::class);
-    
-    $paymentData = [
-        'amount' => 100000, // 100k test
-        'order_info' => "Test Payment #123",
-        'order_id' => 'TEST' . time(),
-        'order_type' => 'billpayment'
-    ];
-    
-    $paymentUrl = $vnpayService->createPaymentUrl($paymentData, request());
-    
-    return response()->json([
-        'payment_url' => $paymentUrl,
-        'config' => [
-            'tmn_code' => config('services.vnpay.tmn_code'),
-            'hash_secret_exists' => !empty(config('services.vnpay.hash_secret')),
-        ]
-    ]);
-})->name('debug.vnpay');
+// Debug VnPay Payment URL (Development only)
+if (config('app.debug')) {
+    Route::get('debug-vnpay-payment', function() {
+        $vnpayService = app(\App\Services\VnPayService::class);
+        
+        $paymentData = [
+            'amount' => 100000, // 100k test
+            'order_info' => "Test Payment #123",
+            'order_id' => 'TEST' . time(),
+            'order_type' => 'billpayment'
+        ];
+        
+        $paymentUrl = $vnpayService->createPaymentUrl($paymentData, request());
+        
+        return response()->json([
+            'payment_url' => $paymentUrl,
+            'config' => [
+                'tmn_code' => config('services.vnpay.tmn_code'),
+                'hash_secret_exists' => !empty(config('services.vnpay.hash_secret')),
+            ]
+        ]);
+    })->name('debug.vnpay');
 
-// Test VnPay Configuration (Development only - xóa khi production)
-Route::get('test-vnpay-config', function() {
-    $config = config('services.vnpay');
-    
-    return response()->json([
-        'status' => 'VnPay Configuration Check',
-        'tmn_code' => $config['tmn_code'] ?: '❌ CHƯA CẤU HÌNH - Cần thêm VNPAY_TMN_CODE vào .env',
-        'hash_secret' => $config['hash_secret'] ? '✅ Đã cấu hình' : '❌ CHƯA CẤU HÌNH - Cần thêm VNPAY_HASH_SECRET vào .env',
-        'url' => $config['url'],
-        'return_url' => $config['return_url'],
-        'version' => $config['version'],
-        'command' => $config['command'],
-        'curr_code' => $config['curr_code'],
-        'locale' => $config['locale'],
-        'note' => 'Hãy đảm bảo cả TMN_CODE và HASH_SECRET đều được cấu hình đúng'
-    ], 200, [], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-})->name('test.vnpay.config');
+    // Test VnPay Configuration
+    Route::get('test-vnpay-config', function() {
+        $config = config('services.vnpay');
+        
+        return response()->json([
+            'status' => 'VnPay Configuration Check',
+            'tmn_code' => $config['tmn_code'] ?: '❌ CHƯA CẤU HÌNH - Cần thêm VNPAY_TMN_CODE vào .env',
+            'hash_secret' => $config['hash_secret'] ? '✅ Đã cấu hình' : '❌ CHƯA CẤU HÌNH - Cần thêm VNPAY_HASH_SECRET vào .env',
+            'url' => $config['url'],
+            'return_url' => $config['return_url'],
+            'version' => $config['version'],
+            'command' => $config['command'],
+            'curr_code' => $config['curr_code'],
+            'locale' => $config['locale'],
+            'note' => 'Hãy đảm bảo cả TMN_CODE và HASH_SECRET đều được cấu hình đúng'
+        ], 200, [], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    })->name('test.vnpay.config');
 
-// VNPay Debug Page - Giao diện đẹp để kiểm tra config
-Route::get('vnpay-debug', function() {
-    return view('vnpay-debug');
-})->name('vnpay.debug');
+    // VNPay Debug Page - Giao diện đẹp để kiểm tra config
+    Route::get('vnpay-debug', function() {
+        return view('vnpay-debug');
+    })->name('vnpay.debug');
 
-// VNPay Fix Page - Sửa lỗi one-click
-Route::get('vnpay-fix', function() {
-    return view('vnpay-fix');
-})->name('vnpay.fix');
+    // VNPay Fix Page - Sửa lỗi one-click
+    Route::get('vnpay-fix', function() {
+        return view('vnpay-fix');
+    })->name('vnpay.fix');
 
-// VNPay Test Callback - Test page
-Route::get('vnpay-test', function() {
-    return view('vnpay-test-callback');
-})->name('vnpay.test');
+    // VNPay Test Callback - Test page
+    Route::get('vnpay-test', function() {
+        return view('vnpay-test-callback');
+    })->name('vnpay.test');
 
-// VNPay Test Signature - API test
-Route::post('vnpay-test-signature', function() {
+    // VNPay Test Signature - API test
+    Route::post('vnpay-test-signature', function() {
     $config = config('services.vnpay');
     
     // Tạo test data giống VNPay callback
@@ -536,18 +538,19 @@ Route::post('vnpay-test-signature', function() {
     $hashData = http_build_query($testData, '', '&');
     $computedHash = hash_hmac('sha512', $hashData, $config['hash_secret']);
     
-    return response()->json([
-        'config' => [
-            'tmn_code' => $config['tmn_code'],
-            'hash_secret_length' => strlen($config['hash_secret']),
-            'hash_secret_correct' => $config['hash_secret'] === 'LYS57TC0V5NARXASTFT3Y0D50NHNPWEZ',
-        ],
-        'test_data' => $testData,
-        'hash_data' => $hashData,
-        'computed_hash' => $computedHash,
-        'hash_preview' => substr($computedHash, 0, 20) . '...',
-    ]);
-})->name('vnpay.test.signature');
+        return response()->json([
+            'config' => [
+                'tmn_code' => $config['tmn_code'],
+                'hash_secret_length' => strlen($config['hash_secret']),
+                'hash_secret_correct' => $config['hash_secret'] === 'LYS57TC0V5NARXASTFT3Y0D50NHNPWEZ',
+            ],
+            'test_data' => $testData,
+            'hash_data' => $hashData,
+            'computed_hash' => $computedHash,
+            'hash_preview' => substr($computedHash, 0, 20) . '...',
+        ]);
+    })->name('vnpay.test.signature');
+}
 
 // VNPay Clear Session
 Route::post('vnpay-clear-session', function() {
