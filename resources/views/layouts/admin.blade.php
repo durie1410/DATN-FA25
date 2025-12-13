@@ -1138,16 +1138,16 @@
                 
                 @endif
                 @endcan
-                <a href="{{ route('admin.borrows.index')}}" class="menu-item">
-                    <i class="fas fa-undo"></i>
-                    <span>Quản lý mượn sách</span>
+                <a href="{{ route('admin.borrows.index') }}" class="menu-item {{ request()->routeIs('admin.borrows.*') ? 'active' : '' }}">
+                    <i class="fas fa-book-reader"></i>
+                    <span>📚 Mượn/Trả Sách (CHI TIẾT)</span>
                 </a>
-<a href="{{ route('admin.shipping_logs.index') }}" 
-   class="menu-item d-flex align-items-center gap-2 
-          {{ request()->routeIs('admin.shipping_logs.*') ? 'active' : '' }}">
-    <i class="bi bi-truck fs-5"></i>
-    <span>Đơn mượn</span>
-</a>
+                <a href="{{ route('admin.shipping_logs.index') }}" 
+                   class="menu-item d-flex align-items-center gap-2 
+                          {{ request()->routeIs('admin.shipping_logs.*') ? 'active' : '' }}">
+                    <i class="bi bi-truck fs-5"></i>
+                    <span>🚚 Giao Hàng (Đơn Mua)</span>
+                </a>
 
 
 

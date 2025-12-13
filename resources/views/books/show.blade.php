@@ -1847,7 +1847,7 @@
                 `;
             });
             
-            const payableNow = totalDeposit + totalShippingFee;
+            const payableNow = totalDeposit + totalShippingFee+ totalRentalFee;
             
             const content = `
                 <div class="borrow-info-section">
@@ -2145,127 +2145,55 @@
         }
 
         // Hàm mới: Xác nhận mượn nhiều quyển với thông số khác nhau
-        function confirmBorrowMultiple() {
-            const confirmBtn = event.target;
-            confirmBtn.disabled = true;
-            confirmBtn.textContent = 'Đang xử lý...';
-
-            // Lấy thông tin từng item
-            const daysInputs = document.querySelectorAll('.item-days-input');
-            const distanceInputs = document.querySelectorAll('.item-distance-input');
-            const availableCopies = {{ $stats['available_copies'] ?? 0 }};
-            
-            if (daysInputs.length === 0) {
-                alert('Không có thông tin mượn sách!');
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = 'Xác nhận mượn sách';
-                return;
-            }
-            
-            // Kiểm tra số lượng hợp lệ
-            if (daysInputs.length > availableCopies) {
-                alert(`Số lượng mượn vượt quá số lượng có sẵn. Chỉ còn ${availableCopies} cuốn.`);
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = 'Xác nhận mượn sách';
-                return;
-            }
-            
-            // Tạo mảng items
-            const items = [];
-            daysInputs.forEach((daysInput, index) => {
-                const days = parseInt(daysInput.value) || 14;
-                const distance = parseFloat(distanceInputs[index].value) || 0;
-                
-                if (days < 1 || days > 30) {
-                    alert(`Quyển ${index + 1}: Số ngày mượn phải từ 1 đến 30 ngày!`);
-                    confirmBtn.disabled = false;
-                    confirmBtn.textContent = 'Xác nhận mượn sách';
-                    return;
-                }
-                
-                items.push({
-                    book_id: {{ $book->id }},
-                    borrow_days: days,
-                    distance: distance
-                });
-            });
-            
-            if (items.length === 0) {
-                alert('Không có thông tin mượn sách hợp lệ!');
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = 'Xác nhận mượn sách';
-                return;
-            }
-
-            // Gửi yêu cầu mượn sách với mảng items
-            fetch('{{ route("borrow.book") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify({
-                    items: items,
-                    note: `Yêu cầu mượn sách - ${items.length} cuốn`
-                })
-            })
-            .then(response => {
-                console.log('Response status:', response.status);
-                if (response.status === 401) {
-                    return response.json().then(data => {
-                        alert(data.message || 'Vui lòng đăng nhập để mượn sách!');
-                        if (data.redirect) {
-                            window.location.href = data.redirect;
-                        } else {
-                            window.location.href = '{{ route("login") }}';
-                        }
-                        return;
-                    });
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Response data:', data);
-                if (!data) {
-                    console.error('No data returned from server');
-                    alert('Không nhận được phản hồi từ server!');
-                    confirmBtn.disabled = false;
-                    confirmBtn.textContent = 'Xác nhận mượn sách';
-                    return;
-                }
-                
-                if (data.success) {
-                    console.log('Borrow created successfully:', data.data);
-                    closeBorrowModal();
-                    
-                    // Hiển thị thông báo thành công
-                    const totalItems = items.length;
-                    const message = (data.message || 'Đã gửi yêu cầu mượn sách thành công!') + 
-                        '\n\nSố lượng mượn: ' + totalItems + ' cuốn' +
-                        '\nMã phiếu mượn: ' + (data.data?.borrow_id || 'N/A') +
-                        '\n\nYêu cầu đã được gửi và sẽ hiển thị trong trang "Quản lý mượn sách" của admin.';
-                    
-                    alert(message);
-                    
-                    // Redirect đến trang sách đang mượn
-                    window.location.href = '{{ route("account.borrowed-books") }}';
-                } else {
-                    console.error('Borrow creation failed:', data.message);
-                    alert(data.message || 'Có lỗi xảy ra khi gửi yêu cầu mượn sách!');
-                    confirmBtn.disabled = false;
-                    confirmBtn.textContent = 'Xác nhận mượn sách';
-                    if (data.redirect) {
-                        window.location.href = data.redirect;
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Fetch Error:', error);
-                alert('Có lỗi xảy ra khi gửi yêu cầu mượn sách: ' + error.message);
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = 'Xác nhận mượn sách';
-            });
+       // Thay thế hàm confirmBorrowMultiple (line ~1350) thành:
+function confirmBorrowMultiple() {
+    const daysInputs = document.querySelectorAll('.item-days-input');
+    const distanceInputs = document.querySelectorAll('.item-distance-input');
+    const availableCopies = {{ $stats['available_copies'] ?? 0 }};
+    
+    if (daysInputs.length === 0) {
+        alert('Không có thông tin mượn sách!');
+        return;
+    }
+    
+    if (daysInputs.length > availableCopies) {
+        alert(`Số lượng mượn vượt quá số lượng có sẵn. Chỉ còn ${availableCopies} cuốn.`);
+        return;
+    }
+    
+    // ✅ KHÔNG GỘI API, CHỈ REDIRECT CHECKOUT VỚI THÔNG SỐ
+    const items = [];
+    daysInputs.forEach((daysInput, index) => {
+        const days = parseInt(daysInput.value) || 14;
+        const distance = parseFloat(distanceInputs[index].value) || 0;
+        
+        if (days < 1 || days > 30) {
+            alert(`Quyển ${index + 1}: Số ngày mượn phải từ 1 đến 30 ngày!`);
+            return;
         }
+        
+        items.push({
+            book_id: {{ $book->id }},
+            borrow_days: days,
+            distance: distance
+        });
+    });
+    
+    if (items.length === 0) {
+        alert('Không có thông tin mượn sách hợp lệ!');
+        return;
+    }
+
+    closeBorrowModal();
+    
+    // ✅ Redirect đến checkout với thông tin items
+    const params = new URLSearchParams();
+    params.append('book_id', {{ $book->id }});
+    params.append('quantity', items.length);
+    params.append('items', JSON.stringify(items));
+    
+    window.location.href = '{{ route("borrow-cart.checkout") }}?' + params.toString();
+}
         
         // Hàm cũ: Xác nhận mượn sách (giữ lại cho tương thích)
         function confirmBorrow(days, quantityFromModal = null) {
@@ -2343,8 +2271,7 @@
                     alert(message);
                     
                     // Redirect đến trang sách đang mượn để xem yêu cầu vừa tạo
-                    window.location.href = '{{ route("account.borrowed-books") }}';
-                } else {
+window.location.href = '{{ route("borrow-cart.checkout") }}';                } else {
                     console.error('Borrow creation failed:', data.message);
                     alert(data.message || 'Có lỗi xảy ra khi gửi yêu cầu mượn sách!');
                     confirmBtn.disabled = false;

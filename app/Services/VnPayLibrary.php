@@ -72,14 +72,14 @@ class VnPayLibrary
         ksort($this->requestData);
         
         $query = '';
-        $hashData = '';
+        $hashdata = '';
         $i = 0;
         
         foreach ($this->requestData as $key => $value) {
             if ($i == 1) {
-                $hashData .= '&' . $key . "=" . $value;
+                $hashdata .= '&' . urlencode($key) . "=" . urlencode($value);
             } else {
-                $hashData .= $key . "=" . $value;
+                $hashdata .= urlencode($key) . "=" . urlencode($value);
                 $i = 1;
             }
             $query .= urlencode($key) . "=" . urlencode($value) . '&';
@@ -92,12 +92,13 @@ class VnPayLibrary
         
         if (!empty($hashSecret)) {
             // Tạo secure hash từ raw data (không encode)
-            $vnpSecureHash = hash_hmac('sha512', $hashData, $hashSecret);
+            $vnpSecureHash = hash_hmac('sha512', $hashdata, $hashSecret);
             $vnpUrl .= '&vnp_SecureHash=' . $vnpSecureHash;
             
             // Debug logging
             Log::info('VNPay Create Payment URL', [
-                'hash_data' => $hashData,
+                'hash_data' => $hashdata,
+                'hash_secret' => $hashSecret,
                 'hash_secret_length' => strlen($hashSecret),
                 'secure_hash' => $vnpSecureHash
             ]);
@@ -114,16 +115,30 @@ class VnPayLibrary
         $rspRaw = $this->getResponseDataString();
         $myChecksum = hash_hmac('sha512', $rspRaw, $secretKey);
         
-        // Debug logging
+        $isValid = strcasecmp($myChecksum, $inputHash) === 0;
+        
+        // Debug logging với thông tin chi tiết
         Log::info('VNPay Validate Signature', [
             'response_data_string' => $rspRaw,
             'input_hash' => $inputHash,
             'my_checksum' => $myChecksum,
-            'is_valid' => strcasecmp($myChecksum, $inputHash) === 0,
-            'secret_key_length' => strlen($secretKey)
+            'is_valid' => $isValid,
+            'secret_key_length' => strlen($secretKey),
+            'secret_key_preview' => substr($secretKey, 0, 5) . '...' . substr($secretKey, -5),
+            'hash_match_result' => $isValid ? '✅ KHỚP' : '❌ KHÔNG KHỚP',
         ]);
         
-        return strcasecmp($myChecksum, $inputHash) === 0;
+        // Log lỗi nếu không khớp
+        if (!$isValid) {
+            Log::error('VNPay Signature Validation FAILED', [
+                'reason' => 'Hash không khớp - có thể do HASH_SECRET sai',
+                'suggestion' => 'Kiểm tra lại VNPAY_HASH_SECRET trong file .env',
+                'expected_hash' => $myChecksum,
+                'received_hash' => $inputHash,
+            ]);
+        }
+        
+        return $isValid;
     }
 
     /**
@@ -144,10 +159,16 @@ class VnPayLibrary
         $i = 0;
         
         foreach ($data as $key => $value) {
+            // if ($i == 1) {
+            //     $query .= '&' . $key . "=" . $value;
+            // } else {
+            //     $query .= $key . "=" . $value;
+            //     $i = 1;
+            // }
             if ($i == 1) {
-                $query .= '&' . $key . "=" . $value;
+                $query .= '&' . urlencode($key) . "=" . urlencode($value);
             } else {
-                $query .= $key . "=" . $value;
+                $query .= urlencode($key) . "=" . urlencode($value);
                 $i = 1;
             }
         }

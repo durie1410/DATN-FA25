@@ -46,3 +46,4 @@ echo "   VNPAY_HASH_SECRET=LYS57TC0V5NARXASTFT3Y0D50NHNPWEZ\n";
 echo "   VNPAY_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html\n";
 echo "\n⚡ Tiếp theo, chạy lệnh: php artisan config:clear\n";
 
+

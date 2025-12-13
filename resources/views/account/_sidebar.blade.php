@@ -26,7 +26,7 @@
                 <a href="{{ route('account.change-password') }}"><span class="icon">🔒</span> Đổi mật khẩu</a>
             </li>
             <li class="{{ $currentRoute === 'orders.index' ? 'active' : '' }}">
-                <a href="{{ route('orders.index') }}"><span class="icon">🛒</span> Lịch sử mua hàng</a>
+                 <a href="{{ route('orders.index') }}" class="dropdown-item"><span>📋</span> Lịch sử đơn mượn</a>
             </li>
             @if(!$user->reader)
             <li class="{{ $currentRoute === 'account.register-reader' ? 'active' : '' }}">

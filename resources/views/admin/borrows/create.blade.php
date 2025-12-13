@@ -84,11 +84,12 @@
             <div class="col-md-6">
                 <label class="form-label">Trạng thái</label>
                 <select name="trang_thai" class="form-control">
-                    <option value="chua_hoan_tat">chưa hoàn tất</option>
+                    <option value="Cho duyet">Chờ duyệt</option>
                     <option value="Dang muon">Đang mượn</option>
                     <option value="Da tra">Đã trả</option>
                     <option value="Qua han">Quá hạn</option>
                     <option value="Mat sach">Mất sách</option>
+                    <option value="Huy">Hủy</option>
                 </select>
             </div>
         </div>

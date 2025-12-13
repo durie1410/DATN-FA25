@@ -446,26 +446,12 @@
                 console.log('Redirect URL:', data.redirect_url);
                 showToast('success', data.message || 'Đặt hàng thành công!');
                 
-                // Redirect ngay lập tức với cache-busting
+                // Redirect ngay lập tức về trang lịch sử mua hàng
                 const redirectUrl = data.redirect_url || '{{ route("orders.index") }}';
                 console.log('Redirecting to:', redirectUrl);
                 
-                // Force GET request - sử dụng window.location.replace để tránh history và cache
-                // Thêm timestamp để force reload và clear cache
-                // Sử dụng window.location.href để đảm bảo redirect hoạt động
-                setTimeout(() => {
-                    // Clear any cached data
-                    if ('caches' in window) {
-                        caches.keys().then(names => {
-                            names.forEach(name => caches.delete(name));
-                        });
-                    }
-                    
-                    // Redirect với cache-busting parameter
-                    const finalUrl = redirectUrl + '?_nocache=' + Date.now() + '&order=' + encodeURIComponent(data.order_number || '');
-                    console.log('Final redirect URL:', finalUrl);
-                    window.location.href = finalUrl;
-                }, 1000);
+                // Redirect ngay lập tức, không đợi
+                window.location.href = redirectUrl;
             } else {
                 console.error('Order creation failed:', data.message);
                 showToast('error', data.message || 'Có lỗi xảy ra khi đặt hàng');

@@ -276,6 +276,14 @@ class HomeController extends Controller
 
     public function borrowBook(Request $request)
     {
+        // Nếu items tồn tại và là MẢNG RỖNG thì mới coi là giỏ trống
+if (is_array($request->items ?? null) && count($request->items) === 0) {
+    return response()->json([
+        'success' => false,
+        'message' => 'Giỏ sách của bạn đang trống'
+    ], 400);
+}
+
         // Kiểm tra xem request có items[] không (kiểu mới) hay là kiểu cũ
         $hasItemsArray = $request->has('items') && is_array($request->items);
         
@@ -419,7 +427,7 @@ class HomeController extends Controller
                         'xa' => count($parts) > 0 ? trim($parts[0]) : '',
                         'so_nha' => '',
                         'ngay_muon' => $ngayMuon,
-                        'trang_thai' => 'Dang muon',
+                        'trang_thai' => 'Cho duyet',
                         'tien_coc' => $totalTienCoc,
                         'tien_thue' => $totalTienThue,
                         'tien_ship' => $tienShip,
@@ -729,7 +737,7 @@ class HomeController extends Controller
             'xa' => count($parts) > 0 ? trim($parts[0]) : '',
             'so_nha' => '',
             'ngay_muon' => $ngayMuon,
-            'trang_thai' => 'Dang muon',
+            'trang_thai' => 'Cho duyet',
             'tien_coc' => $totalTienCoc,
             'tien_thue' => $totalTienThue,
             'tien_ship' => $totalTienShip,

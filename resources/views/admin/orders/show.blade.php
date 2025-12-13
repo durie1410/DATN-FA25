@@ -63,7 +63,7 @@
                     <div style="color: #666; font-weight: 500;">Trạng thái:</div>
                     <div style="color: #333;">
                         @if(in_array($order->status, ['pending']))
-                            <span style="background-color: #fff3cd; color: #856404; padding: 4px 12px; border-radius: 12px; font-size: 13px;">Chờ xác nhận</span>
+                            <span style="background-color: #fff3cd; color: #856404; padding: 4px 12px; border-radius: 12px; font-size: 13px;">Đang chờ duyệt</span>
                         @elseif(in_array($order->status, ['confirmed', 'processing']))
                             <span style="background-color: #cfe2ff; color: #084298; padding: 4px 12px; border-radius: 12px; font-size: 13px;">Đã xác nhận</span>
                         @elseif($order->status === 'preparing')

@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Lịch sử mua hàng - Nhà Xuất Bản Xây Dựng</title>
+    <title>Lịch sử đơn mượn - Nhà Xuất Bản Xây Dựng</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -230,7 +230,7 @@
                                 <span>🔒</span> Đổi mật khẩu
                             </a>
                             <a href="{{ route('orders.index') }}" class="dropdown-item">
-                                <span>⏰</span> Lịch sử mua hàng
+                                <span>📋</span> Lịch sử đơn mượn
                             </a>
                             @if(auth()->user()->role === 'admin' || auth()->user()->role === 'staff')
                             <div style="border-top: 1px solid #eee; margin-top: 5px;"></div>
@@ -319,7 +319,7 @@
                 </svg>
             </a>
             <span class="breadcrumb-separator">/</span>
-            <span class="breadcrumb-current">Lịch sử mua hàng</span>
+            <span class="breadcrumb-current">Lịch sử đơn mượn</span>
         </div>
     </nav>
 
@@ -335,8 +335,9 @@
                     <li><a href="{{ route('account.borrowed-books') }}"><span class="icon">📚</span> Sách đang mượn</a></li>
                     @endif
                     <li><a href="{{ route('account') }}"><span class="icon">👤</span> Thông tin khách hàng</a></li>
+                    <li><a href="{{ route('account.reader-info') }}" class="dropdown-item"><span>👥</span> Thông tin độc giả</a></li>
                     <li><a href="{{ route('account.change-password') }}"><span class="icon">🔒</span> Đổi mật khẩu</a></li>
-                    <li class="active"><a href="{{ route('orders.index') }}"><span class="icon">🛒</span> Lịch sử mua hàng</a></li>
+                    <li class="active"><a href="{{ route('orders.index') }}"><span class="icon">📋</span> Lịch sử đơn mượn</a></li>
                     @if(!auth()->user()->reader)
                     <li><a href="{{ route('account.register-reader') }}"><span class="icon">📝</span> Đăng kí độc giả</a></li>
                     @endif
@@ -350,7 +351,7 @@
 
         <section class="account-content">
             <div class="purchase-history-section">
-                <h2 class="purchase-history-title">Lịch sử mua hàng</h2>
+                <h2 class="purchase-history-title">Lịch sử đơn mượn</h2>
                 
                 @if($orders->count() > 0)
                 <table class="purchase-history-table">
@@ -358,7 +359,7 @@
                         <tr>
                             <th>STT</th>
                             <th>Mã đơn</th>
-                            <th>Ngày đặt</th>
+                            <th>Ngày mượn</th>
                             <th>Số tiền</th>
                             <th>Phương thức thanh toán</th>
                             <th>Trạng thái</th>
@@ -370,54 +371,58 @@
                         <tr>
                             <td>{{ $orders->firstItem() + $index }}</td>
                             <td>
-                                <span class="order-code">#{{ $order->order_number }}</span>
+                                <span class="order-code">#BRW{{ str_pad($order->id, 6, '0', STR_PAD_LEFT) }}</span>
                             </td>
                             <td>
                                 <span class="order-date">{{ $order->created_at->format('d/m/Y H:i') }}</span>
                             </td>
                             <td>
-                                <span class="order-amount">{{ number_format($order->total_amount, 0, ',', '.') }}₫</span>
+                                <span class="order-amount">{{ number_format($order->tong_tien ?? 0, 0, ',', '.') }}₫</span>
                             </td>
                             <td>
-                                @if($order->payment_method === 'cash_on_delivery')
-                                    <span style="color: #28a745; font-weight: 500;">💳 Thanh toán khi nhận hàng</span>
-                                @elseif($order->payment_method === 'bank_transfer')
-                                    <span style="color: #17a2b8; font-weight: 500;">🏦 Chuyển khoản ngân hàng</span>
+                                @php
+                                    $payment = $order->payments->first();
+                                    $paymentMethod = $payment ? $payment->payment_method : null;
+                                    $paymentNote = $payment ? $payment->note : '';
+                                @endphp
+                                @if($paymentMethod === 'online')
+                                    @if(str_contains($paymentNote, 'VNPay'))
+                                        <span style="color: #2196f3; font-weight: 500;">💳 VNPay</span>
+                                    @elseif(str_contains($paymentNote, 'chuyển khoản'))
+                                        <span style="color: #17a2b8; font-weight: 500;">🏦 Chuyển khoản</span>
+                                    @elseif(str_contains($paymentNote, 'ví điện tử'))
+                                        <span style="color: #ff9800; font-weight: 500;">👛 Ví điện tử</span>
+                                    @else
+                                        <span style="color: #2196f3; font-weight: 500;">💳 Online</span>
+                                    @endif
+                                @elseif($paymentMethod === 'offline')
+                                    <span style="color: #28a745; font-weight: 500;">💰 Thanh toán khi nhận hàng</span>
                                 @else
-                                    <span style="color: #6c757d;">Chưa xác định</span>
+                                    <span style="color: #6c757d; font-weight: 500;">Chưa xác định</span>
                                 @endif
                             </td>
                             <td>
                                 <div class="status-buttons">
-                                    @if($order->status === 'cancelled')
-                                        <span class="status-btn cancelled">Đã huỷ</span>
-                                    @elseif($order->status === 'pending')
-                                        <span class="status-btn" style="background-color: #ffc107; color: #000;">Chờ xử lý</span>
-                                    @elseif($order->status === 'processing')
-                                        <span class="status-btn processing">Đang xử lý</span>
-                                    @elseif($order->status === 'shipped')
-                                        <span class="status-btn" style="background-color: #17a2b8; color: #fff;">Đã giao hàng</span>
-                                    @elseif($order->status === 'delivered')
-                                        <span class="status-btn paid">Đã hoàn thành</span>
-                                    @endif
-                                    @if($order->payment_status === 'pending')
-                                        <span class="status-btn unpaid">Chưa thanh toán</span>
-                                    @elseif($order->payment_status === 'paid')
-                                        <span class="status-btn paid">Đã thanh toán</span>
-                                    @elseif($order->payment_status === 'failed')
-                                        <span class="status-btn cancelled">Thanh toán thất bại</span>
-                                    @elseif($order->payment_status === 'refunded')
-                                        <span class="status-btn" style="background-color: #6c757d; color: #fff;">Đã hoàn tiền</span>
+                                    @if($order->trang_thai === 'Cho duyet')
+                                        <span class="status-btn" style="background-color: #ffc107; color: #000;">⏳ Chờ duyệt</span>
+                                    @elseif($order->trang_thai === 'Dang muon')
+                                        <span class="status-btn" style="background-color: #2196f3; color: #fff;">📖 Đang mượn</span>
+                                    @elseif($order->trang_thai === 'Da tra')
+                                        <span class="status-btn paid">✅ Đã trả</span>
+                                    @elseif($order->trang_thai === 'Huy')
+                                        <span class="status-btn cancelled">❌ Đã hủy</span>
+                                    @elseif($order->trang_thai === 'Qua han')
+                                        <span class="status-btn" style="background-color: #ff5722; color: #fff;">⚠️ Quá hạn</span>
+                                    @else
+                                        <span class="status-btn" style="background-color: #6c757d; color: #fff;">{{ $order->trang_thai }}</span>
                                     @endif
                                 </div>
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <a href="{{ route('orders.show', $order->id) }}" class="view-btn">Xem</a>
-                                    @if($order->canBeCancelled())
-                                    <button type="button" class="cancel-btn" onclick="cancelOrder({{ $order->id }})">
-                                        Huỷ
-                                    </button>
+                                    <a href="{{ route('orders.detail', $order->id) }}" class="view-btn">Xem</a>
+                                    @if($order->trang_thai === 'Cho duyet')
+                                        <button class="cancel-btn" onclick="showCancelModal({{ $order->id }})">Hủy đơn</button>
                                     @endif
                                 </div>
                             </td>
@@ -435,11 +440,11 @@
 
                 @else
                 <div class="empty-state">
-                    <div class="empty-icon">🛒</div>
-                    <h4>Bạn chưa có đơn hàng nào</h4>
-                    <p>Hãy bắt đầu mua sắm để tạo đơn hàng đầu tiên của bạn!</p>
+                    <div class="empty-icon">📋</div>
+                    <h4>Bạn chưa có đơn mượn nào</h4>
+                    <p>Hãy bắt đầu mượn sách để tạo đơn mượn đầu tiên của bạn!</p>
                     <a href="{{ route('books.public') }}" class="btn-primary">
-                        Mua sắm ngay
+                        Khám phá sách ngay
                     </a>
                 </div>
                 @endif
@@ -449,476 +454,94 @@
 
     @include('components.footer')
 
-    <!-- Modal xác nhận hủy đơn hàng (Bước 1: Xác nhận) -->
-    <div class="modal fade" id="confirmCancelModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content" style="border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
-                <div class="modal-body text-center" style="padding: 40px 30px;">
-                    <!-- Icon -->
-                    <div style="width: 80px; height: 80px; margin: 0 auto 20px; background-color: #fff3cd; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                        <span style="font-size: 48px; color: #ffc107; font-weight: bold;">?</span>
-                    </div>
-                    
-                    <!-- Title -->
-                    <h4 class="modal-title mb-3" style="font-weight: 600; color: #333; font-size: 22px;">
-                        Xác nhận hủy đơn hàng
-                    </h4>
-                    
-                    <!-- Message -->
-                    <p style="color: #666; font-size: 16px; margin-bottom: 30px;">
-                        Vui lòng xác nhận để hủy đơn hàng
-                    </p>
-                    
-                    <!-- Buttons -->
-                    <div class="d-flex gap-3 justify-content-center">
-                        <button type="button" class="btn btn-secondary" id="cancelConfirmBtn" style="padding: 10px 30px; border-radius: 8px; font-weight: 500;">
-                            Huỷ
-                        </button>
-                        <button type="button" class="btn btn-primary" id="proceedCancelBtn" style="padding: 10px 30px; border-radius: 8px; font-weight: 500; background-color: #0d6efd;">
-                            Xác nhận
-                        </button>
-                    </div>
+    <!-- Cancel Modal -->
+    <div id="cancelModal" class="modal" tabindex="-1" style="display: none;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Hủy đơn mượn</h5>
+                    <button type="button" class="btn-close" onclick="hideCancelModal()"></button>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal nhập lý do hủy (Bước 2: Nhập lý do) -->
-    <div class="modal fade" id="cancelOrderModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content" style="border: none; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
-                <div class="modal-header" style="border-bottom: 1px solid #e9ecef; padding: 20px 30px;">
-                    <h5 class="modal-title" style="font-weight: 600; color: #333;">Nhập lý do hủy đơn hàng</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-body">
+                    <p>Vui lòng cho chúng tôi biết lí do bạn muốn hủy đơn mượn này:</p>
+                    <textarea id="cancelReason" class="form-control" rows="4" placeholder="Nhập lí do hủy đơn (ít nhất 10 ký tự)..."></textarea>
+                    <div id="errorMessage" class="alert alert-danger mt-3" style="display: none;"></div>
                 </div>
-                <div class="modal-body" style="padding: 30px;">
-                    <div class="alert alert-warning mb-3">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <strong>Lưu ý:</strong> Hành động này không thể hoàn tác.
-                    </div>
-                    <div class="mb-3">
-                        <label for="cancellation_reason" class="form-label">
-                            <strong>Lý do hủy đơn hàng <span class="text-danger">*</span></strong>
-                        </label>
-                        <textarea 
-                            class="form-control" 
-                            id="cancellation_reason" 
-                            name="cancellation_reason" 
-                            rows="4" 
-                            placeholder="Vui lòng nhập lý do hủy đơn hàng (tối thiểu 10 ký tự)"
-                            required
-                            minlength="10"
-                            maxlength="500"
-                            style="border-radius: 8px;"
-                        ></textarea>
-                        <div class="form-text">
-                            <span id="charCount">0</span>/500 ký tự (tối thiểu 10 ký tự)
-                        </div>
-                        <div class="invalid-feedback" id="reasonError"></div>
-                    </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="hideCancelModal()">Đóng</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmCancel()">Xác nhận hủy</button>
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid #e9ecef; padding: 20px 30px;">
-                    <button type="button" class="btn btn-secondary" id="backToConfirmBtn" style="border-radius: 8px;">
-                        <i class="fas fa-arrow-left"></i> Quay lại
-                    </button>
-                    <button type="button" class="btn btn-danger" id="confirmCancelBtn" style="border-radius: 8px;">
-                        <i class="fas fa-times"></i> Xác nhận hủy
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Toast thông báo -->
-    <div class="toast-container position-fixed bottom-0 end-0 p-3">
-        <div id="orderToast" class="toast" role="alert">
-            <div class="toast-header">
-                <i class="fas fa-shopping-cart text-success me-2"></i>
-                <strong class="me-auto">Thông báo</strong>
-                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
-            </div>
-            <div class="toast-body" id="toastMessage">
-                <!-- Nội dung thông báo sẽ được thêm vào đây -->
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-    // Khai báo biến global
-    let currentOrderId = null;
-    let confirmCancelModal = null;
-    let cancelOrderModal = null;
-    let orderToast = null;
+        let currentBorrowId = null;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-    // Hàm hủy đơn hàng - Hiển thị modal xác nhận đầu tiên
-    window.cancelOrder = function(orderId) {
-        console.log('=== cancelOrder function called ===');
-        console.log('Order ID:', orderId);
-        
-        if (!orderId) {
-            console.error('Order ID is required');
-            alert('Lỗi: Không có mã đơn hàng');
-            return false;
+        function showCancelModal(borrowId) {
+            currentBorrowId = borrowId;
+            document.getElementById('cancelModal').style.display = 'block';
+            document.getElementById('cancelModal').classList.add('show');
+            document.getElementById('cancelReason').value = '';
+            document.getElementById('errorMessage').style.display = 'none';
         }
-        
-        currentOrderId = orderId;
-        
-        // Tìm modal xác nhận
-        const confirmModalElement = document.getElementById('confirmCancelModal');
-        if (!confirmModalElement) {
-            console.error('Confirm modal element not found in DOM');
-            alert('Không thể tải form hủy đơn hàng. Vui lòng tải lại trang.');
-            return false;
+
+        function hideCancelModal() {
+            document.getElementById('cancelModal').style.display = 'none';
+            document.getElementById('cancelModal').classList.remove('show');
+            currentBorrowId = null;
         }
-        
-        console.log('Confirm modal element found');
-        
-        // Khởi tạo modal xác nhận nếu chưa có
-        if (!confirmCancelModal) {
-            try {
-                if (typeof bootstrap === 'undefined') {
-                    console.error('Bootstrap is not loaded');
-                    alert('Lỗi: Bootstrap chưa được tải. Vui lòng tải lại trang.');
-                    return false;
-                }
-                
-                confirmCancelModal = new bootstrap.Modal(confirmModalElement, {
-                    backdrop: 'static',
-                    keyboard: false
-                });
-                console.log('Confirm modal initialized successfully');
-            } catch (error) {
-                console.error('Error initializing confirm modal:', error);
-                alert('Lỗi khởi tạo form: ' + error.message);
-                return false;
+
+        function confirmCancel() {
+            const reason = document.getElementById('cancelReason').value.trim();
+            const errorDiv = document.getElementById('errorMessage');
+
+            // Validate
+            if (reason.length < 10) {
+                errorDiv.textContent = 'Lí do hủy đơn phải có ít nhất 10 ký tự';
+                errorDiv.style.display = 'block';
+                return;
             }
-        }
-        
-        // Hiển thị modal xác nhận
-        try {
-            confirmCancelModal.show();
-            console.log('Confirm modal shown successfully');
-            return true;
-        } catch (error) {
-            console.error('Error showing confirm modal:', error);
-            alert('Lỗi hiển thị form: ' + error.message);
-            return false;
-        }
-    };
 
-    // Khởi tạo tất cả sau khi DOM đã load
-    document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM loaded, initializing cancel order functionality...');
-        
-        // Khởi tạo modal xác nhận
-        const confirmModalElement = document.getElementById('confirmCancelModal');
-        if (confirmModalElement && typeof bootstrap !== 'undefined') {
-            confirmCancelModal = new bootstrap.Modal(confirmModalElement, {
-                backdrop: 'static',
-                keyboard: false
-            });
-            console.log('Confirm modal initialized');
-        }
-        
-        // Khởi tạo modal nhập lý do
-        const modalElement = document.getElementById('cancelOrderModal');
-        if (modalElement && typeof bootstrap !== 'undefined') {
-            cancelOrderModal = new bootstrap.Modal(modalElement, {
-                backdrop: 'static',
-                keyboard: false
-            });
-            console.log('Cancel order modal initialized');
-        }
-        
-        // Khởi tạo toast
-        const toastElement = document.getElementById('orderToast');
-        if (toastElement && typeof bootstrap !== 'undefined') {
-            orderToast = new bootstrap.Toast(toastElement);
-            console.log('Toast initialized');
-        }
-        
-        // Xử lý nút "Huỷ" trong modal xác nhận
-        const cancelConfirmBtn = document.getElementById('cancelConfirmBtn');
-        if (cancelConfirmBtn && confirmCancelModal) {
-            cancelConfirmBtn.addEventListener('click', function() {
-                confirmCancelModal.hide();
-            });
-        }
-        
-        // Xử lý nút "Xác nhận" trong modal xác nhận - chuyển sang modal nhập lý do
-        const proceedCancelBtn = document.getElementById('proceedCancelBtn');
-        if (proceedCancelBtn && confirmCancelModal && cancelOrderModal) {
-            proceedCancelBtn.addEventListener('click', function() {
-                confirmCancelModal.hide();
-                setTimeout(function() {
-                    // Reset form trước khi hiển thị
-                    const cancellationReasonInput = document.getElementById('cancellation_reason');
-                    const charCountSpan = document.getElementById('charCount');
-                    const reasonError = document.getElementById('reasonError');
-                    if (cancellationReasonInput) {
-                        cancellationReasonInput.value = '';
-                        cancellationReasonInput.classList.remove('is-invalid');
-                    }
-                    if (charCountSpan) {
-                        charCountSpan.textContent = '0';
-                        charCountSpan.classList.remove('text-success', 'text-warning', 'text-danger');
-                    }
-                    if (reasonError) {
-                        reasonError.textContent = '';
-                    }
-                    
-                    cancelOrderModal.show();
-                    
-                    setTimeout(function() {
-                        if (cancellationReasonInput) {
-                            cancellationReasonInput.focus();
-                        }
-                    }, 100);
-                }, 300);
-            });
-        }
-        
-        // Xử lý nút "Quay lại" trong modal nhập lý do
-        const backToConfirmBtn = document.getElementById('backToConfirmBtn');
-        if (backToConfirmBtn && cancelOrderModal && confirmCancelModal) {
-            backToConfirmBtn.addEventListener('click', function() {
-                cancelOrderModal.hide();
-                const cancellationReasonInput = document.getElementById('cancellation_reason');
-                const charCountSpan = document.getElementById('charCount');
-                const reasonError = document.getElementById('reasonError');
-                if (cancellationReasonInput) {
-                    cancellationReasonInput.value = '';
-                    cancellationReasonInput.classList.remove('is-invalid');
-                }
-                if (charCountSpan) {
-                    charCountSpan.textContent = '0';
-                    charCountSpan.classList.remove('text-success', 'text-warning', 'text-danger');
-                }
-                if (reasonError) {
-                    reasonError.textContent = '';
-                }
-                setTimeout(function() {
-                    confirmCancelModal.show();
-                }, 300);
-            });
-        }
-        
-        // Đếm ký tự trong textarea lý do hủy
-        const cancellationReasonInput = document.getElementById('cancellation_reason');
-        const charCountSpan = document.getElementById('charCount');
+            // Disable button
+            const btn = event.target;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Đang xử lý...';
 
-        if (cancellationReasonInput && charCountSpan) {
-            cancellationReasonInput.addEventListener('input', function() {
-                const charCount = this.value.length;
-                charCountSpan.textContent = charCount;
-                
-                if (charCount < 10) {
-                    charCountSpan.classList.add('text-warning');
-                    charCountSpan.classList.remove('text-success', 'text-danger');
-                } else if (charCount > 500) {
-                    charCountSpan.classList.add('text-danger');
-                    charCountSpan.classList.remove('text-success', 'text-warning');
+            // Send request
+            fetch(`/borrows/${currentBorrowId}/cancel`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    cancellation_reason: reason
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Đã hủy đơn mượn thành công!');
+                    window.location.reload();
                 } else {
-                    charCountSpan.classList.add('text-success');
-                    charCountSpan.classList.remove('text-warning', 'text-danger');
+                    errorDiv.textContent = data.message || 'Có lỗi xảy ra khi hủy đơn mượn';
+                    errorDiv.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = 'Xác nhận hủy';
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                errorDiv.textContent = 'Có lỗi xảy ra khi hủy đơn mượn';
+                errorDiv.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Xác nhận hủy';
             });
         }
-        
-        // Xác nhận hủy đơn hàng
-        const confirmCancelBtn = document.getElementById('confirmCancelBtn');
-        if (confirmCancelBtn) {
-            confirmCancelBtn.addEventListener('click', function() {
-                if (!currentOrderId) {
-                    console.error('No order ID set');
-                    return;
-                }
-                
-                const cancellationReasonInput = document.getElementById('cancellation_reason');
-                const cancellationReason = cancellationReasonInput ? cancellationReasonInput.value.trim() : '';
-                const reasonError = document.getElementById('reasonError');
-                
-                // Validate lý do hủy
-                if (!cancellationReason) {
-                    if (reasonError && cancellationReasonInput) {
-                        reasonError.textContent = 'Vui lòng nhập lý do hủy đơn hàng';
-                        cancellationReasonInput.classList.add('is-invalid');
-                    }
-                    return;
-                }
-                
-                if (cancellationReason.length < 10) {
-                    if (reasonError && cancellationReasonInput) {
-                        reasonError.textContent = 'Lý do hủy đơn hàng phải có ít nhất 10 ký tự';
-                        cancellationReasonInput.classList.add('is-invalid');
-                    }
-                    return;
-                }
-                
-                if (cancellationReason.length > 500) {
-                    if (reasonError && cancellationReasonInput) {
-                        reasonError.textContent = 'Lý do hủy đơn hàng không được vượt quá 500 ký tự';
-                        cancellationReasonInput.classList.add('is-invalid');
-                    }
-                    return;
-                }
-                
-                if (reasonError && cancellationReasonInput) {
-                    reasonError.textContent = '';
-                    cancellationReasonInput.classList.remove('is-invalid');
-                }
-                
-                const button = this;
-                const originalText = button.innerHTML;
-                
-                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...';
-                button.disabled = true;
-                
-                // Lấy CSRF token
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-                
-                if (!csrfToken) {
-                    alert('Lỗi: Không tìm thấy CSRF token. Vui lòng tải lại trang.');
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-                    return;
-                }
-                
-                console.log('Sending cancel request for order:', currentOrderId);
-                
-                fetch(`/orders/${currentOrderId}/cancel`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        cancellation_reason: cancellationReason
-                    })
-                })
-                .then(response => {
-                    console.log('Response status:', response.status);
-                    
-                    const contentType = response.headers.get('content-type') || '';
-                    if (!contentType.includes('application/json')) {
-                        return response.text().then(text => {
-                            console.error('Non-JSON response:', text);
-                            if (!response.ok) {
-                                throw new Error(`Lỗi ${response.status}: ${text || 'Server error'}`);
-                            }
-                            throw new Error('Server trả về dữ liệu không đúng định dạng');
-                        });
-                    }
-                    
-                    return response.json().then(data => {
-                        if (!response.ok) {
-                            return Promise.reject({ ...data, status: response.status });
-                        }
-                        return data;
-                    });
-                })
-                .then(data => {
-                    console.log('Response data:', data);
-                    
-                    if (data.success) {
-                        showToast('success', data.message || 'Đơn hàng đã được hủy thành công');
-                        
-                        if (cancelOrderModal) {
-                            try {
-                                cancelOrderModal.hide();
-                            } catch (e) {
-                                console.error('Error hiding modal:', e);
-                                const modalElement = document.getElementById('cancelOrderModal');
-                                if (modalElement) {
-                                    modalElement.classList.remove('show');
-                                    modalElement.style.display = 'none';
-                                    document.body.classList.remove('modal-open');
-                                    const backdrop = document.getElementById('modalBackdrop');
-                                    if (backdrop) backdrop.remove();
-                                }
-                            }
-                        }
-                        
-                        setTimeout(() => {
-                            console.log('Reloading page...');
-                            window.location.reload();
-                        }, 1500);
-                    } else {
-                        const errorMessage = data.message || data.error || 'Có lỗi xảy ra khi hủy đơn hàng';
-                        showToast('error', errorMessage);
-                        
-                        if (data.errors && data.errors.cancellation_reason) {
-                            const reasonError = document.getElementById('reasonError');
-                            const cancellationReasonInput = document.getElementById('cancellation_reason');
-                            if (reasonError && cancellationReasonInput) {
-                                reasonError.textContent = data.errors.cancellation_reason[0];
-                                cancellationReasonInput.classList.add('is-invalid');
-                            }
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.error('Error details:', error);
-                    
-                    if (error && typeof error === 'object' && 'success' in error) {
-                        const errorMessage = error.message || 'Có lỗi xảy ra khi hủy đơn hàng';
-                        showToast('error', errorMessage);
-                        
-                        if (error.errors && error.errors.cancellation_reason) {
-                            const reasonError = document.getElementById('reasonError');
-                            const cancellationReasonInput = document.getElementById('cancellation_reason');
-                            if (reasonError && cancellationReasonInput) {
-                                reasonError.textContent = error.errors.cancellation_reason[0];
-                                cancellationReasonInput.classList.add('is-invalid');
-                            }
-                        }
-                    } else {
-                        let errorMessage = 'Có lỗi xảy ra, vui lòng thử lại';
-                        if (error && error.message) {
-                            errorMessage = error.message;
-                        }
-                        console.error('Error message:', errorMessage);
-                        showToast('error', errorMessage);
-                    }
-                })
-                .finally(() => {
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-                });
-            });
-        }
-    });
-
-    // Hàm hiển thị toast
-    function showToast(type, message) {
-        const toastElement = document.getElementById('orderToast');
-        const toastMessage = document.getElementById('toastMessage');
-        
-        if (!toastElement || !toastMessage) {
-            console.error('Toast elements not found');
-            alert(message);
-            return;
-        }
-        
-        toastMessage.textContent = message;
-        
-        const toastHeader = toastElement.querySelector('.toast-header');
-        const icon = toastHeader.querySelector('i');
-        
-        if (type === 'success') {
-            icon.className = 'fas fa-check-circle text-success me-2';
-            toastElement.classList.remove('bg-danger');
-        } else {
-            icon.className = 'fas fa-exclamation-circle text-danger me-2';
-            toastElement.classList.add('bg-danger');
-        }
-        
-        if (orderToast) {
-            orderToast.show();
-        }
-    }
     </script>
 </body>
 </html>

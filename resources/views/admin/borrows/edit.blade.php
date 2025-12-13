@@ -173,17 +173,6 @@
                         <label class="form-label fw-semibold">Số điện thoại</label>
                         <input type="text" name="so_dien_thoai" value="{{ $borrow->so_dien_thoai }}" class="form-control" required>
                     </div>
-                    <!-- Trạng thái -->
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label fw-semibold">Trạng thái</label>
-                        <select name="trang_thai" class="form-select" required>
-                            <option value="chua_hoan_tat"{{ $borrow->trang_thai == 'chua_hoan_tat' ? 'selected' : '' }}>chưa hoàn tất</option>
-                            <option value="Dang muon" {{ $borrow->trang_thai == 'Dang muon' ? 'selected' : '' }}>Đang mượn</option>
-                            <option value="Da tra" {{ $borrow->trang_thai == 'Da tra' ? 'selected' : '' }}>Đã trả</option>
-                            <option value="Qua han" {{ $borrow->trang_thai == 'Qua han' ? 'selected' : '' }}>Quá hạn</option>
-                            <option value="Mat sach" {{ $borrow->trang_thai == 'Mat sach' ? 'selected' : '' }}>Mất sách</option>
-                        </select>
-                    </div>
                 </div>
 
                 <!-- Ghi chú -->
@@ -209,7 +198,6 @@
                                     <th>Tiền thuê</th>
                                     <th>Ngày hẹn trả</th>
                                     <th>Trạng thái</th>
-                                    <th>Hành động</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -241,78 +229,8 @@
             @case('Hong') Hỏng @break
             @default Không xác định
         @endswitch
-    </span>
+                    </span>
 </td>
-
-                    
-                                               <td>            <a href="{{ route('admin.borrowitems.show', $item->id) }}" 
-               class="btn btn-sm btn-secondary"
-               title="Xem chi tiết">
-                <i class="fas fa-eye"></i>
-            </a>
-
-            
-            {{-- <form action="{{ route('admin.borrows.destroy', $borrow->id) }}" 
-                  method="POST" 
-                  style="display: inline;"
-                  onsubmit="return confirm('Xóa phiếu mượn này?')">
-                @csrf 
-                @method('DELETE')
-                <button type="submit" 
-                        class="btn btn-sm btn-danger"
-                        title="Xóa">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </form> --}}
- @if($item->trang_thai === 'Dang muon')
-    <form action="{{ route('admin.borrowitems.return', $item->id) }}"
-          method="POST" style="display:inline;">
-        @csrf
-        <button class="btn btn-success btn-sm">
-           <i class="fas fa-rotate-left" title="xác nhận trả"></i>
-        </button>
-    </form>
-@endif
-
-@if($item->trang_thai === 'Cho duyet')
-    <form action="{{ route('admin.borrowitems.approve', $item->id) }}" method="POST" style="display:inline-block;">
-        @csrf
-        <button class="btn btn-sm btn-primary mb-0">
-            Duyệt
-        </button>
-    </form>
-@endif
-@if($item->trang_thai === 'Chua nhan')
-<form action="{{ route('admin.borrowitems.changeStatus', $item->id) }}" 
-      method="POST"
-      style="display:inline;">
-    @csrf
-    <button class="btn btn-success btn-smc" title="Mượn thành công">
-        <i class="fas fa-check"></i>
-    </button>
-</form>
-@endif
-
-
-@if($item->trang_thai === 'Dang muon')  
-  <form action="{{ route('admin.borrowitems.lost', $item->id) }}" 
-          method="POST" style="display:inline;">
-        @csrf
-        <button class="btn btn-sm btn-danger" title="báo cáo mất">
-            <i class="fas fa-exclamation-triangle"></i>
-        </button>
-    </form>
-@endif
-@if($item->trang_thai === 'Dang muon')
-<form action="{{ route('admin.borrowitems.report-damage', $item->id) }}" 
-      method="POST" style="display:inline-block;">
-    @csrf
-    <button class="btn btn-sm btn-danger mb-0">
-        Báo hỏng
-    </button>
-</form>
-@endif
-        </td>            
                                 </tr>
                                 @endforeach
                             </tbody>

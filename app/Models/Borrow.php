@@ -22,17 +22,37 @@ class Borrow extends Model
         'librarian_id',
         'ngay_muon',
         'trang_thai',
+        'trang_thai_chi_tiet', // ✅ thêm trạng thái chi tiết
+        'tinh_trang_sach',
+        'phi_hong_sach',
+        'tien_coc_hoan_tra',
         'tong_tien',
         'tien_coc',
         'tien_thue',
         'tien_ship',
-        'voucher_id', // ✅ thêm cột voucher
+        'voucher_id',
         'ghi_chu',
+        'ghi_chu_giao_hang',
+        'ghi_chu_tra_hang',
+        'ghi_chu_kiem_tra',
+        'ghi_chu_hoan_coc',
+        'ngay_chuan_bi',
+        'ngay_bat_dau_giao',
+        'ngay_giao_thanh_cong',
+        'ngay_bat_dau_tra',
+        'ngay_nhan_tra',
+        'ngay_kiem_tra',
+        'ngay_hoan_coc',
+        'nguoi_chuan_bi_id',
+        'nguoi_giao_hang_id',
+        'nguoi_kiem_tra_id',
+        'nguoi_hoan_coc_id',
     ];
 
     protected $casts = [
         'ngay_muon' => 'date',
     ];
+    
 
     // 🔹 Một phiếu mượn có nhiều sách mượn
     public function borrowItems()
@@ -211,6 +231,30 @@ public function payments() {
 
 public function shippingLogs() {
     return $this->hasMany(ShippingLog::class);
+}
+
+// 🔹 Người chuẩn bị hàng
+public function nguoiChuanBi()
+{
+    return $this->belongsTo(User::class, 'nguoi_chuan_bi_id');
+}
+
+// 🔹 Người giao hàng
+public function nguoiGiaoHang()
+{
+    return $this->belongsTo(User::class, 'nguoi_giao_hang_id');
+}
+
+// 🔹 Người kiểm tra
+public function nguoiKiemTra()
+{
+    return $this->belongsTo(User::class, 'nguoi_kiem_tra_id');
+}
+
+// 🔹 Người hoàn cọc
+public function nguoiHoanCoc()
+{
+    return $this->belongsTo(User::class, 'nguoi_hoan_coc_id');
 }
 
 }

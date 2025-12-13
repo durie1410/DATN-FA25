@@ -54,13 +54,18 @@ class BorrowController extends Controller
 
         $borrows = $query->paginate(10);
         
-        // Đảm bảo refresh lại items cho mỗi borrow để có dữ liệu mới nhất
+        // Đảm bảo refresh lại items cho mỗi borrow để có dữ liệu mới nhất từ database
         $borrows->getCollection()->transform(function($borrow) {
-            $borrow->load('items');
+            // Reload hoàn toàn từ database để tránh cache
+            $borrow = Borrow::with(['reader', 'librarian', 'items', 'voucher'])->find($borrow->id);
             return $borrow;
         });
         
-        return view('admin.borrows.index', compact('borrows'));
+        return response()
+            ->view('admin.borrows.index', compact('borrows'))
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     /* ============================================================
@@ -96,23 +101,40 @@ class BorrowController extends Controller
             ->with('success', 'Cho mượn sách thành công!');
     }
 
+
     /* ============================================================
         3) CHỈNH SỬA PHIẾU MƯỢN
     ============================================================ */
     public function edit($id)
     {
-        $borrow = Borrow::with(['items.book', 'items.inventory', 'reader', 'librarian'])->findOrFail($id);
+        $borrow = Borrow::with([
+            'items.book.category', 
+            'items.inventory', 
+            'reader', 
+            'librarian',
+            'voucher'
+        ])->findOrFail($id);
+        
         $readers = Reader::where('trang_thai', 'Hoat dong')->get();
         $books = Book::all();
         $librarians = User::where('role','admin')->get();
 
-        $vouchers = Voucher::where('reader_id', $borrow->reader_id)
-            ->where('kich_hoat', 1)
+        // Lấy danh sách voucher khả dụng
+        $vouchers = Voucher::where('kich_hoat', 1)
             ->where('trang_thai', 'active')
             ->whereDate('ngay_bat_dau', '<=', now())
             ->whereDate('ngay_ket_thuc', '>=', now())
-            ->where('so_luong', '>', 0)
-            ->get();
+            ->where('so_luong', '>', 0);
+        
+        // Nếu có reader_id thì lọc theo reader
+        if ($borrow->reader_id) {
+            $vouchers = $vouchers->where(function($query) use ($borrow) {
+                $query->where('reader_id', $borrow->reader_id)
+                      ->orWhereNull('reader_id');
+            });
+        }
+        
+        $vouchers = $vouchers->get();
 
         return view('admin.borrows.edit', compact(
             'borrow', 'readers', 'books', 'vouchers', 'librarians'
@@ -133,29 +155,14 @@ class BorrowController extends Controller
             'huyen' => 'required|string|max:255',
             'xa' => 'required|string|max:255',
             'so_nha' => 'required|string|max:255',
-            'trang_thai' => 'required|string|in:Dang muon,Da tra,Qua han,Mat sach',
             'ghi_chu' => 'nullable|string',
             'voucher_id' => 'nullable|exists:vouchers,id',
         ]);
 
         $borrow->update($data);
 
-        // Cập nhật tổng tiền
-        $totalShip = $borrow->items->sum('tien_ship');
-        $discount  = 0;
-
-        if ($borrow->voucher_id) {
-            $voucher = Voucher::find($borrow->voucher_id);
-            if ($voucher && $totalShip >= $voucher->don_toi_thieu) {
-                $discount = $voucher->loai === 'percentage'
-                    ? $totalShip * ($voucher->gia_tri / 100)
-                    : min($totalShip, $voucher->gia_tri);
-            }
-        }
-
-        $borrow->update([
-            'tong_tien' => max(0, $totalShip - $discount)
-        ]);
+        // Cập nhật lại tổng tiền
+        $borrow->recalculateTotals();
 
         return redirect()->route('admin.borrows.index')
             ->with('success', 'Cập nhật phiếu mượn thành công!');
@@ -405,7 +412,7 @@ public function clientCancel($id)
     $borrow = Borrow::where('reader_id', $readerId)->findOrFail($id);
 
     // Các trạng thái cho phép hủy
-    if (!in_array($borrow->trang_thai, ['chua_hoan_tat', 'Dang muon'])) {
+    if (!in_array($borrow->trang_thai, ['Cho duyet', 'Dang muon'])) {
         return back()->with('error', 'Không thể hủy đơn này.');
     }
 

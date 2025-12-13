@@ -118,16 +118,17 @@ tạo phiếu mượn    </a>
             <table class="table">
             <thead>
                 <tr>
-                    <th>Mã phiếu</th>
+                    <th style="width: 80px;">Mã phiếu</th>
                     <th>Độc giả</th>
-                    <th>tên khách hàng</th>
-                    <th>Tiền cọc</th>
-                    <th>Tiền ship</th>
-                    <th>Tiền thuê</th>
-                    <th>Voucher</th>
+                    <th>Tên khách hàng</th>
+                    <th style="width: 100px;">Tiền cọc</th>
+                    <th style="width: 100px;">Tiền ship</th>
+                    <th style="width: 100px;">Tiền thuê</th>
+                    <th style="width: 100px;">Voucher</th>
 <th style="min-width: 200px;">Trạng thái</th>
-                    <th>Tổng tiền</th>
-                    <th>Hành động</th>
+                    <th style="width: 120px;">Tổng tiền</th>
+                    <th style="width: 100px;">Chi tiết</th>
+                    <th style="width: 180px;">Hành động</th>
                 </tr>
             </thead>
          <tbody>
@@ -223,7 +224,7 @@ if ($borrow->items && $borrow->items->count() > 0) {
     } elseif (in_array('Qua han', $statuses)) {
         $status = 'Qua han';
     } elseif (in_array('Cho duyet', $statuses) || in_array('Chua nhan', $statuses)) {
-        $status = 'chua_hoan_tat';
+        $status = 'Cho duyet';
     } elseif (in_array('Dang muon', $statuses)) {
         $status = 'Dang muon';
     } else {
@@ -264,6 +265,19 @@ if ($borrow->items && $borrow->items->count() > 0) {
 
       <td>
         {{ number_format($tongTien) }}₫
+    </td>
+    <td style="text-align: center;">
+        @if($borrow->items && $borrow->items->count() > 0)
+        <button class="btn btn-sm btn-info toggle-items" 
+                data-borrow-id="{{ $borrow->id }}"
+                title="Xem danh sách sách"
+                style="white-space: nowrap;">
+            <i class="fas fa-chevron-down"></i>
+            {{ $borrow->items->count() }} sách
+        </button>
+        @else
+        <span class="text-muted">-</span>
+        @endif
     </td>
     <td>
         <div style="display: flex; gap: 5px; flex-wrap: wrap;">
@@ -332,6 +346,169 @@ if ($borrow->items && $borrow->items->count() > 0) {
         </div>
     </td>
 </tr>
+
+{{-- Row ẩn chứa danh sách sách chi tiết --}}
+<tr class="items-detail-row" id="items-row-{{ $borrow->id }}" style="display: none;">
+    <td colspan="11" style="padding: 0; background-color: #f8f9fa;">
+        <div style="padding: 20px; margin: 0;">
+            <div style="background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h5 style="color: var(--primary-color); margin-bottom: 15px; font-weight: 600;">
+                    <i class="fas fa-book"></i> Danh sách sách trong phiếu #{{ $borrow->id }}
+                </h5>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered table-hover" style="margin-bottom: 0;">
+                        <thead style="background-color: #e9ecef;">
+                            <tr>
+                                <th style="width: 50px;">ID</th>
+                                <th>Tên sách</th>
+                                <th style="width: 150px;">Tác giả</th>
+                                <th style="width: 100px;">Tiền cọc</th>
+                                <th style="width: 100px;">Tiền ship</th>
+                                <th style="width: 100px;">Tiền thuê</th>
+                                <th style="width: 120px;">Ngày hẹn trả</th>
+                                <th style="width: 130px;">Trạng thái</th>
+                                <th style="width: 150px;">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($borrow->items as $item)
+                            <tr>
+                                <td><strong>{{ $item->id }}</strong></td>
+                                <td>
+                                    <div style="font-weight: 500;">{{ $item->book->ten_sach ?? 'N/A' }}</div>
+                                    @if($item->book->hinh_anh)
+                                    <small class="text-muted">
+                                        <i class="fas fa-image"></i> Có ảnh
+                                    </small>
+                                    @endif
+                                </td>
+                                <td>{{ $item->book->tac_gia ?? 'N/A' }}</td>
+                                <td>{{ number_format($item->tien_coc ?? 0) }}₫</td>
+                                <td>{{ number_format($item->tien_ship ?? 0) }}₫</td>
+                                <td>{{ number_format($item->tien_thue ?? 0) }}₫</td>
+                                <td>
+                                    @if($item->ngay_hen_tra)
+                                        {{ $item->ngay_hen_tra->format('d/m/Y') }}
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @php
+                                        switch($item->trang_thai) {
+                                            case 'Dang muon': 
+                                                $text = 'Đang mượn'; 
+                                                $bgColor = '#007bff'; 
+                                                break;
+                                            case 'Qua han': 
+                                                $text = 'Quá hạn'; 
+                                                $bgColor = '#dc3545'; 
+                                                break;
+                                            case 'Da tra': 
+                                                $text = 'Đã trả'; 
+                                                $bgColor = '#28a745'; 
+                                                break;
+                                            case 'Cho duyet': 
+                                                $text = 'Chờ duyệt'; 
+                                                $bgColor = '#fd7e14'; 
+                                                break;
+                                            case 'Chua nhan': 
+                                                $text = 'Chưa nhận'; 
+                                                $bgColor = '#17a2b8'; 
+                                                break;
+                                            case 'Mat sach': 
+                                                $text = 'Mất sách'; 
+                                                $bgColor = '#e83e8c'; 
+                                                break;
+                                            case 'Hong':
+                                                $text = 'Hỏng';
+                                                $bgColor = '#6c757d';
+                                                break;
+                                            default: 
+                                                $text = $item->trang_thai; 
+                                                $bgColor = '#6c757d';
+                                        }
+                                    @endphp
+                                    <span class="badge" style="background-color: {{ $bgColor }}; color: white; font-size: 11px;">
+                                        {{ $text }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: wrap;">
+                                        @if($item->trang_thai == 'Cho duyet')
+                                            {{-- Nút duyệt cho sách chờ duyệt --}}
+                                            {{-- <form action="{{ route('admin.borrowitems.approve', $item->id) }}" 
+                                                  method="POST" 
+                                                  style="display: inline;"
+                                                  onsubmit="return confirm('Xác nhận duyệt sách: {{ $item->book->ten_sach }}?')">
+                                                @csrf
+                                                <button type="submit" 
+                                                        class="btn btn-sm btn-success"
+                                                        title="Duyệt sách này">
+                                                    <i class="fas fa-check"></i> Duyệt
+                                                </button>
+                                            </form> --}}
+                                        @elseif($item->trang_thai == 'Dang muon')
+                                            {{-- 4 nút cho sách đang mượn --}}
+                                            
+                                            {{-- 1. Hoàn trả --}}
+                                            <form action="{{ route('admin.borrowitems.return', $item->id) }}" 
+                                                  method="POST" 
+                                                  style="display: inline;"
+                                                  onsubmit="return confirm('Xác nhận hoàn trả sách: {{ $item->book->ten_sach }}?')">
+                                                @csrf
+                                                <button type="submit" 
+                                                        class="btn btn-sm btn-success"
+                                                        title="Hoàn trả sách">
+                                                    <i class="fas fa-undo"></i>
+                                                </button>
+                                            </form>
+                                            
+                                            {{-- 2. Quá hạn --}}
+                                            <form action="{{ route('admin.borrowitems.mark-overdue', $item->id) }}" 
+                                                  method="POST" 
+                                                  style="display: inline;"
+                                                  onsubmit="return confirm('Xác nhận đánh dấu quá hạn: {{ $item->book->ten_sach }}?')">
+                                                @csrf
+                                                <button type="submit" 
+                                                        class="btn btn-sm btn-warning"
+                                                        title="Đánh dấu quá hạn">
+                                                    <i class="fas fa-clock"></i>
+                                                </button>
+                                            </form>
+                                            
+                                            {{-- 3. Báo hỏng --}}
+                                            <form action="{{ route('admin.borrowitems.report-damage', $item->id) }}" 
+                                                  method="POST" 
+                                                  style="display: inline;"
+                                                  onsubmit="return confirm('Xác nhận báo hỏng sách: {{ $item->book->ten_sach }}?')">
+                                                @csrf
+                                                <button type="submit" 
+                                                        class="btn btn-sm btn-danger"
+                                                        title="Báo hỏng sách">
+                                                    <i class="fas fa-tools"></i>
+                                                </button>
+                                            </form>
+                                        @endif
+                                        
+                                        {{-- 4. Xem chi tiết (luôn hiển thị) --}}
+                                        <a href="{{ route('admin.borrowitems.show', $item->id) }}" 
+                                           class="btn btn-sm btn-info"
+                                           title="Xem chi tiết sách">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </td>
+</tr>
+
 @endforeach
 </tbody>
 
@@ -444,5 +621,127 @@ if ($borrow->items && $borrow->items->count() > 0) {
             transform: translateY(0);
         }
     }
+
+    /* Styles for toggle button */
+    .toggle-items {
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .toggle-items i {
+        transition: transform 0.3s ease;
+    }
+    
+    .toggle-items.active {
+        background-color: #0056b3 !important;
+        border-color: #0056b3 !important;
+    }
+    
+    .toggle-items.active i {
+        transform: rotate(180deg);
+    }
+
+    /* Animation for items detail row */
+    .items-detail-row {
+        transition: all 0.3s ease;
+    }
+
+    .items-detail-row.show {
+        animation: slideInDown 0.3s ease-out;
+    }
+
+    @keyframes slideInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Table hover effect */
+    .items-detail-row .table-hover tbody tr:hover {
+        background-color: #f0f8ff;
+    }
+
+    /* Action buttons styling */
+    .items-detail-row .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+        min-width: 32px;
+        height: 32px;
+    }
+
+    .items-detail-row form {
+        margin: 0;
+    }
+
+    /* Tooltip effect for action buttons */
+    .items-detail-row [title]:hover::after {
+        content: attr(title);
+        position: absolute;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+        z-index: 1000;
+        margin-top: 40px;
+        margin-left: -50px;
+    }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initializing toggle buttons...');
+    
+    // Lấy tất cả các nút toggle
+    const toggleButtons = document.querySelectorAll('.toggle-items');
+    console.log('Found ' + toggleButtons.length + ' toggle buttons');
+    
+    toggleButtons.forEach(function(button) {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const borrowId = this.getAttribute('data-borrow-id');
+            const itemsRow = document.getElementById('items-row-' + borrowId);
+            const icon = this.querySelector('i');
+            
+            console.log('Toggle clicked for borrow ID:', borrowId);
+            console.log('Items row:', itemsRow);
+            
+            if (itemsRow) {
+                if (itemsRow.style.display === 'none' || itemsRow.style.display === '') {
+                    // Hiển thị
+                    itemsRow.style.display = 'table-row';
+                    itemsRow.classList.add('show');
+                    this.classList.add('active');
+                    console.log('Showing items for borrow ID:', borrowId);
+                } else {
+                    // Ẩn
+                    itemsRow.style.display = 'none';
+                    itemsRow.classList.remove('show');
+                    this.classList.remove('active');
+                    console.log('Hiding items for borrow ID:', borrowId);
+                }
+            } else {
+                console.error('Items row not found for borrow ID:', borrowId);
+            }
+        });
+    });
+    
+    // Auto refresh page after approval (optional)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('approved')) {
+        setTimeout(function() {
+            window.location.href = window.location.pathname;
+        }, 2000);
+    }
+});
+</script>
 @endpush

@@ -75,9 +75,10 @@ Route::post('/books/{id}/comments', [CommentController::class, 'storePublic'])->
 Route::get('/checkout', [App\Http\Controllers\OrderController::class, 'checkout'])->name('checkout')->middleware('auth');
 // Đặt GET routes trước POST để tránh conflict
 Route::get('/orders', [App\Http\Controllers\OrderController::class, 'index'])->name('orders.index');
-Route::get('/orders/{id}', [App\Http\Controllers\OrderController::class, 'show'])->name('orders.show');
+Route::get('/orders/{id}', [App\Http\Controllers\OrderController::class, 'show'])->name('orders.detail')->middleware('auth');
 Route::post('/orders', [App\Http\Controllers\OrderController::class, 'store'])->name('orders.store');
 Route::post('/orders/{id}/cancel', [App\Http\Controllers\OrderController::class, 'cancel'])->name('orders.cancel')->middleware('auth');
+Route::post('/borrows/{id}/cancel', [App\Http\Controllers\OrderController::class, 'cancelBorrow'])->name('borrows.cancel')->middleware('auth');
 
 // Authentication Routes
 Route::middleware('guest')->group(function () {
@@ -175,10 +176,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
       Route::put('borrow-items/{id}', [BorrowItemController::class, 'update'])->name('borrowitems.update');
       Route::get('borrow-items/{id}', [BorrowItemController::class, 'show'])->name('borrowitems.show');
       
-      Route::post('borrows/{id}/process', [BorrowController::class, 'processBorrow'])->name('borrows.process');
-      Route::post('borrows/{id}/approve', [BorrowController::class, 'approve'])->name('borrows.approve')->middleware('permission:edit-borrows');
+     Route::post('borrows/{id}/process', [BorrowController::class, 'processBorrow'])->name('borrows.process');
+     Route::post('borrows/{id}/approve', [BorrowController::class, 'approve'])->name('borrows.approve')->middleware('permission:edit-borrows');
 
-      Route::post('borrow-items/{id}/return', [BorrowController::class, 'returnItem'])->name('borrowitems.return');
+     Route::post('borrow-items/{id}/return', [BorrowController::class, 'returnItem'])->name('borrowitems.return');
       ///////////////////////////////////////////////////////////////////////
       Route::post('borrowitems/{id}/approve', [BorrowItemController::class, 'approve'])
           ->name('borrowitems.approve');
@@ -192,6 +193,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
       Route::post('borrowitems/{id}/report-damage', 
           [BorrowItemController::class, 'reportDamage']
       )->name('borrowitems.report-damage');
+      Route::post('borrowitems/{id}/mark-overdue', 
+          [BorrowItemController::class, 'markOverdue']
+      )->name('borrowitems.mark-overdue');
 
 
 
@@ -494,6 +498,136 @@ Route::get('test-vnpay-config', function() {
         'note' => 'Hãy đảm bảo cả TMN_CODE và HASH_SECRET đều được cấu hình đúng'
     ], 200, [], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 })->name('test.vnpay.config');
+
+// VNPay Debug Page - Giao diện đẹp để kiểm tra config
+Route::get('vnpay-debug', function() {
+    return view('vnpay-debug');
+})->name('vnpay.debug');
+
+// VNPay Fix Page - Sửa lỗi one-click
+Route::get('vnpay-fix', function() {
+    return view('vnpay-fix');
+})->name('vnpay.fix');
+
+// VNPay Test Callback - Test page
+Route::get('vnpay-test', function() {
+    return view('vnpay-test-callback');
+})->name('vnpay.test');
+
+// VNPay Test Signature - API test
+Route::post('vnpay-test-signature', function() {
+    $config = config('services.vnpay');
+    
+    // Tạo test data giống VNPay callback
+    $testData = [
+        'vnp_Amount' => '10000000',
+        'vnp_BankCode' => 'NCB',
+        'vnp_CardType' => 'ATM',
+        'vnp_OrderInfo' => 'Test Payment',
+        'vnp_PayDate' => '20251203103000',
+        'vnp_ResponseCode' => '00',
+        'vnp_TmnCode' => $config['tmn_code'],
+        'vnp_TransactionNo' => '14374354',
+        'vnp_TxnRef' => 'TEST' . time(),
+    ];
+    
+    // Tính hash
+    ksort($testData);
+    $hashData = http_build_query($testData, '', '&');
+    $computedHash = hash_hmac('sha512', $hashData, $config['hash_secret']);
+    
+    return response()->json([
+        'config' => [
+            'tmn_code' => $config['tmn_code'],
+            'hash_secret_length' => strlen($config['hash_secret']),
+            'hash_secret_correct' => $config['hash_secret'] === 'LYS57TC0V5NARXASTFT3Y0D50NHNPWEZ',
+        ],
+        'test_data' => $testData,
+        'hash_data' => $hashData,
+        'computed_hash' => $computedHash,
+        'hash_preview' => substr($computedHash, 0, 20) . '...',
+    ]);
+})->name('vnpay.test.signature');
+
+// VNPay Clear Session
+Route::post('vnpay-clear-session', function() {
+    session()->flush();
+    session()->regenerate();
+    
+    return response()->json([
+        'success' => true,
+        'message' => 'Session cleared successfully'
+    ]);
+})->name('vnpay.clear.session');
+
+// VNPay Fix Execute - API để sửa lỗi
+Route::post('vnpay-fix-execute', function() {
+    try {
+        $envFile = base_path('.env');
+        
+        if (!file_exists($envFile)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File .env không tồn tại'
+            ]);
+        }
+        
+        $lines = file($envFile, FILE_IGNORE_NEW_LINES);
+        $updated = false;
+        $foundTMN = false;
+        $foundHash = false;
+        $foundURL = false;
+        
+        foreach ($lines as $key => $line) {
+            if (strpos($line, 'VNPAY_TMN_CODE=') === 0) {
+                $lines[$key] = 'VNPAY_TMN_CODE=E6I8Z7HX';
+                $foundTMN = true;
+                $updated = true;
+            }
+            if (strpos($line, 'VNPAY_HASH_SECRET=') === 0) {
+                $lines[$key] = 'VNPAY_HASH_SECRET=LYS57TC0V5NARXASTFT3Y0D50NHNPWEZ';
+                $foundHash = true;
+                $updated = true;
+            }
+            if (strpos($line, 'VNPAY_URL=') === 0) {
+                $lines[$key] = 'VNPAY_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
+                $foundURL = true;
+                $updated = true;
+            }
+        }
+        
+        if (!$foundTMN) {
+            $lines[] = 'VNPAY_TMN_CODE=E6I8Z7HX';
+            $updated = true;
+        }
+        if (!$foundHash) {
+            $lines[] = 'VNPAY_HASH_SECRET=LYS57TC0V5NARXASTFT3Y0D50NHNPWEZ';
+            $updated = true;
+        }
+        if (!$foundURL) {
+            $lines[] = 'VNPAY_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
+            $updated = true;
+        }
+        
+        file_put_contents($envFile, implode("\n", $lines));
+        
+        // Clear cache
+        \Artisan::call('config:clear');
+        \Artisan::call('cache:clear');
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã cập nhật cấu hình VNPay thành công',
+            'details' => "TMN_CODE: E6I8Z7HX\nHASH_SECRET: Đã cấu hình (32 ký tự)\nURL: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html\n\nĐã clear cache thành công!"
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage()
+        ]);
+    }
+})->name('vnpay.fix.execute');
 
 // Test Borrow Cart Status (Development only - xóa khi production)
 Route::get('test-cart-status', function() {

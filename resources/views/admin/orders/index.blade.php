@@ -35,7 +35,7 @@
                 <a href="{{ route('admin.orders.index', ['status' => 'pending']) }}" 
                    class="status-tab {{ request('status') == 'pending' ? 'active' : '' }}"
                    style="text-decoration: none;">
-                    Chờ xác nhận
+                    Đang chờ duyệt
                     @if($stats['pending'] > 0)
                         <span class="status-count">{{ $stats['pending'] }}</span>
                     @endif
@@ -144,7 +144,7 @@
                                 </td>
                                 <td style="padding: 15px;">
                                     @if(in_array($order->status, ['pending']))
-                                        <span class="status-badge" style="background-color: #fff3cd; color: #856404; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;">Chờ xác nhận</span>
+                                        <span class="status-badge" style="background-color: #fff3cd; color: #856404; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;">Đang chờ duyệt</span>
                                     @elseif(in_array($order->status, ['confirmed', 'processing']))
                                         <span class="status-badge" style="background-color: #cfe2ff; color: #084298; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;">Đã xác nhận</span>
                                     @elseif($order->status === 'preparing')
