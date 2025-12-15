@@ -425,7 +425,6 @@ Route::post('vouchers/validate', [VoucherController::class, 'validateCode'])->na
       
       // Test route without permission middleware
       Route::get('settings/backup/test', [App\Http\Controllers\Admin\SettingsController::class, 'listBackups'])->name('settings.backup.test');
-       Route::get('settings/backup/test', [App\Http\Controllers\Admin\SettingsController::class, 'listBackups'])->name('settings.backup.test');
       
       // Banner Management routes
       Route::get('banners', [App\Http\Controllers\Admin\BannerController::class, 'index'])->name('banners.index');
