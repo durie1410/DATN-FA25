@@ -1,0 +1,162 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Models\Book;
+use Illuminate\Database\Seeder;
+
+class BookSeeder extends Seeder
+{
+    public function run()
+    {
+        $books = [
+            [
+                'ten_sach' => 'Kinh tế xây dựng công nghiệp 4.0',
+                'category_id' => 1,
+                'tac_gia' => 'PGS.TS. Bùi Mạnh Hùng',
+                'nam_xuat_ban' => 2024,
+                'mo_ta' => 'Cuốn sách về kinh tế xây dựng trong thời đại công nghiệp 4.0',
+                'hinh_anh' => null,
+                'gia' => 28000,
+                'danh_gia_trung_binh' => 4.5,
+                'so_luong_ban' => 150,
+                'so_luot_xem' => 500,
+                'is_featured' => true,
+                'trang_thai' => 'active',
+            ],
+            [
+                'ten_sach' => 'Giáo trình Revit Structure theo kết cấu',
+                'category_id' => 1,
+                'tac_gia' => 'TS. Nguyễn Văn A',
+                'nam_xuat_ban' => 2023,
+                'mo_ta' => 'Hướng dẫn sử dụng Revit Structure trong thiết kế kết cấu',
+                'hinh_anh' => null,
+                'gia' => 150000,
+                'danh_gia_trung_binh' => 4.8,
+                'so_luong_ban' => 1571,
+                'so_luot_xem' => 3500,
+                'is_featured' => true,
+                'trang_thai' => 'active',
+            ],
+            [
+                'ten_sach' => 'Hướng dẫn đồ án tổ chức và quản lý',
+                'category_id' => 1,
+                'tac_gia' => 'ThS. Trần Thị B',
+                'nam_xuat_ban' => 2023,
+                'mo_ta' => 'Tài liệu hướng dẫn thực hiện đồ án về tổ chức và quản lý xây dựng',
+                'hinh_anh' => null,
+                'gia' => 120000,
+                'danh_gia_trung_binh' => 4.3,
+                'so_luong_ban' => 490,
+                'so_luot_xem' => 1200,
+                'is_featured' => true,
+                'trang_thai' => 'active',
+            ],
+            [
+                'ten_sach' => 'Thiết kế kết cấu bê tông cốt thép',
+                'category_id' => 1,
+                'tac_gia' => 'PGS.TS. Lê Văn C',
+                'nam_xuat_ban' => 2022,
+                'mo_ta' => 'Giáo trình về thiết kế kết cấu bê tông cốt thép cho công trình xây dựng',
+                'hinh_anh' => null,
+                'gia' => 180000,
+                'danh_gia_trung_binh' => 4.6,
+                'so_luong_ban' => 361,
+                'so_luot_xem' => 980,
+                'is_featured' => true,
+                'trang_thai' => 'active',
+            ],
+            [
+                'ten_sach' => 'Lập trình Laravel từ A-Z',
+                'category_id' => 2,
+                'tac_gia' => 'Nguyễn Văn D',
+                'nam_xuat_ban' => 2024,
+                'mo_ta' => 'Cuốn sách hướng dẫn lập trình Laravel từ cơ bản đến nâng cao',
+                'hinh_anh' => null,
+                'gia' => 250000,
+                'danh_gia_trung_binh' => 4.7,
+                'so_luong_ban' => 200,
+                'so_luot_xem' => 800,
+                'is_featured' => false,
+                'trang_thai' => 'active',
+            ],
+            [
+                'ten_sach' => 'Khoa học dữ liệu',
+                'category_id' => 2,
+                'tac_gia' => 'TS. Trần Thị E',
+                'nam_xuat_ban' => 2023,
+                'mo_ta' => 'Giới thiệu về khoa học dữ liệu và machine learning',
+                'hinh_anh' => null,
+                'gia' => 220000,
+                'danh_gia_trung_binh' => 4.4,
+                'so_luong_ban' => 180,
+                'so_luot_xem' => 650,
+                'is_featured' => false,
+                'trang_thai' => 'active',
+            ],
+            [
+                'ten_sach' => 'Lịch sử Việt Nam hiện đại',
+                'category_id' => 3,
+                'tac_gia' => 'Lê Văn F',
+                'nam_xuat_ban' => 2022,
+                'mo_ta' => 'Lịch sử Việt Nam từ thế kỷ 20 đến nay',
+                'hinh_anh' => null,
+                'gia' => 95000,
+                'danh_gia_trung_binh' => 4.2,
+                'so_luong_ban' => 120,
+                'so_luot_xem' => 450,
+                'is_featured' => false,
+                'trang_thai' => 'active',
+            ],
+            [
+                'ten_sach' => 'Kinh tế học vi mô',
+                'category_id' => 4,
+                'tac_gia' => 'PGS.TS. Phạm Thị G',
+                'nam_xuat_ban' => 2023,
+                'mo_ta' => 'Giáo trình kinh tế học vi mô cho sinh viên',
+                'hinh_anh' => null,
+                'gia' => 110000,
+                'danh_gia_trung_binh' => 4.5,
+                'so_luong_ban' => 300,
+                'so_luot_xem' => 900,
+                'is_featured' => false,
+                'trang_thai' => 'active',
+            ],
+            [
+                'ten_sach' => 'Truyện Kiều',
+                'category_id' => 5,
+                'tac_gia' => 'Nguyễn Du',
+                'nam_xuat_ban' => 1950,
+                'mo_ta' => 'Tác phẩm kinh điển của văn học Việt Nam',
+                'hinh_anh' => null,
+                'gia' => 60000,
+                'danh_gia_trung_binh' => 4.9,
+                'so_luong_ban' => 2500,
+                'so_luot_xem' => 5000,
+                'is_featured' => true,
+                'trang_thai' => 'active',
+            ],
+            [
+                'ten_sach' => 'Giáo dục thế kỷ 21',
+                'category_id' => 6,
+                'tac_gia' => 'TS. Hoàng Văn H',
+                'nam_xuat_ban' => 2024,
+                'mo_ta' => 'Phương pháp giáo dục hiện đại',
+                'hinh_anh' => null,
+                'gia' => 140000,
+                'danh_gia_trung_binh' => 4.3,
+                'so_luong_ban' => 150,
+                'so_luot_xem' => 500,
+                'is_featured' => false,
+                'trang_thai' => 'active',
+            ],
+        ];
+
+        foreach ($books as $book) {
+            Book::updateOrCreate(
+                ['ten_sach' => $book['ten_sach']],
+                $book
+            );
+        }
+    }
+}
