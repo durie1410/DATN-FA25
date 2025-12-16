@@ -10,8 +10,6 @@
             <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
             <li class="breadcrumb-item"><a href="{{ route('admin.authors.index') }}">Quản lý tác giả</a></li>
             <li class="breadcrumb-item active">Thêm tác giả mới</li>
-            <li class="breadcrumb-item active">Thêm tác giả mới</li>
-            <li class="breadcrumb-item active">Thêm tác giả mới</li>
         </ol>
     </nav>
 
