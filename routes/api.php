@@ -45,7 +45,7 @@ Route::get('/books', [BookApiController::class, 'index']);
 Route::get('/books/{id}', [BookApiController::class, 'show']);
 Route::get('/books/featured', [BookApiController::class, 'featured']);
 Route::get('/categories', [BookApiController::class, 'categories']);
-Route::get('/categories', [BookApiController::class, 'categories']);
+
 
 // Departments API
 Route::get('/departments', [DepartmentApiController::class, 'index']);
