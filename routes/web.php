@@ -311,6 +311,11 @@ Route::post('vouchers/validate', [VoucherController::class, 'validateCode'])->na
       Route::post('bulk-operations/books/import', [App\Http\Controllers\Admin\BulkOperationController::class, 'bulkImportBooks'])->name('bulk-operations.books.import')->middleware('permission:manage-bulk-operations');
       Route::get('bulk-operations/books/export', [App\Http\Controllers\Admin\BulkOperationController::class, 'exportBooks'])->name('bulk-operations.books.export')->middleware('permission:manage-bulk-operations');
       Route::get('bulk-operations/stats', [App\Http\Controllers\Admin\BulkOperationController::class, 'getStats'])->name('bulk-operations.stats')->middleware('permission:manage-bulk-operations');
+
+      // Support chat admin routes
+      Route::get('chat', [App\Http\Controllers\Admin\ChatAdminController::class, 'index'])->name('chat.index');
+      Route::get('chat/{sessionId}', [App\Http\Controllers\Admin\ChatAdminController::class, 'show'])->name('chat.show');
+      Route::post('chat/{sessionId}/reply', [App\Http\Controllers\Admin\ChatAdminController::class, 'reply'])->name('chat.reply');
       
       // Advanced Statistics routes
       Route::get('statistics/advanced', [AdvancedStatisticsController::class, 'dashboard'])->name('statistics.advanced.dashboard')->middleware('permission:view-reports');

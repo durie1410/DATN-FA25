@@ -62,6 +62,23 @@
         font-weight: 700;
     }
 
+    #support-chat-widget .chat-header-status {
+        font-size: 11px;
+        opacity: 0.9;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 2px;
+    }
+
+    #support-chat-widget .chat-header-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.25);
+    }
+
     #support-chat-widget .chat-close {
         background: rgba(255, 255, 255, 0.16);
         border: none;
@@ -230,7 +247,13 @@
             </button>
             <div class="chat-panel" role="dialog" aria-label="Chat hỗ trợ thư viện">
                 <div class="chat-header">
-                    <h4>Hỗ trợ thư viện</h4>
+                    <div>
+                        <h4>Hỗ trợ thư viện</h4>
+                        <div class="chat-header-status">
+                            <span class="chat-header-dot"></span>
+                            <span id="chat-online-text">Đang trực tuyến</span>
+                        </div>
+                    </div>
                     <button class="chat-close" type="button" aria-label="Đóng chat">×</button>
                 </div>
                 <div class="chat-body">
@@ -337,6 +360,14 @@
                 .replace(/'/g, '&#039;')
                 .replace(/\n/g, '<br>');
         }
+
+        // Submit on Enter, newline with Shift+Enter
+        messageInput?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                form?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            }
+        });
 
         form?.addEventListener('submit', async (e) => {
             e.preventDefault();
