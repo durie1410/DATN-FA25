@@ -15,6 +15,7 @@ use App\Http\Controllers\FineController;
 use App\Http\Controllers\AdvancedSearchController;
 use App\Http\Controllers\AdvancedStatisticsController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\ChatController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\VoucherController;
 use App\Http\Controllers\BorrowItemController;
@@ -35,6 +36,12 @@ use App\Http\Controllers\VnPayController;
 // CSRF Token routes
 Route::get('/csrf-token', [App\Http\Controllers\CsrfController::class, 'getToken'])->name('csrf.token');
 Route::post('/csrf-refresh', [App\Http\Controllers\CsrfController::class, 'refreshToken'])->name('csrf.refresh');
+
+// Chat widget routes
+Route::prefix('chat')->group(function () {
+    Route::get('/messages', [ChatController::class, 'index'])->name('chat.messages.index');
+    Route::post('/messages', [ChatController::class, 'store'])->name('chat.messages.store');
+});
 
 // Frontend Routes
 Route::get('/', [HomeController::class, 'trangchu'])->name('home');
