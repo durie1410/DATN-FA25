@@ -9,7 +9,6 @@
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Dashboard</a></li>
             <li class="breadcrumb-item active">Quản lý tác giả</li>
-            <li class="breadcrumb-item active">Quản lý tác giả</li>
         </ol>
     </nav>
 
