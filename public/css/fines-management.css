@@ -1,0 +1,424 @@
+/* CSS cho quản lý phí phạt */
+.fines-management {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+}
+
+/* Header section */
+.fines-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+    border-radius: 0 0 20px 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.fines-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.fines-header .subtitle {
+    font-size: 1.1rem;
+    opacity: 0.9;
+    margin-bottom: 0;
+}
+
+/* Action buttons */
+.fines-actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+}
+
+.fines-actions .btn {
+    border-radius: 12px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border: none;
+}
+
+.fines-actions .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.fines-actions .btn-primary {
+    background: linear-gradient(45deg, #007bff, #0056b3);
+}
+
+.fines-actions .btn-warning {
+    background: linear-gradient(45deg, #ffc107, #e0a800);
+    color: #212529;
+}
+
+.fines-actions .btn-info {
+    background: linear-gradient(45deg, #17a2b8, #138496);
+}
+
+/* Filter section */
+.fines-filter {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    border: 1px solid #e9ecef;
+}
+
+.fines-filter .form-group label {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.fines-filter .form-control {
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.fines-filter .form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+.fines-filter .btn {
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+}
+
+/* Statistics cards */
+.fines-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.fines-stat-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    border: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.fines-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--card-color), var(--card-color-light));
+}
+
+.fines-stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.fines-stat-card.pending {
+    --card-color: #ffc107;
+    --card-color-light: #fff3cd;
+}
+
+.fines-stat-card.paid {
+    --card-color: #28a745;
+    --card-color-light: #d4edda;
+}
+
+.fines-stat-card.overdue {
+    --card-color: #dc3545;
+    --card-color-light: #f8d7da;
+}
+
+.fines-stat-card.total {
+    --card-color: #17a2b8;
+    --card-color-light: #d1ecf1;
+}
+
+.fines-stat-card .stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    background: linear-gradient(45deg, var(--card-color), var(--card-color-light));
+    color: white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.fines-stat-card .stat-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.fines-stat-card .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 0;
+}
+
+/* Table styling */
+.fines-table-container {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    border: 1px solid #e9ecef;
+}
+
+.fines-table {
+    margin-bottom: 0;
+}
+
+.fines-table thead th {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.85rem;
+    padding: 1rem 0.75rem;
+    border: none;
+}
+
+.fines-table tbody td {
+    padding: 1rem 0.75rem;
+    vertical-align: middle;
+    border-color: #f1f3f4;
+}
+
+.fines-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.fines-table tbody tr.table-danger {
+    background-color: #fff5f5;
+    border-left: 4px solid #dc3545;
+}
+
+/* Badge styling */
+.fines-badge {
+    border-radius: 20px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.fines-badge.pending {
+    background: linear-gradient(45deg, #ffc107, #e0a800);
+    color: #212529;
+}
+
+.fines-badge.paid {
+    background: linear-gradient(45deg, #28a745, #1e7e34);
+    color: white;
+}
+
+.fines-badge.waived {
+    background: linear-gradient(45deg, #17a2b8, #138496);
+    color: white;
+}
+
+.fines-badge.cancelled {
+    background: linear-gradient(45deg, #6c757d, #545b62);
+    color: white;
+}
+
+.fines-badge.late-return {
+    background: linear-gradient(45deg, #ffc107, #e0a800);
+    color: #212529;
+}
+
+.fines-badge.damaged-book {
+    background: linear-gradient(45deg, #dc3545, #c82333);
+    color: white;
+}
+
+.fines-badge.lost-book {
+    background: linear-gradient(45deg, #343a40, #23272b);
+    color: white;
+}
+
+.fines-badge.other {
+    background: linear-gradient(45deg, #6c757d, #545b62);
+    color: white;
+}
+
+/* Action buttons in table */
+.fines-table .btn-group .btn {
+    border-radius: 8px;
+    margin: 0 2px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+.fines-table .btn-group .btn:hover {
+    transform: scale(1.1);
+}
+
+/* Empty state */
+.fines-empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #6c757d;
+}
+
+.fines-empty-state .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.fines-empty-state .empty-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #495057;
+}
+
+.fines-empty-state .empty-subtitle {
+    font-size: 1rem;
+    opacity: 0.7;
+}
+
+/* Pagination */
+.fines-pagination {
+    display: flex;
+    justify-content: center;
+    margin-top: 2rem;
+}
+
+.fines-pagination .pagination {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.fines-pagination .page-link {
+    border: none;
+    padding: 0.75rem 1rem;
+    color: #007bff;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.fines-pagination .page-link:hover {
+    background-color: #e9ecef;
+    color: #0056b3;
+}
+
+.fines-pagination .page-item.active .page-link {
+    background: linear-gradient(45deg, #007bff, #0056b3);
+    border-color: #007bff;
+}
+
+/* Alert styling */
+.fines-alert {
+    border-radius: 12px;
+    border: none;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.fines-alert.alert-info {
+    background: linear-gradient(45deg, #d1ecf1, #bee5eb);
+    color: #0c5460;
+    border-left: 4px solid #17a2b8;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .fines-header h1 {
+        font-size: 2rem;
+    }
+    
+    .fines-actions {
+        flex-direction: column;
+    }
+    
+    .fines-actions .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .fines-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .fines-table-container {
+        overflow-x: auto;
+    }
+    
+    .fines-table {
+        min-width: 800px;
+    }
+}
+
+/* Loading animation */
+.fines-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+}
+
+.fines-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Success/Error messages */
+.fines-message {
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.fines-message.success {
+    background: linear-gradient(45deg, #d4edda, #c3e6cb);
+    color: #155724;
+    border-left: 4px solid #28a745;
+}
+
+.fines-message.error {
+    background: linear-gradient(45deg, #f8d7da, #f5c6cb);
+    color: #721c24;
+    border-left: 4px solid #dc3545;
+}

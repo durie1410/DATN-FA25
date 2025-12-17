@@ -1,0 +1,336 @@
+/* ============================================
+   CHECKOUT PAGE - Modern Light Theme
+   ============================================ */
+
+/* Reset và biến màu sắc */
+:root {
+    --checkout-primary: #2563eb;
+    --checkout-primary-dark: #1e40af;
+    --checkout-secondary: #10b981;
+    --checkout-accent: #3b82f6;
+    --checkout-bg: #f8fafc;
+    --checkout-card-bg: #ffffff;
+    --checkout-text: #1e293b;
+    --checkout-text-light: #64748b;
+    --checkout-border: #e2e8f0;
+    --checkout-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --checkout-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Container chính với gradient background đẹp - Áp dụng cho toàn bộ body */
+html,
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%) !important;
+    background-size: 400% 400% !important;
+    animation: gradientShift 15s ease infinite !important;
+    min-height: 100vh !important;
+    position: relative !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Áp dụng cho trang checkout */
+.checkout-page {
+    background: transparent !important;
+    position: relative !important;
+    z-index: 1 !important;
+}
+
+/* Animation cho gradient background */
+@keyframes gradientShift {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Overlay tinh tế để làm nổi bật nội dung - Áp dụng cho body */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(248, 250, 252, 0.75);
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Container chính của checkout */
+.checkout-page .container {
+    position: relative;
+    z-index: 1;
+    background: transparent;
+}
+
+/* Đảm bảo main content có z-index đúng */
+main {
+    position: relative;
+    z-index: 1;
+}
+
+/* Override dark theme styles */
+.checkout-page * {
+    box-sizing: border-box;
+}
+
+/* Card header với gradient xanh dương */
+.checkout-page .card-header {
+    background: linear-gradient(135deg, var(--checkout-primary) 0%, var(--checkout-accent) 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    padding: 20px 25px !important;
+    border-radius: 12px 12px 0 0 !important;
+    font-weight: 600 !important;
+    font-size: 1.1rem !important;
+}
+
+.checkout-page .card-header h5 {
+    color: #ffffff !important;
+    margin: 0 !important;
+}
+
+.checkout-page .card-header i {
+    color: #ffffff !important;
+    margin-right: 10px !important;
+}
+
+/* Card body nền trắng */
+.checkout-page .card {
+    background-color: var(--checkout-card-bg) !important;
+    border: 1px solid var(--checkout-border) !important;
+    border-radius: 12px !important;
+    box-shadow: var(--checkout-shadow) !important;
+    margin-bottom: 20px !important;
+}
+
+.checkout-page .card-body {
+    background-color: var(--checkout-card-bg) !important;
+    color: var(--checkout-text) !important;
+    padding: 25px !important;
+}
+
+/* Form labels và inputs */
+.checkout-page .form-label {
+    color: var(--checkout-text) !important;
+    font-weight: 500 !important;
+    margin-bottom: 8px !important;
+}
+
+.checkout-page .form-control,
+.checkout-page .form-select {
+    background-color: #ffffff !important;
+    border: 1.5px solid var(--checkout-border) !important;
+    border-radius: 8px !important;
+    color: var(--checkout-text) !important;
+    padding: 10px 15px !important;
+    transition: all 0.3s ease !important;
+}
+
+.checkout-page .form-control:focus,
+.checkout-page .form-select:focus {
+    border-color: var(--checkout-primary) !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
+    outline: none !important;
+}
+
+.checkout-page .form-control::placeholder {
+    color: var(--checkout-text-light) !important;
+}
+
+/* Text màu */
+.checkout-page h2,
+.checkout-page h5,
+.checkout-page h6 {
+    color: var(--checkout-text) !important;
+}
+
+.checkout-page .text-muted,
+.checkout-page small.text-muted {
+    color: var(--checkout-text-light) !important;
+}
+
+/* Nút đặt hàng với gradient xanh lá */
+.checkout-page #placeOrderBtn,
+.checkout-page .btn-primary {
+    background: linear-gradient(135deg, var(--checkout-secondary) 0%, #059669 100%) !important;
+    color: #ffffff !important;
+    border: none !important;
+    padding: 14px 28px !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.checkout-page #placeOrderBtn:hover,
+.checkout-page .btn-primary:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+}
+
+.checkout-page #placeOrderBtn:disabled {
+    opacity: 0.7 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+}
+
+/* Nút quay lại */
+.checkout-page .btn-outline-secondary {
+    background-color: transparent !important;
+    border: 2px solid var(--checkout-border) !important;
+    color: var(--checkout-text) !important;
+    padding: 12px 24px !important;
+    border-radius: 10px !important;
+    font-weight: 500 !important;
+    transition: all 0.3s ease !important;
+}
+
+.checkout-page .btn-outline-secondary:hover {
+    background-color: var(--checkout-border) !important;
+    border-color: var(--checkout-border) !important;
+    color: var(--checkout-text) !important;
+}
+
+/* Alert boxes */
+.checkout-page .alert-info {
+    background-color: #dbeafe !important;
+    border: 1px solid #93c5fd !important;
+    color: var(--checkout-text) !important;
+    border-radius: 8px !important;
+    padding: 15px 20px !important;
+}
+
+.checkout-page .alert-warning {
+    background-color: #fef3c7 !important;
+    border: 1px solid #fcd34d !important;
+    color: var(--checkout-text) !important;
+    border-radius: 8px !important;
+    padding: 15px 20px !important;
+}
+
+.checkout-page .alert-info h6,
+.checkout-page .alert-warning h6 {
+    color: var(--checkout-primary) !important;
+    font-weight: 600 !important;
+}
+
+.checkout-page .text-success {
+    color: var(--checkout-secondary) !important;
+}
+
+.checkout-page .text-danger {
+    color: #ef4444 !important;
+}
+
+/* Breadcrumb */
+.checkout-page .breadcrumb {
+    background-color: transparent !important;
+    padding: 0 !important;
+}
+
+.checkout-page .breadcrumb-item a {
+    color: var(--checkout-primary) !important;
+    text-decoration: none !important;
+}
+
+.checkout-page .breadcrumb-item.active {
+    color: var(--checkout-text-light) !important;
+}
+
+/* Tóm tắt đơn hàng */
+.checkout-page .border-top {
+    border-top: 1px solid var(--checkout-border) !important;
+    padding-top: 20px !important;
+    margin-top: 20px !important;
+}
+
+.checkout-page .fw-bold {
+    color: var(--checkout-text) !important;
+}
+
+.checkout-page .text-primary {
+    color: var(--checkout-primary) !important;
+}
+
+/* Product items trong tóm tắt */
+.checkout-page .mb-0 {
+    color: var(--checkout-text) !important;
+}
+
+/* HR lines */
+.checkout-page hr {
+    border-color: var(--checkout-border) !important;
+    opacity: 0.5 !important;
+}
+
+/* Input fields với giá trị */
+.checkout-page input[type="text"],
+.checkout-page input[type="email"],
+.checkout-page input[type="tel"],
+.checkout-page textarea {
+    background-color: #ffffff !important;
+    color: var(--checkout-text) !important;
+}
+
+/* Select dropdown - Bỏ hoàn toàn mũi tên lặp lại */
+.checkout-page select.form-select {
+    background-image: none !important;
+    background-repeat: no-repeat !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    padding-right: 0.75rem !important;
+}
+
+/* Ẩn tất cả các mũi tên có thể xuất hiện */
+.checkout-page select.form-select::-ms-expand {
+    display: none !important;
+}
+
+/* Đảm bảo không có background image nào được áp dụng */
+.checkout-page select.form-select,
+.checkout-page select.form-select:focus,
+.checkout-page select.form-select:hover {
+    background-image: none !important;
+}
+
+/* Icon colors */
+.checkout-page .fas,
+.checkout-page .fa {
+    color: inherit !important;
+}
+
+.checkout-page .card-header .fas,
+.checkout-page .card-header .fa {
+    color: #ffffff !important;
+}
+
+/* Link colors */
+.checkout-page a {
+    color: var(--checkout-primary) !important;
+}
+
+.checkout-page a:hover {
+    color: var(--checkout-primary-dark) !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .checkout-page .card-header {
+        padding: 15px 20px !important;
+        font-size: 1rem !important;
+    }
+    
+    .checkout-page .card-body {
+        padding: 20px !important;
+    }
+}
