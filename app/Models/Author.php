@@ -24,9 +24,7 @@ class Author extends Model
     protected $casts = [
         'ngay_sinh' => 'date',
     ];
-    protected $castss = [
-        'ngay_sinh' => 'date',
-    ];
+
 
     // Scope để lấy tác giả đang hoạt động
     public function scopeActive($query)
