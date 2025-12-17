@@ -19,16 +19,7 @@ class Author extends Model
         'hinh_anh',
         'trang_thai',
     ];
-    protected $fillables = [
-        'ten_tac_gia',
-        'email',
-        'so_dien_thoai',
-        'dia_chi',
-        'ngay_sinh',
-        'gioi_thieu',
-        'hinh_anh',
-        'trang_thai',
-    ];
+   
 
     protected $casts = [
         'ngay_sinh' => 'date',
