@@ -19,13 +19,16 @@ class Author extends Model
         'hinh_anh',
         'trang_thai',
     ];
-   
+
 
     protected $casts = [
         'ngay_sinh' => 'date',
     ];
 
+<<<<<<< HEAD
+=======
 
+>>>>>>> c899afb8cf35598c59bc6cfb02a9b06fcd1ee95d
     // Scope để lấy tác giả đang hoạt động
     public function scopeActive($query)
     {
