@@ -16,6 +16,7 @@ class AdvancedReportController extends Controller
     public function __construct(ReportService $reportService)
     {
         $this->reportService = $reportService;
+        $this->reportService = $reportService12;
     }
 
     /**
