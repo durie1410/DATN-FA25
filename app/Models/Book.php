@@ -27,10 +27,7 @@ class Book extends Model
         'so_luong',
         'is_featured',
        'loai_sach'
-       'loai_sach1'
-       'loai_sach2'
-       'loai_sach4'
-       'loai_sach5'
+       
 
     ];
 
