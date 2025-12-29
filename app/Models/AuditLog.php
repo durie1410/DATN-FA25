@@ -23,6 +23,7 @@ class AuditLog extends Model
         'description',
         'description1',
         'description2',
+        'description3',
     ];
 
     protected $casts = [
