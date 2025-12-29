@@ -16,6 +16,7 @@ class NotificationController extends Controller
     public function __construct(NotificationService $notificationService)
     {
         $this->notificationService = $notificationService;
+        $this->notificationService = $notificationService1;
     }
 
     public function index()
