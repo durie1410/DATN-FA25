@@ -16,13 +16,14 @@ class ShippingLogController extends Controller
     /**
      * Hiển thị tất cả shipping logs
      */
+    /**
+     * Hien thi danh sach shipping logs voi tim kiem va loc theo trang thai
+     * QUAN TRONG: Load ca payments de hien thi thong tin thanh toan
+     */
     public function index(Request $request)
     {
-<<<<<<< HEAD
+        // Load day du thong tin: borrow -> reader, items -> book, va payments
         $query = ShippingLog::with(['borrow.reader', 'borrow.items.book', 'borrow.payments'])
-=======
-        $query = ShippingLog::with(['borrow.reader', 'borrow.items.book'])
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
             ->orderBy('id', 'desc');
 
         // Tìm kiếm theo mã đơn hàng hoặc tên người đặt
@@ -46,8 +47,8 @@ class ShippingLogController extends Controller
 
         $logs = $query->paginate(20);
 
-<<<<<<< HEAD
-        // Đếm số lượng theo từng trạng thái (11 trạng thái mới)
+        // QUAN TRONG: Dem so luong theo tung trang thai (11 trang thai trong he thong)
+        // Cac trang thai nay phai khop voi migration va validation
         $statusCounts = [
             'all' => ShippingLog::count(),
             'don_hang_moi' => ShippingLog::where('status', 'don_hang_moi')->count(),
@@ -61,23 +62,6 @@ class ShippingLogController extends Controller
             'dang_van_chuyen_tra_ve' => ShippingLog::where('status', 'dang_van_chuyen_tra_ve')->count(),
             'da_nhan_va_kiem_tra' => ShippingLog::where('status', 'da_nhan_va_kiem_tra')->count(),
             'hoan_tat_don_hang' => ShippingLog::where('status', 'hoan_tat_don_hang')->count(),
-=======
-        // Đếm số lượng theo từng trạng thái
-        $statusCounts = [
-            'all' => ShippingLog::count(),
-            'cho_xu_ly' => ShippingLog::where('status', 'cho_xu_ly')->count(),
-            'dang_chuan_bi' => ShippingLog::where('status', 'dang_chuan_bi')->count(),
-            'dang_giao' => ShippingLog::where('status', 'dang_giao')->count(),
-            'da_giao_thanh_cong' => ShippingLog::where('status', 'da_giao_thanh_cong')->count(),
-            'giao_that_bai' => ShippingLog::where('status', 'giao_that_bai')->count(),
-            'tra_lai_sach' => ShippingLog::where('status', 'tra_lai_sach')->count(),
-            'dang_gui_lai' => ShippingLog::where('status', 'dang_gui_lai')->count(),
-            'da_nhan_hang' => ShippingLog::where('status', 'da_nhan_hang')->count(),
-            'dang_kiem_tra' => ShippingLog::where('status', 'dang_kiem_tra')->count(),
-            'thanh_toan_coc' => ShippingLog::where('status', 'thanh_toan_coc')->count(),
-            'hoan_thanh' => ShippingLog::where('status', 'hoan_thanh')->count(),
-            'da_huy' => ShippingLog::where('status', 'da_huy')->count(),
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
         ];
 
         return view('admin.shipping_logs.index', compact('logs', 'statusCounts'));
@@ -191,28 +175,28 @@ public function show($id)
     /**
      * Cập nhật trạng thái giao hàng
      */
-public function updateStatus(Request $request, $id)
-{
-    $log = ShippingLog::findOrFail($id);
+    /**
+     * QUAN TRONG: Cap nhat trang thai giao hang va tu dong xu ly thanh toan
+     * - Khi giao hang thanh cong: Tu dong xac nhan thanh toan COD/Online
+     * - Khi giao hang that bai: Chuyen thanh toan COD ve pending
+     * - Khi hoan tat don hang: Tu dong danh dau fines da thanh toan
+     */
+    public function updateStatus(Request $request, $id)
+    {
+        $log = ShippingLog::findOrFail($id);
 
-<<<<<<< HEAD
-    // Validate với 11 trạng thái mới
-    $request->validate([
-        'status' => 'required|string|in:don_hang_moi,dang_chuan_bi_sach,cho_ban_giao_van_chuyen,dang_giao_hang,giao_hang_thanh_cong,giao_hang_that_bai,da_muon_dang_luu_hanh,cho_tra_sach,dang_van_chuyen_tra_ve,da_nhan_va_kiem_tra,hoan_tat_don_hang',
-=======
-    // Validate với 12 trạng thái
-    $request->validate([
-        'status'        => 'required|string|in:cho_xu_ly,dang_chuan_bi,dang_giao,da_giao_thanh_cong,giao_that_bai,tra_lai_sach,dang_gui_lai,da_nhan_hang,dang_kiem_tra,thanh_toan_coc,hoan_thanh,da_huy',
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
-        'tinh_trang_sach' => 'nullable|in:binh_thuong,hong_nhe,hong_nang,mat_sach',
-        'ghi_chu_kiem_tra' => 'nullable|string',
-        'ghi_chu_hoan_coc' => 'nullable|string',
-        'receiver_note' => 'nullable|string',
-        'delivered_at'  => 'nullable|date',
-        'proof_image'   => 'nullable|image|max:2048',
-        'ma_van_don' => 'nullable|string|max:100',
-        'don_vi_van_chuyen' => 'nullable|string|max:100',
-    ]);
+        // Validate voi 11 trang thai trong he thong
+        $request->validate([
+            'status' => 'required|string|in:don_hang_moi,dang_chuan_bi_sach,cho_ban_giao_van_chuyen,dang_giao_hang,giao_hang_thanh_cong,giao_hang_that_bai,da_muon_dang_luu_hanh,cho_tra_sach,dang_van_chuyen_tra_ve,da_nhan_va_kiem_tra,hoan_tat_don_hang',
+            'tinh_trang_sach' => 'nullable|in:binh_thuong,hong_nhe,hong_nang,mat_sach',
+            'ghi_chu_kiem_tra' => 'nullable|string',
+            'ghi_chu_hoan_coc' => 'nullable|string',
+            'receiver_note' => 'nullable|string',
+            'delivered_at'  => 'nullable|date',
+            'proof_image'   => 'nullable|image|max:2048',
+            'ma_van_don' => 'nullable|string|max:100',
+            'don_vi_van_chuyen' => 'nullable|string|max:100',
+        ]);
 
     // Nếu trạng thái là 'da_giao', có thể yêu cầu ảnh minh chứng (tùy chọn)
     // if ($request->status === 'da_giao' && !$request->hasFile('proof_image') && !$log->proof_image) {
@@ -248,11 +232,10 @@ public function updateStatus(Request $request, $id)
         }
     }
 
-    // Cập nhật các trường
+    // Cap nhat cac truong co ban
     $log->status = $request->status;
     
-<<<<<<< HEAD
-    // Cập nhật thông tin vận đơn nếu có
+    // QUAN TRONG: Cap nhat thong tin van don de theo doi don hang
     if ($request->filled('ma_van_don')) {
         $log->ma_van_don = $request->ma_van_don;
     }
@@ -260,7 +243,8 @@ public function updateStatus(Request $request, $id)
         $log->don_vi_van_chuyen = $request->don_vi_van_chuyen;
     }
     
-    // Xử lý theo từng trạng thái (11 trạng thái mới)
+    // QUAN TRONG: Xu ly logic theo tung trang thai (11 trang thai)
+    // Moi trang thai co logic rieng de cap nhat borrow, payments, fines
     switch ($request->status) {
         case 'don_hang_moi':
             // Đơn hàng mới tạo
@@ -292,39 +276,41 @@ public function updateStatus(Request $request, $id)
         case 'giao_hang_thanh_cong':
             $log->ngay_giao_thanh_cong = now();
             $log->delivered_at = now();
-            // Chỉ cập nhật trang_thai_chi_tiet, KHÔNG tự động chuyển sang "Dang muon"
-            // Chỉ khi khách hàng xác nhận đã nhận sách thì mới chuyển sang "da_muon_dang_luu_hanh"
+            
+            // QUAN TRONG: Chi cap nhat trang_thai_chi_tiet, KHONG tu dong chuyen sang "Dang muon"
+            // Chi khi khach hang xac nhan da nhan sach thi moi chuyen sang "da_muon_dang_luu_hanh"
             if ($log->borrow) {
                 $log->borrow->update([
                     'trang_thai_chi_tiet' => 'giao_hang_thanh_cong'
                 ]);
                 
-                // Reset trạng thái xác nhận từ khách hàng (nếu có)
+                // Reset trang thai xac nhan tu khach hang (neu co)
                 $log->borrow->customer_confirmed_delivery = false;
                 $log->borrow->customer_confirmed_delivery_at = null;
                 $log->borrow->save();
                 
-                // ✅ Tự động cập nhật trạng thái thanh toán
-                // 1. Chuyển tất cả payment COD (offline) từ pending → success
+                // QUAN TRONG: Tu dong cap nhat trang thai thanh toan khi giao hang thanh cong
+                // 1. Chuyen tat ca payment COD (offline) tu pending -> success
+                //    Vi COD thanh toan khi nhan hang, nen khi giao thanh cong = da thanh toan
                 $log->borrow->payments()
                     ->where('payment_method', 'offline')
                     ->where('payment_status', 'pending')
                     ->whereIn('payment_type', ['deposit', 'borrow_fee', 'shipping_fee'])
                     ->update([
                         'payment_status' => 'success',
-                        'note' => \DB::raw("CONCAT(COALESCE(note, ''), ' - Đã thanh toán COD khi giao hàng thành công')"),
+                        'note' => \DB::raw("CONCAT(COALESCE(note, ''), ' - Da thanh toan COD khi giao hang thanh cong')"),
                         'updated_at' => now()
                     ]);
                 
-                // 2. Chuyển tất cả payment Online (online) từ pending → success
-                // (Trường hợp thanh toán online nhưng chưa xác nhận)
+                // 2. Chuyen tat ca payment Online (online) tu pending -> success
+                //    (Truong hop thanh toan online nhung chua xac nhan, gio xac nhan khi giao hang)
                 $log->borrow->payments()
                     ->where('payment_method', 'online')
                     ->where('payment_status', 'pending')
                     ->whereIn('payment_type', ['deposit', 'borrow_fee', 'shipping_fee'])
                     ->update([
                         'payment_status' => 'success',
-                        'note' => \DB::raw("CONCAT(COALESCE(note, ''), ' - Xác nhận thanh toán online thành công')"),
+                        'note' => \DB::raw("CONCAT(COALESCE(note, ''), ' - Xac nhan thanh toan online thanh cong')"),
                         'updated_at' => now()
                     ]);
             }
@@ -335,14 +321,15 @@ public function updateStatus(Request $request, $id)
             if ($log->borrow) {
                 $log->borrow->update(['trang_thai_chi_tiet' => 'giao_hang_that_bai']);
                 
-                // ✅ Đảm bảo các khoản COD vẫn ở trạng thái pending
+                // QUAN TRONG: Dam bao cac khoan COD van o trang thai pending khi giao hang that bai
+                // Vi khong giao duoc hang nen chua thu tien COD
                 $log->borrow->payments()
                     ->where('payment_method', 'offline')
                     ->where('payment_status', 'success')
                     ->whereIn('payment_type', ['deposit', 'borrow_fee', 'shipping_fee'])
                     ->update([
                         'payment_status' => 'pending',
-                        'note' => \DB::raw("CONCAT(COALESCE(note, ''), ' - Chuyển về chưa thanh toán do giao hàng thất bại')"),
+                        'note' => \DB::raw("CONCAT(COALESCE(note, ''), ' - Chuyen ve chua thanh toan do giao hang that bai')"),
                         'updated_at' => now()
                     ]);
             }
@@ -377,19 +364,19 @@ public function updateStatus(Request $request, $id)
             $log->ngay_kiem_tra = now();
             $log->nguoi_kiem_tra_id = auth()->id();
             
-            // Xử lý tình trạng sách
+            // QUAN TRONG: Xu ly tinh trang sach va tinh phi hong sach
             if ($request->filled('tinh_trang_sach')) {
                 $log->tinh_trang_sach = $request->tinh_trang_sach;
                 
-                // Tính phí hỏng sách
+                // Tinh phi hong sach dua tren tinh trang (binh_thuong=0%, hong_nhe=10%, hong_nang=50%, mat_sach=100%)
                 $phiHong = $this->calculateDamageFee($log, $request->tinh_trang_sach);
                 $log->phi_hong_sach = $phiHong;
                 
-                // Tính tiền cọc hoàn trả
+                // Tinh tien coc hoan tra = tien coc - phi hong sach (toi thieu = 0)
                 $tienCoc = $log->borrow ? $log->borrow->tien_coc : 0;
                 $log->tien_coc_hoan_tra = max(0, $tienCoc - $phiHong);
                 
-                // Cập nhật vào borrow
+                // Cap nhat vao borrow de dong bo du lieu
                 if ($log->borrow) {
                     $log->borrow->update([
                         'tinh_trang_sach' => $request->tinh_trang_sach,
@@ -413,25 +400,29 @@ public function updateStatus(Request $request, $id)
                 $log->ghi_chu_hoan_coc = $request->ghi_chu_hoan_coc;
             }
             
+            // QUAN TRONG: Khi hoan tat don hang, cap nhat tat ca trang thai lien quan
             if ($log->borrow) {
+                // 1. Cap nhat borrow items ve "Da tra"
                 $log->borrow->items()->update([
                     'trang_thai' => 'Da tra', 
                     'ngay_tra_thuc_te' => now()
                 ]);
+                
+                // 2. Cap nhat borrow ve "Da tra"
                 $log->borrow->update([
                     'trang_thai' => 'Da tra',
                     'trang_thai_chi_tiet' => 'hoan_tat_don_hang'
                 ]);
                 
-                // Cập nhật inventory về trạng thái 'Co san' (Có sẵn)
+                // 3. QUAN TRONG: Cap nhat inventory ve trang thai 'Co san' de co the muon lai
                 foreach ($log->borrow->items as $item) {
                     if ($item->inventory) {
                         $item->inventory->update(['status' => 'Co san']);
                     }
                 }
 
-                // ✅ Tự động đánh dấu các khoản phạt (fines) chưa thanh toán thành 'paid'
-                // Ghi lại paid_date và ghi chú nhỏ để dễ tra cứu
+                // 4. QUAN TRONG: Tu dong danh dau cac khoan phat (fines) chua thanh toan thanh 'paid'
+                // Vi da hoan tat don hang nen coi nhu da thanh toan tat ca phat
                 $updatedFinesCount = $log->borrow->fines()->where('status', 'pending')->count();
                 if ($updatedFinesCount > 0) {
                     $log->borrow->fines()
@@ -439,82 +430,10 @@ public function updateStatus(Request $request, $id)
                         ->update([
                             'status' => 'paid',
                             'paid_date' => now(),
-                            'notes' => \DB::raw("CONCAT(COALESCE(notes, ''), ' - Tự động đánh dấu đã thanh toán khi hoàn tất đơn hàng')"),
+                            'notes' => \DB::raw("CONCAT(COALESCE(notes, ''), ' - Tu dong danh dau da thanh toan khi hoan tat don hang')"),
                             'updated_at' => now()
                         ]);
                 }
-=======
-    // Xử lý theo từng trạng thái
-    switch ($request->status) {
-        case 'dang_chuan_bi':
-            $log->ngay_chuan_bi = now();
-            $log->nguoi_chuan_bi_id = auth()->id();
-            break;
-            
-        case 'dang_giao':
-            $log->ngay_bat_dau_giao = now();
-            break;
-            
-        case 'da_giao_thanh_cong':
-            $log->ngay_giao_thanh_cong = now();
-            $log->delivered_at = now();
-            // Cập nhật borrow items
-            if ($log->borrow) {
-                $log->borrow->items()->update(['trang_thai' => 'Dang muon']);
-                $log->borrow->update(['trang_thai' => 'Dang muon']);
-            }
-            break;
-            
-        case 'tra_lai_sach':
-            $log->ngay_bat_dau_tra = now();
-            break;
-            
-        case 'da_nhan_hang':
-            $log->ngay_nhan_tra = now();
-            break;
-            
-        case 'dang_kiem_tra':
-            $log->ngay_kiem_tra = now();
-            $log->nguoi_kiem_tra_id = auth()->id();
-            break;
-            
-        case 'thanh_toan_coc':
-            if (!$request->filled('tinh_trang_sach')) {
-                return back()->withErrors(['tinh_trang_sach' => 'Vui lòng chọn tình trạng sách'])->withInput();
-            }
-            
-            $log->tinh_trang_sach = $request->tinh_trang_sach;
-            $log->ngay_hoan_coc = now();
-            $log->nguoi_hoan_coc_id = auth()->id();
-            
-            // Tính phí hỏng sách
-            $phiHong = $this->calculateDamageFee($log, $request->tinh_trang_sach);
-            $log->phi_hong_sach = $phiHong;
-            
-            // Tính tiền cọc hoàn trả
-            $tienCoc = $log->borrow ? $log->borrow->tien_coc : 0;
-            $log->tien_coc_hoan_tra = max(0, $tienCoc - $phiHong);
-            
-            if ($request->filled('ghi_chu_kiem_tra')) {
-                $log->ghi_chu_kiem_tra = $request->ghi_chu_kiem_tra;
-            }
-            if ($request->filled('ghi_chu_hoan_coc')) {
-                $log->ghi_chu_hoan_coc = $request->ghi_chu_hoan_coc;
-            }
-            break;
-            
-        case 'hoan_thanh':
-            if ($log->borrow) {
-                $log->borrow->items()->update(['trang_thai' => 'Da tra', 'ngay_tra_thuc_te' => now()]);
-                $log->borrow->update(['trang_thai' => 'Da tra']);
-            }
-            break;
-            
-        case 'da_huy':
-            if ($log->borrow) {
-                $log->borrow->items()->update(['trang_thai' => 'Da huy']);
-                $log->borrow->update(['trang_thai' => 'Da huy']);
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
             }
             break;
     }
@@ -529,12 +448,11 @@ public function updateStatus(Request $request, $id)
     
     $log->save();
 
-<<<<<<< HEAD
-    // KHÔNG tự động cập nhật items và trang_thai sang "Dang muon" khi giao hàng
-    // Chỉ khi khách hàng xác nhận đã nhận sách thì mới cập nhật
-    // Code cũ đã được loại bỏ để đảm bảo flow đúng
+    // QUAN TRONG: KHONG tu dong cap nhat items va trang_thai sang "Dang muon" khi giao hang
+    // Chi khi khach hang xac nhan da nhan sach thi moi cap nhat
+    // Flow dung: giao_hang_thanh_cong -> khach xac nhan -> da_muon_dang_luu_hanh
 
-    // Tạo thông báo với thông tin chi tiết
+    // Tao thong bao voi thong tin chi tiet ve cac thay doi tu dong
     $message = 'Cập nhật trạng thái đơn hàng thành công!';
     
     if ($request->status === 'giao_hang_thanh_cong') {
@@ -563,24 +481,14 @@ public function updateStatus(Request $request, $id)
     }
 
     return redirect()->route('admin.shipping_logs.edit', $log->id)->with('success', $message);
-=======
-    // Nếu trạng thái là đã giao, cập nhật tất cả sách trong borrow_items
-    if ($request->status === 'da_giao') {
-        $borrow = $log->borrow;
-        if ($borrow) {
-            $borrow->items()->update(['trang_thai' => 'Dang muon']);
-            // Cập nhật trạng thái của borrow
-            $borrow->trang_thai = 'Dang muon';
-            $borrow->save();
-        }
-    }
-
-    return redirect()->back()->with('success', 'Cập nhật trạng thái đơn hàng thành công!');
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
 }
 
     /**
-     * Tính phí hỏng sách
+     * QUAN TRONG: Tinh phi hong sach dua tren tinh trang sach khi tra
+     * - binh_thuong: 0% (khong phat)
+     * - hong_nhe: 10% tong gia tri sach
+     * - hong_nang: 50% tong gia tri sach
+     * - mat_sach: 100% tong gia tri sach (phai boi thuong day du)
      */
     protected function calculateDamageFee(ShippingLog $log, $condition)
     {
@@ -588,6 +496,7 @@ public function updateStatus(Request $request, $id)
             return 0;
         }
 
+        // Tinh tong gia tri tat ca sach trong don muon
         $totalBookValue = 0;
         if ($log->borrow) {
             foreach ($log->borrow->items as $item) {
@@ -597,13 +506,14 @@ public function updateStatus(Request $request, $id)
             }
         }
 
+        // Tinh phi dua tren muc do hu hong
         switch ($condition) {
             case 'hong_nhe':
-                return $totalBookValue * 0.1; // 10%
+                return $totalBookValue * 0.1; // 10% gia tri sach
             case 'hong_nang':
-                return $totalBookValue * 0.5; // 50%
+                return $totalBookValue * 0.5; // 50% gia tri sach
             case 'mat_sach':
-                return $totalBookValue; // 100%
+                return $totalBookValue; // 100% gia tri sach (phai boi thuong day du)
             default:
                 return 0;
         }

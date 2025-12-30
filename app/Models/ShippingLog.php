@@ -23,31 +23,25 @@ class ShippingLog extends Model
         'shipper_name',
         'shipper_phone',
         'ngay_chuan_bi',
-<<<<<<< HEAD
-        'ngay_dong_goi_xong',
-        'ngay_bat_dau_giao',
-        'ngay_giao_thanh_cong',
-        'ngay_that_bai_giao_hang',
-        'ngay_bat_dau_luu_hanh',
-        'ngay_yeu_cau_tra_sach',
-=======
-        'ngay_bat_dau_giao',
-        'ngay_giao_thanh_cong',
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
-        'ngay_bat_dau_tra',
-        'ngay_nhan_tra',
-        'ngay_kiem_tra',
-        'ngay_hoan_coc',
+        // QUAN TRONG: Cac truong ngay thang theo tung trang thai giao hang (11 trang thai)
+        'ngay_dong_goi_xong',           // cho_ban_giao_van_chuyen
+        'ngay_bat_dau_giao',            // dang_giao_hang
+        'ngay_giao_thanh_cong',         // giao_hang_thanh_cong
+        'ngay_that_bai_giao_hang',      // giao_hang_that_bai
+        'ngay_bat_dau_luu_hanh',        // da_muon_dang_luu_hanh
+        'ngay_yeu_cau_tra_sach',        // cho_tra_sach
+        'ngay_bat_dau_tra',             // dang_van_chuyen_tra_ve
+        'ngay_nhan_tra',                // da_nhan_va_kiem_tra
+        'ngay_kiem_tra',                // da_nhan_va_kiem_tra
+        'ngay_hoan_coc',                // hoan_tat_don_hang
         'ghi_chu_kiem_tra',
         'ghi_chu_hoan_coc',
         'nguoi_chuan_bi_id',
         'nguoi_kiem_tra_id',
         'nguoi_hoan_coc_id',
-<<<<<<< HEAD
-        'ma_van_don',
-        'don_vi_van_chuyen',
-=======
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
+        // QUAN TRONG: Thong tin van don de theo doi don hang voi don vi van chuyen
+        'ma_van_don',                   // Ma van don tu don vi van chuyen
+        'don_vi_van_chuyen',            // Ten don vi van chuyen (VD: Giao hang nhanh, Viettel Post...)
     ];
 
     public function borrow()

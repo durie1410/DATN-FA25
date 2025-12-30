@@ -142,43 +142,59 @@ class ShippingService
     }
 
     /**
-     * Tính phí vận chuyển dựa trên khoảng cách
-     * Logic: Miễn phí 5km đầu, từ km thứ 6 trở đi mỗi km thêm 5.000₫
+     * QUAN TRONG: Tinh phi van chuyen dua tren khoang cach
+     * Logic: Mien phi 5km dau, tu km thu 6 tro di moi km them 5.000 VND
      * 
-     * @param float $distance Khoảng cách (km)
-     * @return float Phí vận chuyển (VNĐ)
+     * Vi du:
+     * - 3km: Mien phi (0 VND)
+     * - 7km: (7-5) x 5.000 = 10.000 VND
+     * - 10.5km: ceil(10.5-5) x 5.000 = 6 x 5.000 = 30.000 VND
+     * 
+     * @param float $distance Khoang cach (km)
+     * @return float Phi van chuyen (VND)
      */
     public function calculateShippingFee($distance)
     {
+        // Lay cau hinh tu config/pricing.php (co the override bang .env)
         $freeKm = config('pricing.shipping.free_km', 5);
         $pricePerKm = config('pricing.shipping.price_per_km', 5000);
 
-        // Nếu khoảng cách <= km miễn phí, phí = 0
+        // QUAN TRONG: Neu khoang cach <= km mien phi, phi = 0
         if ($distance <= $freeKm) {
             return 0;
         }
 
-        // Tính số km phải trả phí (làm tròn lên)
+        // Tinh so km phai tra phi (lam tron len de dam bao tinh du phi)
         $extraKm = ceil($distance - $freeKm);
         
-        // Phí = số km vượt quá x giá mỗi km
+        // Phi = so km vuot qua x gia moi km
         $fee = $extraKm * $pricePerKm;
 
-        // Làm tròn đến hàng nghìn
+        // QUAN TRONG: Lam tron den hang nghin de de thanh toan
+        // VD: 12.500 VND -> 13.000 VND, 12.400 VND -> 12.000 VND
         return round($fee / 1000) * 1000;
     }
 
     /**
-     * Tính khoảng cách và phí vận chuyển từ địa chỉ khách hàng
+     * QUAN TRONG: Tinh khoang cach va phi van chuyen tu dia chi khach hang
      * 
-     * @param string $customerAddress Địa chỉ khách hàng
-     * @return array ['distance' => float, 'shipping_fee' => float, 'success' => bool, 'error' => string|null]
+     * Flow:
+     * 1. Tinh khoang cach tu thu vien den dia chi khach hang (dung Google Maps API)
+     * 2. Tinh phi van chuyen dua tren khoang cach
+     * 3. Tra ve ket qua voi thong tin day du
+     * 
+     * Luu y: Neu khong co Google Maps API key, van cho phep checkout voi phi = 0
+     * 
+     * @param string $customerAddress Dia chi khach hang
+     * @return array ['distance' => float, 'shipping_fee' => float, 'success' => bool, 'error' => string|null, 'duration' => int]
      */
     public function calculateShipping($customerAddress)
     {
+        // Buoc 1: Tinh khoang cach (co cache 24h)
         $distanceResult = $this->calculateDistance($customerAddress);
 
-        // Nếu không thành công nhưng có message (ví dụ: không có API key), vẫn cho phép với phí = 0
+        // QUAN TRONG: Neu khong thanh cong nhung co message (vi du: khong co API key), van cho phep voi phi = 0
+        // De dam bao checkout khong bi loi khi chua cau hinh API key
         if (!$distanceResult['success'] && isset($distanceResult['message'])) {
             return [
                 'distance' => 0,
@@ -190,18 +206,21 @@ class ShippingService
             ];
         }
 
+        // Neu tinh khoang cach that bai (loi that), tra ve loi
         if (!$distanceResult['success']) {
             return [
                 'distance' => 0,
                 'shipping_fee' => 0,
                 'success' => false,
-                'error' => $distanceResult['error'] ?? 'Không thể tính khoảng cách'
+                'error' => $distanceResult['error'] ?? 'Khong the tinh khoang cach'
             ];
         }
 
+        // Buoc 2: Tinh phi van chuyen dua tren khoang cach
         $distance = $distanceResult['distance'];
         $shippingFee = $this->calculateShippingFee($distance);
 
+        // Tra ve ket qua day du
         return [
             'distance' => $distance,
             'shipping_fee' => $shippingFee,
