@@ -164,6 +164,11 @@ Hệ thống sử dụng [Spatie Laravel Permission](https://github.com/spatie/l
 php artisan test
 ```
 
+> Gợi ý nhanh:
+> - Tạo file `.env.testing` (copy từ `.env`) và trỏ tới database riêng cho test.
+> - Chạy `php artisan migrate --env=testing` trước lần test đầu tiên.
+> - Khi cần chạy 1 test cụ thể: `php artisan test tests/Feature/UserTest.php`.
+
 ## 📝 Tài Liệu
 
 - [Hướng dẫn sửa lỗi VNPay](HUONG_DAN_SUA_LOI_VNPAY.md)
