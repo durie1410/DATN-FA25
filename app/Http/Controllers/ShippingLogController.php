@@ -18,7 +18,11 @@ class ShippingLogController extends Controller
      */
     public function index(Request $request)
     {
+<<<<<<< HEAD
         $query = ShippingLog::with(['borrow.reader', 'borrow.items.book', 'borrow.payments'])
+=======
+        $query = ShippingLog::with(['borrow.reader', 'borrow.items.book'])
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
             ->orderBy('id', 'desc');
 
         // Tìm kiếm theo mã đơn hàng hoặc tên người đặt
@@ -42,6 +46,7 @@ class ShippingLogController extends Controller
 
         $logs = $query->paginate(20);
 
+<<<<<<< HEAD
         // Đếm số lượng theo từng trạng thái (11 trạng thái mới)
         $statusCounts = [
             'all' => ShippingLog::count(),
@@ -56,6 +61,23 @@ class ShippingLogController extends Controller
             'dang_van_chuyen_tra_ve' => ShippingLog::where('status', 'dang_van_chuyen_tra_ve')->count(),
             'da_nhan_va_kiem_tra' => ShippingLog::where('status', 'da_nhan_va_kiem_tra')->count(),
             'hoan_tat_don_hang' => ShippingLog::where('status', 'hoan_tat_don_hang')->count(),
+=======
+        // Đếm số lượng theo từng trạng thái
+        $statusCounts = [
+            'all' => ShippingLog::count(),
+            'cho_xu_ly' => ShippingLog::where('status', 'cho_xu_ly')->count(),
+            'dang_chuan_bi' => ShippingLog::where('status', 'dang_chuan_bi')->count(),
+            'dang_giao' => ShippingLog::where('status', 'dang_giao')->count(),
+            'da_giao_thanh_cong' => ShippingLog::where('status', 'da_giao_thanh_cong')->count(),
+            'giao_that_bai' => ShippingLog::where('status', 'giao_that_bai')->count(),
+            'tra_lai_sach' => ShippingLog::where('status', 'tra_lai_sach')->count(),
+            'dang_gui_lai' => ShippingLog::where('status', 'dang_gui_lai')->count(),
+            'da_nhan_hang' => ShippingLog::where('status', 'da_nhan_hang')->count(),
+            'dang_kiem_tra' => ShippingLog::where('status', 'dang_kiem_tra')->count(),
+            'thanh_toan_coc' => ShippingLog::where('status', 'thanh_toan_coc')->count(),
+            'hoan_thanh' => ShippingLog::where('status', 'hoan_thanh')->count(),
+            'da_huy' => ShippingLog::where('status', 'da_huy')->count(),
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
         ];
 
         return view('admin.shipping_logs.index', compact('logs', 'statusCounts'));
@@ -173,9 +195,15 @@ public function updateStatus(Request $request, $id)
 {
     $log = ShippingLog::findOrFail($id);
 
+<<<<<<< HEAD
     // Validate với 11 trạng thái mới
     $request->validate([
         'status' => 'required|string|in:don_hang_moi,dang_chuan_bi_sach,cho_ban_giao_van_chuyen,dang_giao_hang,giao_hang_thanh_cong,giao_hang_that_bai,da_muon_dang_luu_hanh,cho_tra_sach,dang_van_chuyen_tra_ve,da_nhan_va_kiem_tra,hoan_tat_don_hang',
+=======
+    // Validate với 12 trạng thái
+    $request->validate([
+        'status'        => 'required|string|in:cho_xu_ly,dang_chuan_bi,dang_giao,da_giao_thanh_cong,giao_that_bai,tra_lai_sach,dang_gui_lai,da_nhan_hang,dang_kiem_tra,thanh_toan_coc,hoan_thanh,da_huy',
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
         'tinh_trang_sach' => 'nullable|in:binh_thuong,hong_nhe,hong_nang,mat_sach',
         'ghi_chu_kiem_tra' => 'nullable|string',
         'ghi_chu_hoan_coc' => 'nullable|string',
@@ -223,6 +251,7 @@ public function updateStatus(Request $request, $id)
     // Cập nhật các trường
     $log->status = $request->status;
     
+<<<<<<< HEAD
     // Cập nhật thông tin vận đơn nếu có
     if ($request->filled('ma_van_don')) {
         $log->ma_van_don = $request->ma_van_don;
@@ -414,6 +443,78 @@ public function updateStatus(Request $request, $id)
                             'updated_at' => now()
                         ]);
                 }
+=======
+    // Xử lý theo từng trạng thái
+    switch ($request->status) {
+        case 'dang_chuan_bi':
+            $log->ngay_chuan_bi = now();
+            $log->nguoi_chuan_bi_id = auth()->id();
+            break;
+            
+        case 'dang_giao':
+            $log->ngay_bat_dau_giao = now();
+            break;
+            
+        case 'da_giao_thanh_cong':
+            $log->ngay_giao_thanh_cong = now();
+            $log->delivered_at = now();
+            // Cập nhật borrow items
+            if ($log->borrow) {
+                $log->borrow->items()->update(['trang_thai' => 'Dang muon']);
+                $log->borrow->update(['trang_thai' => 'Dang muon']);
+            }
+            break;
+            
+        case 'tra_lai_sach':
+            $log->ngay_bat_dau_tra = now();
+            break;
+            
+        case 'da_nhan_hang':
+            $log->ngay_nhan_tra = now();
+            break;
+            
+        case 'dang_kiem_tra':
+            $log->ngay_kiem_tra = now();
+            $log->nguoi_kiem_tra_id = auth()->id();
+            break;
+            
+        case 'thanh_toan_coc':
+            if (!$request->filled('tinh_trang_sach')) {
+                return back()->withErrors(['tinh_trang_sach' => 'Vui lòng chọn tình trạng sách'])->withInput();
+            }
+            
+            $log->tinh_trang_sach = $request->tinh_trang_sach;
+            $log->ngay_hoan_coc = now();
+            $log->nguoi_hoan_coc_id = auth()->id();
+            
+            // Tính phí hỏng sách
+            $phiHong = $this->calculateDamageFee($log, $request->tinh_trang_sach);
+            $log->phi_hong_sach = $phiHong;
+            
+            // Tính tiền cọc hoàn trả
+            $tienCoc = $log->borrow ? $log->borrow->tien_coc : 0;
+            $log->tien_coc_hoan_tra = max(0, $tienCoc - $phiHong);
+            
+            if ($request->filled('ghi_chu_kiem_tra')) {
+                $log->ghi_chu_kiem_tra = $request->ghi_chu_kiem_tra;
+            }
+            if ($request->filled('ghi_chu_hoan_coc')) {
+                $log->ghi_chu_hoan_coc = $request->ghi_chu_hoan_coc;
+            }
+            break;
+            
+        case 'hoan_thanh':
+            if ($log->borrow) {
+                $log->borrow->items()->update(['trang_thai' => 'Da tra', 'ngay_tra_thuc_te' => now()]);
+                $log->borrow->update(['trang_thai' => 'Da tra']);
+            }
+            break;
+            
+        case 'da_huy':
+            if ($log->borrow) {
+                $log->borrow->items()->update(['trang_thai' => 'Da huy']);
+                $log->borrow->update(['trang_thai' => 'Da huy']);
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
             }
             break;
     }
@@ -428,6 +529,7 @@ public function updateStatus(Request $request, $id)
     
     $log->save();
 
+<<<<<<< HEAD
     // KHÔNG tự động cập nhật items và trang_thai sang "Dang muon" khi giao hàng
     // Chỉ khi khách hàng xác nhận đã nhận sách thì mới cập nhật
     // Code cũ đã được loại bỏ để đảm bảo flow đúng
@@ -461,6 +563,20 @@ public function updateStatus(Request $request, $id)
     }
 
     return redirect()->route('admin.shipping_logs.edit', $log->id)->with('success', $message);
+=======
+    // Nếu trạng thái là đã giao, cập nhật tất cả sách trong borrow_items
+    if ($request->status === 'da_giao') {
+        $borrow = $log->borrow;
+        if ($borrow) {
+            $borrow->items()->update(['trang_thai' => 'Dang muon']);
+            // Cập nhật trạng thái của borrow
+            $borrow->trang_thai = 'Dang muon';
+            $borrow->save();
+        }
+    }
+
+    return redirect()->back()->with('success', 'Cập nhật trạng thái đơn hàng thành công!');
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
 }
 
     /**

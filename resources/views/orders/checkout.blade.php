@@ -255,8 +255,16 @@
 <script>
 // Đảm bảo handler được attach ngay lập tức, không đợi DOMContentLoaded
 (function() {
+    // Debug helper - chỉ log khi debug mode
+    const DEBUG = {{ config('app.debug') ? 'true' : 'false' }};
+    function debugLog(...args) {
+        if (DEBUG) {
+            console.log(...args);
+        }
+    }
+    
     function initCheckout() {
-        console.log('Initializing checkout...');
+        debugLog('Initializing checkout...');
         
         const checkoutForm = document.getElementById('checkoutForm');
         const placeOrderBtn = document.getElementById('placeOrderBtn');
@@ -267,11 +275,11 @@
         
         // Kiểm tra các element có tồn tại không
         if (!checkoutForm || !placeOrderBtn) {
-            console.log('Elements not ready yet, waiting...');
+            debugLog('Elements not ready yet, waiting...');
             return false;
         }
         
-        console.log('All elements found:', {
+        debugLog('All elements found:', {
             form: !!checkoutForm,
             button: !!placeOrderBtn,
             paymentMethod: !!paymentMethodSelect
@@ -413,7 +421,7 @@
         e.stopPropagation();
         e.stopImmediatePropagation();
         
-        console.log('Form submitted! Event prevented.');
+        debugLog('Form submitted! Event prevented.');
         
         const button = placeOrderBtn;
         const originalText = button.innerHTML;
@@ -470,19 +478,21 @@
         const formData = new FormData(this);
         
         // Log form data để debug
-        console.log('Form data:');
-        for (let [key, value] of formData.entries()) {
-            console.log(key, ':', value);
+        debugLog('Form data:');
+        if (DEBUG) {
+            for (let [key, value] of formData.entries()) {
+                debugLog(key, ':', value);
+            }
         }
         
         // Lấy CSRF token
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
                           document.querySelector('input[name="_token"]')?.value;
         
-        console.log('CSRF Token:', csrfToken ? 'Found' : 'Not found');
+        debugLog('CSRF Token:', csrfToken ? 'Found' : 'Not found');
         
         if (!csrfToken) {
-            console.error('CSRF token not found!');
+            if (DEBUG) console.error('CSRF token not found!');
             showToast('error', 'Không tìm thấy token bảo mật. Vui lòng tải lại trang.');
             button.innerHTML = originalText;
             button.disabled = false;
@@ -490,7 +500,7 @@
         }
         
         const orderUrl = '{{ route("orders.store") }}';
-        console.log('Sending request to:', orderUrl);
+        debugLog('Sending request to:', orderUrl);
         
         // Gửi request
         fetch(orderUrl, {
@@ -503,19 +513,23 @@
             }
         })
         .then(async response => {
-            console.log('Response received!');
-            console.log('Response status:', response.status);
-            console.log('Response statusText:', response.statusText);
-            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+            debugLog('Response received!');
+            debugLog('Response status:', response.status);
+            debugLog('Response statusText:', response.statusText);
+            if (DEBUG) {
+                debugLog('Response headers:', Object.fromEntries(response.headers.entries()));
+            }
             
             // Kiểm tra content type
             const contentType = response.headers.get('content-type');
-            console.log('Content-Type:', contentType);
+            debugLog('Content-Type:', contentType);
             
             if (!contentType || !contentType.includes('application/json')) {
                 const text = await response.text();
-                console.error('Response is not JSON:', text);
-                console.error('Response length:', text.length);
+                if (DEBUG) {
+                    console.error('Response is not JSON:', text);
+                    console.error('Response length:', text.length);
+                }
                 showToast('error', 'Phản hồi từ server không đúng định dạng. Vui lòng thử lại. Chi tiết: ' + text.substring(0, 200));
                 button.innerHTML = originalText;
                 button.disabled = false;
@@ -523,7 +537,7 @@
             }
             
             const data = await response.json();
-            console.log('Response data:', data);
+            debugLog('Response data:', data);
             
             if (!response.ok) {
                 // Xử lý lỗi validation hoặc lỗi khác
@@ -535,7 +549,7 @@
                     errorMessage = errorList || errorMessage;
                 }
                 
-                console.error('Error response:', errorMessage);
+                if (DEBUG) console.error('Error response:', errorMessage);
                 showToast('error', errorMessage);
                 
                 // Nếu không có sản phẩm, redirect về trang chủ
@@ -557,29 +571,31 @@
             }
             
             if (data.success) {
-                console.log('Order created successfully!');
-                console.log('Order number:', data.order_number);
-                console.log('Redirect URL:', data.redirect_url);
+                debugLog('Order created successfully!');
+                debugLog('Order number:', data.order_number);
+                debugLog('Redirect URL:', data.redirect_url);
                 showToast('success', data.message || 'Đặt hàng thành công!');
                 
                 // Redirect ngay lập tức về trang lịch sử mua hàng
                 const redirectUrl = data.redirect_url || '{{ route("orders.index") }}';
-                console.log('Redirecting to:', redirectUrl);
+                debugLog('Redirecting to:', redirectUrl);
                 
                 // Redirect ngay lập tức, không đợi
                 window.location.href = redirectUrl;
             } else {
-                console.error('Order creation failed:', data.message);
+                if (DEBUG) console.error('Order creation failed:', data.message);
                 showToast('error', data.message || 'Có lỗi xảy ra khi đặt hàng');
                 button.innerHTML = originalText;
                 button.disabled = false;
             }
         })
         .catch(error => {
-            console.error('Fetch Error:', error);
-            console.error('Error name:', error.name);
-            console.error('Error message:', error.message);
-            console.error('Error stack:', error.stack);
+            if (DEBUG) {
+                console.error('Fetch Error:', error);
+                console.error('Error name:', error.name);
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
+            }
             showToast('error', 'Có lỗi xảy ra khi kết nối đến server: ' + error.message);
             button.innerHTML = originalText;
             button.disabled = false;
@@ -588,14 +604,14 @@
     
     // Thêm event listener cho nút đặt hàng để log
     placeOrderBtn.addEventListener('click', function(e) {
-        console.log('Place order button clicked!');
+        debugLog('Place order button clicked!');
         // Form submit handler sẽ xử lý, không cần preventDefault ở đây
     });
 
         // Hàm hiển thị toast
         function showToast(type, message) {
             try {
-                console.log('Showing toast:', type, message);
+                debugLog('Showing toast:', type, message);
                 const toastElement = document.getElementById('orderToast');
                 const toastMessage = document.getElementById('toastMessage');
                 

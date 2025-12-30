@@ -150,4 +150,69 @@ public function update(Request $request, $id)
 
         return redirect()->route('admin.vouchers.index')->with('success', 'Đã xoá vĩnh viễn mã giảm giá!');
     }
+
+    /**
+     * Validate voucher code (API endpoint)
+     */
+    public function validateCode(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string',
+            'total_amount' => 'nullable|numeric|min:0'
+        ]);
+
+        $code = $request->input('code');
+        $totalAmount = $request->input('total_amount', 0);
+
+        $voucher = Voucher::where('ma', $code)->first();
+
+        if (!$voucher) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Mã giảm giá không tồn tại'
+            ], 404);
+        }
+
+        if (!$voucher->isActive()) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Mã giảm giá không còn hiệu lực hoặc đã hết hạn'
+            ], 400);
+        }
+
+        if ($voucher->so_luong <= 0) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Mã giảm giá đã hết số lượng sử dụng'
+            ], 400);
+        }
+
+        if ($totalAmount > 0 && $totalAmount < $voucher->don_toi_thieu) {
+            return response()->json([
+                'valid' => false,
+                'message' => 'Đơn hàng phải có giá trị tối thiểu ' . number_format($voucher->don_toi_thieu, 0, ',', '.') . ' VNĐ'
+            ], 400);
+        }
+
+        // Tính giá trị giảm
+        $discountValue = 0;
+        if ($voucher->loai === 'percentage') {
+            $discountValue = ($totalAmount * $voucher->gia_tri) / 100;
+        } else {
+            $discountValue = $voucher->gia_tri;
+        }
+
+        return response()->json([
+            'valid' => true,
+            'message' => 'Mã giảm giá hợp lệ',
+            'voucher' => [
+                'id' => $voucher->id,
+                'code' => $voucher->ma,
+                'type' => $voucher->loai,
+                'value' => $voucher->gia_tri,
+                'discount_amount' => $discountValue,
+                'description' => $voucher->mo_ta
+            ]
+        ]);
+    }
 }

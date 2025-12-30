@@ -1130,6 +1130,7 @@
                 <a href="{{ route('admin.borrows.index') }}" class="menu-item {{ request()->routeIs('admin.borrows.*') ? 'active' : '' }}">
                     <i class="fas fa-book-reader"></i>
                     <span>📚 Mượn/Trả Sách (CHI TIẾT)</span>
+<<<<<<< HEAD
                 </a>
                 <a href="{{ route('admin.shipping_logs.index') }}" 
                    class="menu-item d-flex align-items-center gap-2 
@@ -1143,6 +1144,15 @@
                     <span>Vouchers</span>
                 </a>
                 @endif
+=======
+                </a>
+                <a href="{{ route('admin.shipping_logs.index') }}" 
+                   class="menu-item d-flex align-items-center gap-2 
+                          {{ request()->routeIs('admin.shipping_logs.*') ? 'active' : '' }}">
+                    <i class="bi bi-truck fs-5"></i>
+                    <span>🚚 Giao Hàng (Đơn Mua)</span>
+                </a>
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
 
 
 

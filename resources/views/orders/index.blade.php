@@ -331,9 +331,19 @@
                     @if(auth()->user()->reader)
                     <li><a href="{{ route('account.borrowed-books') }}"><span class="icon">📚</span> Sách đang mượn</a></li>
                     @endif
+<<<<<<< HEAD
                     <li><a href="{{ route('account') }}"><span class="icon">👤</span> Thông tin cá nhân</a></li>
                     <li><a href="{{ route('account.change-password') }}"><span class="icon">🔒</span> Đổi mật khẩu</a></li>
                     <li class="active"><a href="{{ route('orders.index') }}"><span class="icon">📋</span> Lịch sử đơn mượn</a></li>
+=======
+                    <li><a href="{{ route('account') }}"><span class="icon">👤</span> Thông tin khách hàng</a></li>
+                    <li><a href="{{ route('account.reader-info') }}" class="dropdown-item"><span>👥</span> Thông tin độc giả</a></li>
+                    <li><a href="{{ route('account.change-password') }}"><span class="icon">🔒</span> Đổi mật khẩu</a></li>
+                    <li class="active"><a href="{{ route('orders.index') }}"><span class="icon">📋</span> Lịch sử đơn mượn</a></li>
+                    @if(!auth()->user()->reader)
+                    <li><a href="{{ route('account.register-reader') }}"><span class="icon">📝</span> Đăng kí độc giả</a></li>
+                    @endif
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                     <li><a href="#" class="logout-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"><span class="icon">➡️</span> Đăng xuất</a></li>
                 </ul>
             </nav>

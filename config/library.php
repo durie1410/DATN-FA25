@@ -25,6 +25,9 @@ return [
 	'close_hour' => env('LIB_CLOSE_HOUR', '21:00'),
 	'capacity_target_ratio' => env('LIB_CAPACITY_TARGET_RATIO', 1.1), // e.g., 50 seats -> 55/h
 
+	// Support chat account (user_id of the support/hỗ trợ account)
+	'support_user_id' => env('LIB_SUPPORT_USER_ID'),
+
 	// Notification timings (days)
 	'reminder_due_soon_days' => env('LIB_REMINDER_DUE_SOON_DAYS', 1),
 	'reminder_overdue_days' => env('LIB_REMINDER_OVERDUE_DAYS', 0),

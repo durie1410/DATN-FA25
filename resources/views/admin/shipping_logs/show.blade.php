@@ -140,10 +140,21 @@ body {
     text-transform: uppercase;
 }
 
+<<<<<<< HEAD
 .col-product { width: 80%; }
 .col-quantity { width: 20%; text-align: center; }
 
 .product-section td.col-quantity { text-align: center; }
+=======
+.col-product { width: 45%; }
+.col-price { width: 20%; text-align: right; }
+.col-quantity { width: 15%; text-align: center; }
+.col-total { width: 20%; text-align: right; }
+
+.product-section td.col-price { text-align: right; color: #555; }
+.product-section td.col-quantity { text-align: center; }
+.product-section td.col-total { font-weight: 600; text-align: right; color: #333; }
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
 
 /* --- Phần Tổng kết --- */
 .summary-section {
@@ -207,6 +218,77 @@ body {
     color: #357ab8;
 }
 
+<<<<<<< HEAD
+=======
+/* --- Phần Cập nhật trạng thái --- */
+.status-update-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.status-update-header {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.status-update-form {
+    display: block;
+}
+
+.form-group-inline {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+}
+
+.form-field {
+    flex: 1;
+    max-width: 400px;
+}
+
+.form-label {
+    display: block;
+    font-size: 13px;
+    color: #6a6a6a;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.form-select {
+    width: 100%;
+    padding: 10px 15px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #333;
+    background-color: #fff;
+    transition: border-color 0.3s;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: #1a73e8;
+}
+
+.btn-update {
+    padding: 10px 25px;
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-update:hover {
+    background-color: #1557b0;
+}
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
 </style>
 
 <div class="order-detail-wrapper">
@@ -249,7 +331,11 @@ body {
                 {{-- Phí vận chuyển --}}
                 <div class="detail-item">
                     <div class="label">Phí vận chuyển:</div>
+<<<<<<< HEAD
                     <div class="value">{{ number_format($log->borrow->tien_ship ?? 0, 0) }}₫</div>
+=======
+                    <div class="value">{{ number_format($log->borrow->tien_ship ?? 0, 2) }}₫</div>
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                 </div>
 
                 {{-- Phương thức thanh toán --}}
@@ -311,6 +397,7 @@ body {
                     <div class="value">
                         @php
                             $isPaid = false;
+<<<<<<< HEAD
                             $paymentMethod = 'N/A';
                             if($log->borrow && $log->borrow->payments->count() > 0) {
                                 // Kiểm tra tất cả các khoản thanh toán
@@ -326,14 +413,22 @@ body {
                                 if ($firstPayment) {
                                     $paymentMethod = $firstPayment->payment_method === 'online' ? 'Online (VNPay/MoMo)' : 'Thanh toán khi nhận hàng (COD)';
                                 }
+=======
+                            if($log->borrow && $log->borrow->payments->count() > 0) {
+                                $payment = $log->borrow->payments->first();
+                                $isPaid = ($payment->trang_thai === 'thanh_cong' || $payment->trang_thai === 'hoan_thanh');
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                             }
                         @endphp
                         <span class="status-badge {{ $isPaid ? 'status-delivered' : 'status-unpaid' }}">
                             {{ $isPaid ? 'Đã thanh toán' : 'Chưa thanh toán' }}
                         </span>
+<<<<<<< HEAD
                         <span style="font-size: 13px; color: #6a6a6a; margin-left: 10px;">
                             ({{ $paymentMethod }})
                         </span>
+=======
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                     </div>
                 </div>
 
@@ -345,6 +440,7 @@ body {
             </div>
         </div>
 
+<<<<<<< HEAD
         {{-- Sản phẩm --}}
         <div class="product-section">
             <div class="product-header">Sản phẩm</div>
@@ -472,6 +568,133 @@ body {
             @else
                 <div style="padding:12px 0; color:#666;">Không có phạt nào cho phiếu này.</div>
             @endif
+=======
+        {{-- Thay đổi trạng thái đơn hàng --}}
+        <div class="status-update-section">
+            <div class="status-update-header">Thay đổi trạng thái đơn hàng</div>
+            
+            <form action="{{ route('admin.shipping_logs.update_status', $log->id) }}" method="POST" class="status-update-form">
+                @csrf
+                <div class="form-group-inline">
+                    <div class="form-field">
+                        <label for="status" class="form-label">Chọn trạng thái mới</label>
+                        <select name="status" id="status" class="form-select" required>
+                            <option value="">-- Chọn trạng thái --</option>
+                            <option value="cho_xu_ly" {{ $log->status === 'cho_xu_ly' ? 'selected' : '' }}>1. Chờ xử lý</option>
+                            <option value="dang_chuan_bi" {{ $log->status === 'dang_chuan_bi' ? 'selected' : '' }}>2. Đang chuẩn bị hàng</option>
+                            <option value="dang_giao" {{ $log->status === 'dang_giao' ? 'selected' : '' }}>3. Đang giao hàng</option>
+                            <option value="da_giao_thanh_cong" {{ $log->status === 'da_giao_thanh_cong' ? 'selected' : '' }}>4. Đã giao thành công</option>
+                            <option value="giao_that_bai" {{ $log->status === 'giao_that_bai' ? 'selected' : '' }}>5. Giao thất bại</option>
+                            <option value="tra_lai_sach" {{ $log->status === 'tra_lai_sach' ? 'selected' : '' }}>6. Trả lại sách</option>
+                            <option value="dang_gui_lai" {{ $log->status === 'dang_gui_lai' ? 'selected' : '' }}>7. Đang gửi lại sách</option>
+                            <option value="da_nhan_hang" {{ $log->status === 'da_nhan_hang' ? 'selected' : '' }}>8. Đã nhận hàng</option>
+                            <option value="dang_kiem_tra" {{ $log->status === 'dang_kiem_tra' ? 'selected' : '' }}>9. Đang kiểm tra</option>
+                            <option value="thanh_toan_coc" {{ $log->status === 'thanh_toan_coc' ? 'selected' : '' }}>10. Thanh toán cọc</option>
+                            <option value="hoan_thanh" {{ $log->status === 'hoan_thanh' ? 'selected' : '' }}>11. Hoàn thành</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-update">Cập nhật trạng thái</button>
+                </div>
+                
+                {{-- Form cho thanh toán cọc --}}
+                <div id="refund-form" style="display: none; margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                    <h6 style="margin-bottom: 15px; color: #495057;">Thông tin thanh toán cọc</h6>
+                    
+                    <div class="form-field" style="margin-bottom: 15px;">
+                        <label class="form-label">Tình trạng sách <span style="color: red;">*</span></label>
+                        <select name="tinh_trang_sach" class="form-select">
+                            <option value="">-- Chọn tình trạng --</option>
+                            <option value="binh_thuong">Bình thường (Hoàn 100%)</option>
+                            <option value="hong_nhe">Hỏng nhẹ (Trừ 10% giá sách)</option>
+                            <option value="hong_nang">Hỏng nặng (Trừ 50% giá sách)</option>
+                            <option value="mat_sach">Mất sách (Trừ 100% giá sách)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-field" style="margin-bottom: 15px;">
+                        <label class="form-label">Ghi chú kiểm tra</label>
+                        <textarea name="ghi_chu_kiem_tra" class="form-control" rows="2" placeholder="Mô tả tình trạng sách..."></textarea>
+                    </div>
+                    
+                    <div class="form-field">
+                        <label class="form-label">Ghi chú hoàn cọc</label>
+                        <textarea name="ghi_chu_hoan_coc" class="form-control" rows="2" placeholder="Thông tin về việc hoàn cọc..."></textarea>
+                    </div>
+                </div>
+            </form>
+        </div>
+        
+        <script>
+        document.getElementById('status').addEventListener('change', function() {
+            const refundForm = document.getElementById('refund-form');
+            if (this.value === 'thanh_toan_coc') {
+                refundForm.style.display = 'block';
+            } else {
+                refundForm.style.display = 'none';
+            }
+        });
+        </script>
+
+        {{-- Sản phẩm --}}
+        <div class="product-section">
+            <div class="product-header">Sản phẩm</div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th class="col-product">Phân loại</th>
+                        <th class="col-price">Giá</th>
+                        <th class="col-quantity">Số lượng</th>
+                        <th class="col-total">Tổng</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @php
+                        $subtotal = 0;
+                    @endphp
+                    @forelse($log->borrow->items as $item)
+                        @php
+                            $itemPrice = $item->tien_thue ?? 0;
+                            $quantity = 1;
+                            $itemTotal = $itemPrice * $quantity;
+                            $subtotal += $itemTotal;
+                        @endphp
+                        <tr>
+                            <td class="col-product">{{ $item->book->ten_sach ?? 'Sách không xác định' }}</td>
+                            <td class="col-price">{{ number_format($itemPrice, 2) }}₫</td>
+                            <td class="col-quantity">{{ $quantity }}</td>
+                            <td class="col-total">{{ number_format($itemTotal, 0) }}.000₫</td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" style="text-align: center; padding: 40px; color: #999;">
+                                Không có sản phẩm nào
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+
+            {{-- Tổng kết --}}
+            <div class="summary-section">
+                <div class="summary-line">
+                    <div class="summary-label">Tạm tính:</div>
+                    <div class="summary-value">{{ number_format($subtotal, 0) }}.000₫</div>
+                </div>
+                <div class="summary-line">
+                    <div class="summary-label">Phí vận chuyển:</div>
+                    <div class="summary-value">{{ number_format($log->borrow->tien_ship ?? 0, 0) }}.000₫</div>
+                </div>
+                <div class="summary-line">
+                    <div class="summary-label">Giảm:</div>
+                    <div class="summary-value discount">- 0₫</div>
+                </div>
+                <div class="summary-line total-row">
+                    <div class="summary-label">Tổng cộng:</div>
+                    <div class="total-value">{{ number_format($log->borrow->tong_tien ?? ($subtotal + ($log->borrow->tien_ship ?? 0)), 0) }}.000₫</div>
+                </div>
+            </div>
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
         </div>
 
         {{-- Footer --}}

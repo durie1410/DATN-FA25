@@ -160,7 +160,11 @@ tạo phiếu mượn    </a>
                     <th style="width: 100px;">Tiền ship</th>
                     <th style="width: 100px;">Tiền thuê</th>
                     <th style="width: 100px;">Voucher</th>
+<<<<<<< HEAD
 <th style="min-width: 200px;">Trạng thái Items</th>
+=======
+<th style="min-width: 200px;">Trạng thái</th>
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                     <th style="width: 120px;">Tổng tiền</th>
                     <th style="width: 100px;">Chi tiết</th>
                     <th style="width: 180px;">Hành động</th>
@@ -472,10 +476,13 @@ if ($borrow->items && $borrow->items->count() > 0) {
                                                 $text = 'Hỏng';
                                                 $bgColor = '#6c757d';
                                                 break;
+<<<<<<< HEAD
                                             case 'Huy':
                                                 $text = 'Đã hủy';
                                                 $bgColor = '#6c757d';
                                                 break;
+=======
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                                             default: 
                                                 $text = $item->trang_thai; 
                                                 $bgColor = '#6c757d';

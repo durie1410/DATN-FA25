@@ -9,9 +9,12 @@ use App\Models\Book;
 use App\Models\Inventory;
 use App\Models\Borrow;
 use App\Models\Reader;
+<<<<<<< HEAD
 use App\Models\Wallet;
 use App\Models\BorrowPayment;
 use App\Services\ShippingService;
+=======
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -690,6 +693,7 @@ class OrderController extends Controller
             
             DB::beginTransaction();
             
+<<<<<<< HEAD
             try {
                 // Cập nhật trạng thái đơn mượn thành Hủy với lí do
                 $cancelNote = 'Đã hủy bởi khách hàng lúc ' . now()->format('d/m/Y H:i') . 
@@ -723,6 +727,29 @@ class OrderController extends Controller
                 throw $e;
             }
             
+=======
+            // Cập nhật trạng thái đơn mượn thành Hủy với lí do
+            $cancelNote = 'Đã hủy bởi khách hàng lúc ' . now()->format('d/m/Y H:i') . 
+                         '. Lí do: ' . $validated['cancellation_reason'];
+            
+            $borrow->update([
+                'trang_thai' => 'Huy',
+                'ghi_chu' => ($borrow->ghi_chu ? $borrow->ghi_chu . ' | ' : '') . $cancelNote
+            ]);
+            
+            // Cập nhật trạng thái các BorrowItem
+            foreach ($borrow->items as $item) {
+                $item->update(['trang_thai' => 'Huy']);
+                
+                // Hoàn lại inventory về trạng thái "Co san" nếu đã bị lock
+                if ($item->inventory && $item->inventory->status === 'Cho muon') {
+                    $item->inventory->update(['status' => 'Co san']);
+                }
+            }
+            
+            DB::commit();
+            
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
             \Log::info('Borrow cancelled by customer', [
                 'borrow_id' => $borrow->id,
                 'reader_id' => $reader->id,

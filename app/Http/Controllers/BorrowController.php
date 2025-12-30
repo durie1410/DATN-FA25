@@ -81,6 +81,7 @@ class BorrowController extends Controller
         $borrows->getCollection()->transform(function($borrow) {
             // Reload hoàn toàn từ database để tránh cache
             $borrow = Borrow::with(['reader', 'librarian', 'items', 'voucher'])->find($borrow->id);
+<<<<<<< HEAD
             
             // Đồng bộ tien_ship từ items lên borrow nếu borrow->tien_ship = 0
             if ($borrow && $borrow->items && $borrow->items->count() > 0) {
@@ -111,6 +112,13 @@ class BorrowController extends Controller
         
         return response()
             ->view('admin.borrows.index', compact('borrows', 'stats'))
+=======
+            return $borrow;
+        });
+        
+        return response()
+            ->view('admin.borrows.index', compact('borrows'))
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
             ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
             ->header('Pragma', 'no-cache')
             ->header('Expires', '0');

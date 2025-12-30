@@ -10,7 +10,10 @@
         <nav class="header-nav">
             <ul>
                 <li><a href="{{ route('home') }}"><i class="fas fa-home"></i> Trang chủ</a></li>
+<<<<<<< HEAD
                 <li><a href="{{ route('pricing.policy') }}"><i class="fas fa-tags"></i> Chính sách giá</a></li>
+=======
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                 @auth
                     <li><a href="{{ route('account') }}"><i class="fas fa-user"></i> Tài khoản</a></li>
                     <li>

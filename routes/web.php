@@ -15,6 +15,7 @@ use App\Http\Controllers\FineController;
 use App\Http\Controllers\AdvancedSearchController;
 use App\Http\Controllers\AdvancedStatisticsController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\ChatController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\VoucherController;
@@ -37,6 +38,7 @@ use App\Http\Controllers\VnPayController;
 Route::get('/csrf-token', [App\Http\Controllers\CsrfController::class, 'getToken'])->name('csrf.token');
 Route::post('/csrf-refresh', [App\Http\Controllers\CsrfController::class, 'refreshToken'])->name('csrf.refresh');
 
+<<<<<<< HEAD
 // Route để fix cột users table - TỰ ĐỘNG CHẠY KHI TRUY CẬP
 Route::get('/fix-users-table-columns', function() {
     try {
@@ -147,6 +149,14 @@ Route::get('/admin/fix-add-column-now', function() {
     }
 })->name('fix.add.column');
 
+=======
+// Chat widget routes
+Route::prefix('chat')->group(function () {
+    Route::get('/messages', [ChatController::class, 'index'])->name('chat.messages.index');
+    Route::post('/messages', [ChatController::class, 'store'])->name('chat.messages.store');
+});
+
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
 // Frontend Routes
 Route::get('/', [HomeController::class, 'trangchu'])->name('home');
 Route::get('/home', function() { return redirect()->route('home'); });
@@ -305,6 +315,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
      Route::post('borrows/{id}/process', [BorrowController::class, 'processBorrow'])->name('borrows.process');
      Route::post('borrows/{id}/approve', [BorrowController::class, 'approve'])->name('borrows.approve')->middleware('permission:edit-borrows');
 
+<<<<<<< HEAD
      // ===== 11 TRẠNG THÁI MỚI - Quản lý quy trình vận chuyển =====
      Route::post('borrows/{id}/confirm-order', [BorrowController::class, 'confirmOrder'])->name('borrows.confirm-order')->middleware('permission:edit-borrows');
      Route::post('borrows/{id}/complete-packaging', [BorrowController::class, 'completePackaging'])->name('borrows.complete-packaging')->middleware('permission:edit-borrows');
@@ -319,6 +330,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
      Route::get('borrows/{id}/status-detail', [BorrowController::class, 'statusDetail'])->name('borrows.status-detail')->middleware('permission:view-borrows');
      // ============================================================
 
+=======
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
      Route::post('borrow-items/{id}/return', [BorrowController::class, 'returnItem'])->name('borrowitems.return');
       ///////////////////////////////////////////////////////////////////////
       Route::post('borrowitems/{id}/approve', [BorrowItemController::class, 'approve'])
@@ -371,6 +384,7 @@ Route::delete('/shipping-logs/{id}', [ShippingLogController::class, 'destroy'])
 
 
 Route::resource('vouchers', VoucherController::class);
+Route::post('vouchers/validate', [VoucherController::class, 'validateCode'])->name('vouchers.validate');
 
       Route::get('vouchers/{id}/restore', [VoucherController::class, 'restore'])->name('admin.vouchers.restore');
       Route::delete('vouchers/{id}/force-delete', [VoucherController::class, 'forceDelete'])->name('admin.vouchers.forceDelete');
@@ -447,6 +461,11 @@ Route::resource('vouchers', VoucherController::class);
       Route::post('bulk-operations/books/import', [App\Http\Controllers\Admin\BulkOperationController::class, 'bulkImportBooks'])->name('bulk-operations.books.import')->middleware('permission:manage-bulk-operations');
       Route::get('bulk-operations/books/export', [App\Http\Controllers\Admin\BulkOperationController::class, 'exportBooks'])->name('bulk-operations.books.export')->middleware('permission:manage-bulk-operations');
       Route::get('bulk-operations/stats', [App\Http\Controllers\Admin\BulkOperationController::class, 'getStats'])->name('bulk-operations.stats')->middleware('permission:manage-bulk-operations');
+
+      // Support chat admin routes
+      Route::get('chat', [App\Http\Controllers\Admin\ChatAdminController::class, 'index'])->name('chat.index');
+      Route::get('chat/{sessionId}', [App\Http\Controllers\Admin\ChatAdminController::class, 'show'])->name('chat.show');
+      Route::post('chat/{sessionId}/reply', [App\Http\Controllers\Admin\ChatAdminController::class, 'reply'])->name('chat.reply');
       
       // Advanced Statistics routes
       Route::get('statistics/advanced', [AdvancedStatisticsController::class, 'dashboard'])->name('statistics.advanced.dashboard')->middleware('permission:view-reports');
@@ -603,45 +622,177 @@ Route::prefix('vnpay')->name('vnpay.')->middleware('auth')->group(function () {
 // VnPay Callback (không cần auth vì VnPay gọi trực tiếp)
 Route::get('vnpay/callback', [VnPayController::class, 'callback'])->name('vnpay.callback');
 
-// Debug VnPay Payment URL
-Route::get('debug-vnpay-payment', function() {
-    $vnpayService = app(\App\Services\VnPayService::class);
-    
-    $paymentData = [
-        'amount' => 100000, // 100k test
-        'order_info' => "Test Payment #123",
-        'order_id' => 'TEST' . time(),
-        'order_type' => 'billpayment'
-    ];
-    
-    $paymentUrl = $vnpayService->createPaymentUrl($paymentData, request());
-    
-    return response()->json([
-        'payment_url' => $paymentUrl,
-        'config' => [
-            'tmn_code' => config('services.vnpay.tmn_code'),
-            'hash_secret_exists' => !empty(config('services.vnpay.hash_secret')),
-        ]
-    ]);
-})->name('debug.vnpay');
+// Debug VnPay Payment URL (Development only)
+if (config('app.debug')) {
+    Route::get('debug-vnpay-payment', function() {
+        $vnpayService = app(\App\Services\VnPayService::class);
+        
+        $paymentData = [
+            'amount' => 100000, // 100k test
+            'order_info' => "Test Payment #123",
+            'order_id' => 'TEST' . time(),
+            'order_type' => 'billpayment'
+        ];
+        
+        $paymentUrl = $vnpayService->createPaymentUrl($paymentData, request());
+        
+        return response()->json([
+            'payment_url' => $paymentUrl,
+            'config' => [
+                'tmn_code' => config('services.vnpay.tmn_code'),
+                'hash_secret_exists' => !empty(config('services.vnpay.hash_secret')),
+            ]
+        ]);
+    })->name('debug.vnpay');
 
-// Test VnPay Configuration (Development only - xóa khi production)
-Route::get('test-vnpay-config', function() {
+    // Test VnPay Configuration
+    Route::get('test-vnpay-config', function() {
+        $config = config('services.vnpay');
+        
+        return response()->json([
+            'status' => 'VnPay Configuration Check',
+            'tmn_code' => $config['tmn_code'] ?: '❌ CHƯA CẤU HÌNH - Cần thêm VNPAY_TMN_CODE vào .env',
+            'hash_secret' => $config['hash_secret'] ? '✅ Đã cấu hình' : '❌ CHƯA CẤU HÌNH - Cần thêm VNPAY_HASH_SECRET vào .env',
+            'url' => $config['url'],
+            'return_url' => $config['return_url'],
+            'version' => $config['version'],
+            'command' => $config['command'],
+            'curr_code' => $config['curr_code'],
+            'locale' => $config['locale'],
+            'note' => 'Hãy đảm bảo cả TMN_CODE và HASH_SECRET đều được cấu hình đúng'
+        ], 200, [], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    })->name('test.vnpay.config');
+
+    // VNPay Debug Page - Giao diện đẹp để kiểm tra config
+    Route::get('vnpay-debug', function() {
+        return view('vnpay-debug');
+    })->name('vnpay.debug');
+
+    // VNPay Fix Page - Sửa lỗi one-click
+    Route::get('vnpay-fix', function() {
+        return view('vnpay-fix');
+    })->name('vnpay.fix');
+
+    // VNPay Test Callback - Test page
+    Route::get('vnpay-test', function() {
+        return view('vnpay-test-callback');
+    })->name('vnpay.test');
+
+    // VNPay Test Signature - API test
+    Route::post('vnpay-test-signature', function() {
     $config = config('services.vnpay');
     
+    // Tạo test data giống VNPay callback
+    $testData = [
+        'vnp_Amount' => '10000000',
+        'vnp_BankCode' => 'NCB',
+        'vnp_CardType' => 'ATM',
+        'vnp_OrderInfo' => 'Test Payment',
+        'vnp_PayDate' => '20251203103000',
+        'vnp_ResponseCode' => '00',
+        'vnp_TmnCode' => $config['tmn_code'],
+        'vnp_TransactionNo' => '14374354',
+        'vnp_TxnRef' => 'TEST' . time(),
+    ];
+    
+    // Tính hash
+    ksort($testData);
+    $hashData = http_build_query($testData, '', '&');
+    $computedHash = hash_hmac('sha512', $hashData, $config['hash_secret']);
+    
+        return response()->json([
+            'config' => [
+                'tmn_code' => $config['tmn_code'],
+                'hash_secret_length' => strlen($config['hash_secret']),
+                'hash_secret_correct' => $config['hash_secret'] === 'LYS57TC0V5NARXASTFT3Y0D50NHNPWEZ',
+            ],
+            'test_data' => $testData,
+            'hash_data' => $hashData,
+            'computed_hash' => $computedHash,
+            'hash_preview' => substr($computedHash, 0, 20) . '...',
+        ]);
+    })->name('vnpay.test.signature');
+}
+
+// VNPay Clear Session
+Route::post('vnpay-clear-session', function() {
+    session()->flush();
+    session()->regenerate();
+    
     return response()->json([
-        'status' => 'VnPay Configuration Check',
-        'tmn_code' => $config['tmn_code'] ?: '❌ CHƯA CẤU HÌNH - Cần thêm VNPAY_TMN_CODE vào .env',
-        'hash_secret' => $config['hash_secret'] ? '✅ Đã cấu hình' : '❌ CHƯA CẤU HÌNH - Cần thêm VNPAY_HASH_SECRET vào .env',
-        'url' => $config['url'],
-        'return_url' => $config['return_url'],
-        'version' => $config['version'],
-        'command' => $config['command'],
-        'curr_code' => $config['curr_code'],
-        'locale' => $config['locale'],
-        'note' => 'Hãy đảm bảo cả TMN_CODE và HASH_SECRET đều được cấu hình đúng'
-    ], 200, [], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-})->name('test.vnpay.config');
+        'success' => true,
+        'message' => 'Session cleared successfully'
+    ]);
+})->name('vnpay.clear.session');
+
+// VNPay Fix Execute - API để sửa lỗi
+Route::post('vnpay-fix-execute', function() {
+    try {
+        $envFile = base_path('.env');
+        
+        if (!file_exists($envFile)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File .env không tồn tại'
+            ]);
+        }
+        
+        $lines = file($envFile, FILE_IGNORE_NEW_LINES);
+        $updated = false;
+        $foundTMN = false;
+        $foundHash = false;
+        $foundURL = false;
+        
+        foreach ($lines as $key => $line) {
+            if (strpos($line, 'VNPAY_TMN_CODE=') === 0) {
+                $lines[$key] = 'VNPAY_TMN_CODE=E6I8Z7HX';
+                $foundTMN = true;
+                $updated = true;
+            }
+            if (strpos($line, 'VNPAY_HASH_SECRET=') === 0) {
+                $lines[$key] = 'VNPAY_HASH_SECRET=LYS57TC0V5NARXASTFT3Y0D50NHNPWEZ';
+                $foundHash = true;
+                $updated = true;
+            }
+            if (strpos($line, 'VNPAY_URL=') === 0) {
+                $lines[$key] = 'VNPAY_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
+                $foundURL = true;
+                $updated = true;
+            }
+        }
+        
+        if (!$foundTMN) {
+            $lines[] = 'VNPAY_TMN_CODE=E6I8Z7HX';
+            $updated = true;
+        }
+        if (!$foundHash) {
+            $lines[] = 'VNPAY_HASH_SECRET=LYS57TC0V5NARXASTFT3Y0D50NHNPWEZ';
+            $updated = true;
+        }
+        if (!$foundURL) {
+            $lines[] = 'VNPAY_URL=https://sandbox.vnpayment.vn/paymentv2/vpcpay.html';
+            $updated = true;
+        }
+        
+        file_put_contents($envFile, implode("\n", $lines));
+        
+        // Clear cache
+        \Artisan::call('config:clear');
+        \Artisan::call('cache:clear');
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Đã cập nhật cấu hình VNPay thành công',
+            'details' => "TMN_CODE: E6I8Z7HX\nHASH_SECRET: Đã cấu hình (32 ký tự)\nURL: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html\n\nĐã clear cache thành công!"
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage()
+        ]);
+    }
+})->name('vnpay.fix.execute');
 
 // VNPay Debug Page - Giao diện đẹp để kiểm tra config
 Route::get('vnpay-debug', function() {

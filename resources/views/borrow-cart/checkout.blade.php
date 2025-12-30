@@ -71,6 +71,7 @@
         background: linear-gradient(135deg,#f97316 0%,#ea580c 100%) !important; color:#fff !important;
         border:none !important; padding:14px 28px !important; border-radius:10px !important;
         font-weight:600 !important; font-size:1rem !important; box-shadow:0 4px 15px rgba(249,115,22,0.3) !important;
+<<<<<<< HEAD
     }
     .btn-checkout:hover { transform:translateY(-2px) !important; box-shadow:0 6px 20px rgba(249,115,22,0.4) !important; }
     .btn-checkout:disabled { opacity:0.7 !important; cursor:not-allowed !important; transform:none !important; }
@@ -104,7 +105,11 @@
     }
     .form-label i { 
         color: #3b82f6; 
+=======
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
     }
+    .btn-checkout:hover { transform:translateY(-2px) !important; box-shadow:0 6px 20px rgba(249,115,22,0.4) !important; }
+    .btn-checkout:disabled { opacity:0.7 !important; cursor:not-allowed !important; transform:none !important; }
 </style>
 @endpush
 
@@ -185,7 +190,11 @@
                                         <div class="payment-icon"><i class="fas fa-wallet" style="color:#8b5cf6;font-size:2rem"></i></div>
                                         <div class="payment-info">
                                             <h6 style="margin-bottom:4px;color:var(--checkout-text)">Thanh toán bằng ví</h6>
+<<<<<<< HEAD
                                             <small class="text-muted">Số dư hiện tại: <strong style="color:#10b981">{{ number_format($walletBalance ?? 0, 0, ',', '.') }}₫</strong> - <a href="{{ route('account.wallet') }}" style="color:#ef4444;text-decoration:none">Nạp thêm</a></small>
+=======
+                                            <small class="text-muted">Số dư hiện tại: 0đ - <span style="color:#ef4444">Nạp thêm</span></small>
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                                         </div>
                                         <div class="payment-check"><i class="fas fa-check-circle"></i></div>
                                     </label>
@@ -235,6 +244,7 @@
                             </div>
                         </div>
 
+<<<<<<< HEAD
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <div class="input-icon-wrapper">
@@ -246,11 +256,31 @@
                             <div class="col-md-6 mb-3">
                                 <label class="form-label text-muted mb-1"><i class="fas fa-birthday-cake me-1"></i>Ngày sinh <span class="text-danger">*</span></label>
                                 <input type="date" class="form-control" id="reader_birthday" name="reader_birthday" value="{{ $reader->ngay_sinh ? $reader->ngay_sinh->format('Y-m-d') : (auth()->user()->ngay_sinh ? auth()->user()->ngay_sinh->format('Y-m-d') : '') }}" required>
+=======
+                        @php
+                            $addressParts = explode(',', $reader->dia_chi ?? '');
+                            $tinh = count($addressParts) > 2 ? trim($addressParts[count($addressParts)-1]) : 'Hà Nội';
+                            $huyen = count($addressParts) > 1 ? trim($addressParts[count($addressParts)-2]) : '';
+                            $xa = count($addressParts) > 0 ? trim($addressParts[0]) : '';
+                        @endphp
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <select class="form-select" id="tinh_thanh" name="tinh_thanh">
+                                    <option value="Hà Nội" {{ $tinh == 'Hà Nội' ? 'selected' : '' }}>Hà Nội</option>
+                                    <option value="Hồ Chí Minh" {{ $tinh == 'Hồ Chí Minh' ? 'selected' : '' }}>Hồ Chí Minh</option>
+                                    <option value="Đà Nẵng" {{ $tinh == 'Đà Nẵng' ? 'selected' : '' }}>Đà Nẵng</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <input type="text" class="form-control" id="huyen" name="huyen" value="{{ $huyen }}" placeholder="Quận/Huyện">
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
+<<<<<<< HEAD
                                 <label class="form-label text-muted mb-1"><i class="fas fa-venus-mars me-1"></i>Giới tính <span class="text-danger">*</span></label>
                                 <select class="form-select" id="reader_gender" name="reader_gender" required>
                                     <option value="">-- Chọn giới tính --</option>
@@ -442,6 +472,15 @@
                             </div>
                         </div>
 
+=======
+                                <input type="text" class="form-control" id="xa" name="xa" value="{{ $xa }}" placeholder="Phường/Xã">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <input type="text" class="form-control" id="so_nha" name="so_nha" placeholder="Số nhà">
+                            </div>
+                        </div>
+
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                         <div class="mb-3">
                             <textarea class="form-control" id="notes" name="notes" rows="2" placeholder="Nhập ghi chú (không bắt buộc)"></textarea>
                         </div>
@@ -477,7 +516,11 @@
                                             <td>
                                                 <div class="d-flex align-items-center">
                                                     @if(!empty($item['book']->hinh_anh))
+<<<<<<< HEAD
                                                         <img src="{{ $item['book']->image_url }}" alt="{{ $item['book']->ten_sach }}" style="width:50px;height:70px;object-fit:cover;border-radius:4px;margin-right:15px;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+=======
+                                                        <img src="{{ asset('storage/books/' . $item['book']->hinh_anh) }}" alt="{{ $item['book']->ten_sach }}" style="width:50px;height:70px;object-fit:cover;border-radius:4px;margin-right:15px;">
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                                                     @else
                                                         <div style="width:50px;height:70px;background:#e2e8f0;border-radius:4px;margin-right:15px;display:flex;align-items:center;justify-content:center;">
                                                             <i class="fas fa-book" style="color:#94a3b8"></i>
@@ -501,12 +544,19 @@
                                         @endforelse
                                     @else
                                         @forelse($cart->items ?? [] as $item)
+<<<<<<< HEAD
                                         @if($item->book)
+=======
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                                         <tr>
                                             <td>
                                                 <div class="d-flex align-items-center">
                                                     @if(!empty($item->book->hinh_anh))
+<<<<<<< HEAD
                                                         <img src="{{ $item->book->image_url }}" alt="{{ $item->book->ten_sach }}" style="width:50px;height:70px;object-fit:cover;border-radius:4px;margin-right:15px;" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+=======
+                                                        <img src="{{ asset('storage/books/' . $item->book->hinh_anh) }}" alt="{{ $item->book->ten_sach }}" style="width:50px;height:70px;object-fit:cover;border-radius:4px;margin-right:15px;">
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                                                     @else
                                                         <div style="width:50px;height:70px;background:#e2e8f0;border-radius:4px;margin-right:15px;display:flex;align-items:center;justify-content:center;">
                                                             <i class="fas fa-book" style="color:#94a3b8"></i>
@@ -527,7 +577,10 @@
                                         @if(!$loop->last)
                                         <tr><td colspan="4"><hr style="margin:10px 0;"></td></tr>
                                         @endif
+<<<<<<< HEAD
                                         @endif
+=======
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                                         @empty
                                         <tr><td colspan="4" class="text-center py-4" style="color:#94a3b8">Giỏ sách trống</td></tr>
                                         @endforelse
@@ -553,6 +606,7 @@
                         @if(isset($fromUrl) && $fromUrl && isset($items))
                             @php
                                 $itemsCollect = collect($items ?? []);
+<<<<<<< HEAD
                                 // Tính tổng tiền cọc và tiền thuê (nhân với số lượng)
                                 $sumTienCoc = $itemsCollect->sum(function($item) {
                                     return ($item['tien_coc'] ?? 0) * ($item['quantity'] ?? 1);
@@ -561,6 +615,12 @@
                                     return ($item['tien_thue'] ?? 0) * ($item['quantity'] ?? 1);
                                 });
                                 // Note: $totalTienShip và $tongTien đã được tính trong controller
+=======
+                                $sumTienCoc = $itemsCollect->sum('tien_coc');
+                                $sumTienThue = $itemsCollect->sum('tien_thue');
+                                $sumTienShip = $itemsCollect->sum('tien_ship');
+                                $sumTotal = ($sumTienCoc + $sumTienThue + $sumTienShip);
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                             @endphp
 
                             <div class="summary-row">
@@ -585,15 +645,25 @@
                         @endif
 
                         <div class="summary-row mb-3" style="padding-bottom:12px;border-bottom:1px dashed #e2e8f0">
+<<<<<<< HEAD
                             <span class="summary-label">Giảm giá SP:</span>
                             <span class="summary-value" id="product_discount">-0₫</span>
+=======
+                            <span class="summary-label">Giảm giá:</span>
+                            <span class="summary-value">-0₫</span>
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                         </div>
 
                         <div class="discount-section mb-3">
                             <div class="input-group">
                                 <span class="input-group-text bg-white" style="border-right:0;"><i class="fas fa-tag" style="color:#64748b"></i></span>
+<<<<<<< HEAD
                                 <input type="text" class="form-control" id="discount_code" name="discount_code" placeholder="Nhập mã giảm giá" style="border-left:0;" value="{{ old('discount_code') }}">
                                 <button class="btn btn-success" type="button" onclick="applyDiscount()" id="apply_voucher_btn">Áp dụng</button>
+=======
+                                <input type="text" class="form-control" id="discount_code" name="discount_code" placeholder="Nhập mã giảm giá" style="border-left:0;">
+                                <button class="btn btn-success" type="button" onclick="applyDiscount()">Áp dụng</button>
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                             </div>
                             <div id="voucher_message" class="mt-2" style="font-size:0.85rem;"></div>
                             <input type="hidden" id="voucher_id" name="voucher_id" value="">
@@ -601,12 +671,18 @@
 
                         <div class="summary-row">
                             <span class="summary-label">Tạm tính:</span>
+<<<<<<< HEAD
                             <span class="summary-value text-primary" id="subtotal_amount">
                                 @if(isset($fromUrl) && $fromUrl && isset($items))
                                     @php
                                         $subtotal = ($sumTienCoc ?? 0) + ($sumTienThue ?? 0);
                                     @endphp
                                     {{ number_format($subtotal,0,',','.') }}₫
+=======
+                            <span class="summary-value text-primary">
+                                @if(isset($fromUrl) && $fromUrl && isset($items))
+                                    {{ number_format(($sumTienCoc + $sumTienThue),0,',','.') }}₫
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                                 @else
                                     {{ number_format(($totalTienCoc ?? 0) + ($totalTienThue ?? 0),0,',','.') }}₫
                                 @endif
@@ -615,11 +691,16 @@
 
                         <div class="summary-row">
                             <span class="summary-label">Giảm giá đơn:</span>
+<<<<<<< HEAD
                             <span class="summary-value text-success" id="order_discount">-0₫</span>
+=======
+                            <span class="summary-value">-0₫</span>
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                         </div>
 
                         <div class="summary-row mb-3">
                             <span class="summary-label">Phí vận chuyển:</span>
+<<<<<<< HEAD
                             <span class="summary-value" id="shipping-fee-display">
                                 {{-- Sử dụng $totalTienShip cho cả 2 trường hợp --}}
                                 {{ number_format($totalTienShip ?? 0,0,',','.') }}₫
@@ -643,6 +724,29 @@
                             <span class="summary-value" style="font-size:1.4rem;font-weight:700;color:#ef4444" id="total_payment">
                                 {{-- Sử dụng $tongTien đã được tính trong controller cho cả 2 trường hợp --}}
                                 {{ number_format($tongTien ?? 0,0,',','.') }}₫
+=======
+                            <span class="summary-value">
+                                @if(isset($fromUrl) && $fromUrl && isset($items))
+                                    {{ number_format($sumTienShip ?? 0,0,',','.') }}₫
+                                @else
+                                    {{ number_format($totalTienShip ?? 0,0,',','.') }}₫
+                                @endif
+                            </span>
+                        </div>
+
+                        <div class="shipping-info-box mb-3">
+                            <small style="color:#92400e;line-height:1.5"><i class="fas fa-info-circle me-1"></i> Phí ship tính theo đơn cứ sau 5km mỗi 1km tăng thêm 5 nghìn.</small>
+                        </div>
+
+                        <div class="summary-row total-payment mb-4">
+                            <span class="summary-label" style="font-size:1.1rem;font-weight:600">Thanh toán:</span>
+                            <span class="summary-value" style="font-size:1.4rem;font-weight:700;color:#ef4444">
+                                @if(isset($fromUrl) && $fromUrl && isset($items))
+                                    {{ number_format($sumTotal ?? 0,0,',','.') }}₫
+                                @else
+                                    {{ number_format($tongTien ?? 0,0,',','.') }}₫
+                                @endif
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                             </span>
                         </div>
 
@@ -676,6 +780,7 @@
 
 @section('scripts')
 <script>
+<<<<<<< HEAD
 console.log('📄 Checkout page script loaded');
 (function(){
     console.log('🔄 IIFE started - Initializing checkout page...');
@@ -831,6 +936,91 @@ console.log('📄 Checkout page script loaded');
                     if (shippingFeeDisplay) {
                         shippingFeeDisplay.textContent = new Intl.NumberFormat('vi-VN').format(shippingFee) + '₫';
                     }
+=======
+(function(){
+    function initBorrowCheckout(){
+        const form = document.getElementById('borrowCheckoutForm');
+        const btn = document.getElementById('confirmBorrowBtn');
+        if(!form || !btn) return false;
+
+        document.querySelectorAll('.payment-card').forEach(card=>{
+            card.addEventListener('click', function(){
+                const radio = this.previousElementSibling;
+                if(radio && radio.type === 'radio') radio.checked = true;
+            });
+        });
+
+        let borrowToast;
+        try {
+            const el = document.getElementById('borrowToast');
+            if(el && window.bootstrap && bootstrap.Toast) borrowToast = new bootstrap.Toast(el);
+        } catch(e){ console.error(e); }
+
+        function showToast(type, message){
+            const el = document.getElementById('borrowToast');
+            const msg = document.getElementById('toastMessage');
+            if(!el || !msg){ alert(message); return; }
+            msg.textContent = message;
+            const icon = el.querySelector('.toast-header i');
+            if(icon){
+                icon.className = type === 'success' ? 'fas fa-check-circle text-success me-2' : 'fas fa-exclamation-circle text-danger me-2';
+                if(type === 'success') el.classList.remove('bg-danger'); else el.classList.add('bg-danger');
+            }
+            if(borrowToast) borrowToast.show(); else alert(message);
+        }
+
+        form.addEventListener('submit', function(e){
+            e.preventDefault(); e.stopPropagation();
+            const original = btn.innerHTML;
+            const name = document.getElementById('reader_name')?.value?.trim();
+            const phone = document.getElementById('reader_phone')?.value?.trim();
+            const email = document.getElementById('reader_email')?.value?.trim();
+            const payment = document.querySelector('input[name="payment_method"]:checked');
+
+            if(!name){ showToast('error','Vui lòng nhập họ và tên'); return; }
+            if(!phone){ showToast('error','Vui lòng nhập số điện thoại'); return; }
+            if(!email){ showToast('error','Vui lòng nhập email'); return; }
+            if(!payment){ showToast('error','Vui lòng chọn phương thức thanh toán'); return; }
+            if(!confirm('Bạn có chắc chắn muốn mượn tất cả các sách này?')) return;
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang xử lý...'; btn.disabled = true;
+
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || document.querySelector('input[name="_token"]')?.value;
+            if(!csrfToken){ showToast('error','Không tìm thấy token bảo mật. Vui lòng tải lại trang.'); btn.innerHTML = original; btn.disabled = false; return; }
+
+            const data = new FormData(form);
+
+            fetch('{{ route("borrow-cart.process-checkout") }}', {
+                method: 'POST',
+                body: data,
+                headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(async res=>{
+                const ct = res.headers.get('content-type') || '';
+                if(!ct.includes('application/json')){
+                    const text = await res.text();
+                    if(text.includes('vnpayment.vn')){
+                        const m = text.match(/https?:\/\/[\w\-\./?&=:%]+vnpayment\.vn[^\s"']*/);
+                        if(m && m[0]){ showToast('success','Chuyển đến cổng thanh toán...'); setTimeout(()=>window.location.href = m[0], 800); return; }
+                    }
+                    showToast('error','Phản hồi từ server không đúng định dạng'); btn.innerHTML = original; btn.disabled = false; return;
+                }
+                const json = await res.json();
+                if(!res.ok){
+                    let err = json.message || 'Có lỗi xảy ra';
+                    if(json.errors){ err = Object.values(json.errors).flat().join(', '); }
+                    showToast('error', err);
+                    if(json.redirect) setTimeout(()=>window.location.href = json.redirect, 1200);
+                    else { btn.innerHTML = original; btn.disabled = false; }
+                    return;
+                }
+                if(json.success){
+                    if(json.payment_required && json.payment_url){ showToast('success','Đang chuyển đến trang thanh toán...'); setTimeout(()=>window.location.href = json.payment_url,800); return; }
+                    showToast('success', json.message || 'Tạo yêu cầu thành công');
+                    setTimeout(()=>window.location.href = json.redirect_url || '{{ route("account.borrowed-books") }}', 900);
+                } else {
+                    showToast('error', json.message || 'Có lỗi xảy ra'); btn.innerHTML = original; btn.disabled = false;
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                 }
                 updateTotalPayment();
                 return;
@@ -928,6 +1118,7 @@ console.log('📄 Checkout page script loaded');
                 }
                 updateTotalPayment();
             })
+<<<<<<< HEAD
             .catch(error => {
                 // Chỉ log lỗi một lần để tránh spam
                 if (!window.shippingErrorLogged) {
@@ -944,9 +1135,16 @@ console.log('📄 Checkout page script loaded');
                     shippingInfo.style.display = 'none';
                 }
                 updateTotalPayment();
+=======
+            .catch(err=>{
+                console.error('Fetch Error:', err);
+                showToast('error', 'Lỗi kết nối: ' + (err.message || err));
+                btn.innerHTML = original; btn.disabled = false;
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
             });
         }
 
+<<<<<<< HEAD
         function updateTotalPayment() {
             if (!totalPaymentEl) return;
             
@@ -1471,7 +1669,25 @@ console.log('📄 Checkout page script loaded');
             initBorrowCheckout();
         }
     }, 2000);
+=======
+        window.applyDiscount = function(){
+            const code = document.getElementById('discount_code')?.value?.trim();
+            if(!code){ showToast('error','Vui lòng nhập mã giảm giá'); return; }
+            showToast('error','Tính năng mã giảm giá đang được phát triển');
+        };
+
+        return true;
+    }
+
+    if(document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', initBorrowCheckout);
+    } else initBorrowCheckout();
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
 })();
 console.log('📄 Checkout page script execution completed');
 </script>
+<<<<<<< HEAD
 @endsection
+=======
+@endpush
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1

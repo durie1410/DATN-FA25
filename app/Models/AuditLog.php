@@ -20,7 +20,6 @@ class AuditLog extends Model
         'user_agent',
         'url',
         'method',
-        'description',
     ];
 
     protected $casts = [

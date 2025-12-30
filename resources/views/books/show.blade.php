@@ -1835,6 +1835,7 @@
             const userId = {{ auth()->id() ?? 'null' }};
             const deliveryType = distance > 0 ? 'ship' : 'pickup';
             
+<<<<<<< HEAD
             // Gọi API để lấy giá
             const apiUrl = `/api/pricing/quote?book_ids[]={{ $book->id }}&kyc_status=${kycStatus}&delivery_type=${deliveryType}&distance=${distance}&days=${days}`;
             const finalUrl = userId ? `${apiUrl}&user_id=${userId}` : apiUrl;
@@ -1869,6 +1870,9 @@
             const formatCurrency = (amount) => {
                 return new Intl.NumberFormat('vi-VN').format(amount) + '₫';
             };
+=======
+            const payableNow = totalDeposit + totalShippingFee+ totalRentalFee;
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
             
             const content = `
                 <div class="borrow-info-section">
@@ -2429,8 +2433,12 @@ function confirmBorrowMultiple() {
     const items = [];
     daysInputs.forEach((daysInput, index) => {
         const days = parseInt(daysInput.value) || 14;
+<<<<<<< HEAD
         // Khoảng cách luôn là 0 - không cho nhập thủ công
         const distance = 0;
+=======
+        const distance = parseFloat(distanceInputs[index].value) || 0;
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
         
         if (days < 1 || days > 30) {
             alert(`Quyển ${index + 1}: Số ngày mượn phải từ 1 đến 30 ngày!`);

@@ -69,9 +69,12 @@ public function update(Request $request, $id)
             $borrow->trang_thai = 'Cho duyet';
         } elseif (in_array('Dang muon', $statuses)) {
             $borrow->trang_thai = 'Dang muon';
+<<<<<<< HEAD
         } elseif (in_array('Huy', $statuses) && count(array_unique($statuses)) === 1) {
             // Nếu TẤT CẢ items đều bị hủy
             $borrow->trang_thai = 'Huy';
+=======
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
         } else {
             $borrow->trang_thai = 'Da tra';
         }
@@ -642,9 +645,15 @@ public function updateStatus(Request $request, $id)
                 // Cập nhật trạng thái item
                 $item->update(['trang_thai' => 'Da tra']);
 
+<<<<<<< HEAD
                 // Cập nhật inventory về 'Co san' (Có sẵn)
                 if ($item->inventory) {
                     $item->inventory->update(['status' => 'Co san']);
+=======
+                // Cập nhật inventory về Available
+                if ($item->inventory) {
+                    $item->inventory->update(['status' => 'Available']);
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                 }
 
                 $message = 'Đã đánh dấu sách đã trả!';
@@ -682,6 +691,7 @@ public function updateStatus(Request $request, $id)
                     $inventory->update(['status' => 'Hong']);
                 }
 
+<<<<<<< HEAD
                 // Lưu vào fines với đầy đủ thông tin hư hỏng
                 $damageDescription = $request->input('damage_description', 'Sách bị hư hỏng khi trả');
                 $damageType = $request->input('damage_type', 'khac');
@@ -695,6 +705,9 @@ public function updateStatus(Request $request, $id)
                     }
                 }
                 
+=======
+                // Lưu vào fines
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                 Fine::create([
                     'borrow_id'      => $item->borrow_id,
                     'borrow_item_id' => $item->id,
@@ -702,6 +715,7 @@ public function updateStatus(Request $request, $id)
                     'amount'         => $phatGoc,
                     'type'           => 'damaged_book',
                     'description'    => 'Sách hỏng: ' . $book->ten_sach . ', tình trạng khi mượn: ' . $tinhTrangKhiMuon,
+<<<<<<< HEAD
                     'damage_description' => $damageDescription,
                     'damage_images' => !empty($damageImages) ? $damageImages : null,
                     'damage_severity' => 'trung_binh',
@@ -713,6 +727,10 @@ public function updateStatus(Request $request, $id)
                     'inspected_at' => now(),
                     'status'         => 'pending',
                     'due_date'       => now()->addDays(30),
+=======
+                    'status'         => 'pending',
+                    'due_date'       => now()->addDays(7),
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                     'created_by'     => auth()->id(),
                 ]);
 

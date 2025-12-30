@@ -45,7 +45,10 @@ class Borrow extends Model
         'trang_thai',
         'trang_thai_chi_tiet', // ✅ thêm trạng thái chi tiết
         'tinh_trang_sach',
+<<<<<<< HEAD
         'anh_hoan_tra', // Ảnh minh chứng hoàn trả sách từ khách hàng
+=======
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
         'phi_hong_sach',
         'tien_coc_hoan_tra',
         'tong_tien',
@@ -54,11 +57,15 @@ class Borrow extends Model
         'tien_ship',
         'voucher_id',
         'ghi_chu',
+<<<<<<< HEAD
         // Ghi chú chi tiết theo từng bước
+=======
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
         'ghi_chu_giao_hang',
         'ghi_chu_tra_hang',
         'ghi_chu_kiem_tra',
         'ghi_chu_hoan_coc',
+<<<<<<< HEAD
         'ghi_chu_dong_goi',
         'ghi_chu_ban_giao',
         'ghi_chu_that_bai',
@@ -73,10 +80,16 @@ class Borrow extends Model
         'ngay_that_bai_giao_hang',
         'ngay_bat_dau_luu_hanh',
         'ngay_yeu_cau_tra_sach',
+=======
+        'ngay_chuan_bi',
+        'ngay_bat_dau_giao',
+        'ngay_giao_thanh_cong',
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
         'ngay_bat_dau_tra',
         'ngay_nhan_tra',
         'ngay_kiem_tra',
         'ngay_hoan_coc',
+<<<<<<< HEAD
         // Xác nhận từ khách hàng
         'customer_confirmed_delivery',
         'customer_confirmed_delivery_at',
@@ -85,14 +98,19 @@ class Borrow extends Model
         'customer_rejected_delivery_at',
         'customer_rejection_reason',
         // Người xử lý
+=======
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
         'nguoi_chuan_bi_id',
         'nguoi_giao_hang_id',
         'nguoi_kiem_tra_id',
         'nguoi_hoan_coc_id',
+<<<<<<< HEAD
         // Thông tin vận chuyển
         'ma_van_don_di',
         'ma_van_don_ve',
         'don_vi_van_chuyen',
+=======
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
     ];
 
     protected $casts = [
@@ -304,6 +322,7 @@ public function nguoiHoanCoc()
     return $this->belongsTo(User::class, 'nguoi_hoan_coc_id');
 }
 
+<<<<<<< HEAD
 // ===================================
 // HELPER METHODS - Trạng thái
 // ===================================
@@ -538,4 +557,6 @@ public function calculateRefundDeposit()
         return $this;
     }
 
+=======
+>>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
 }

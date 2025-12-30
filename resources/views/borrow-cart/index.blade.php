@@ -1333,9 +1333,41 @@ function applyDiscountCode() {
         return;
     }
     
-    // TODO: Implement discount code validation API call
-    // For now, show a message that this feature is coming soon
-    showToast('Tính năng mã giảm giá đang được phát triển', 'info');
+    // Tính tổng tiền hiện tại (nếu có)
+    const totalAmount = parseFloat(document.querySelector('.cart-total')?.textContent?.replace(/[^\d]/g, '') || 0);
+    
+    // Gọi API validate voucher
+    fetch('{{ route("vouchers.validate") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        },
+        body: JSON.stringify({
+            code: code,
+            total_amount: totalAmount
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.valid) {
+            showToast('Áp dụng mã giảm giá thành công! Giảm ' + formatCurrency(data.voucher.discount_amount) + ' VNĐ', 'success');
+            // Có thể lưu voucher vào session/localStorage để áp dụng khi checkout
+            if (typeof(Storage) !== "undefined") {
+                localStorage.setItem('applied_voucher', JSON.stringify(data.voucher));
+            }
+        } else {
+            showToast(data.message || 'Mã giảm giá không hợp lệ', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error validating voucher:', error);
+        showToast('Có lỗi xảy ra khi kiểm tra mã giảm giá', 'error');
+    });
+}
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('vi-VN').format(amount);
 }
 
 function checkout() {
