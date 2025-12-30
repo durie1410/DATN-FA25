@@ -11,8 +11,14 @@ use App\Models\Inventory;
 use App\Models\BorrowItem;
 use App\Models\BorrowPayment;
 use App\Models\ShippingLog;
+use App\Models\Wallet;
+use App\Models\Fine;
+use App\Services\FileUploadService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class BorrowController extends Controller
 {
@@ -36,9 +42,26 @@ class BorrowController extends Controller
                 $query->whereHas('items', function($q) {
                     $q->where('trang_thai', 'Cho duyet');
                 });
+            } elseif ($request->trang_thai === 'Huy') {
+                $query->whereHas('items', function($q) {
+                    $q->where('trang_thai', 'Huy');
+                });
+            } elseif ($request->trang_thai === 'Mat sach') {
+                $query->whereHas('items', function($q) {
+                    $q->where('trang_thai', 'Mat sach');
+                });
+            } elseif ($request->trang_thai === 'Hong') {
+                $query->whereHas('items', function($q) {
+                    $q->where('trang_thai', 'Hong');
+                });
             } else {
                 $query->where('trang_thai', $request->trang_thai);
             }
+        }
+
+        // Filter theo trạng thái chi tiết (11 bước vận chuyển)
+        if ($request->filled('trang_thai_chi_tiet')) {
+            $query->where('trang_thai_chi_tiet', $request->trang_thai_chi_tiet);
         }
 
         if (!$request->filled('trang_thai')) {
@@ -54,13 +77,43 @@ class BorrowController extends Controller
 
         $borrows = $query->paginate(10);
         
-        // Đảm bảo refresh lại items cho mỗi borrow để có dữ liệu mới nhất
+        // Đảm bảo refresh lại items cho mỗi borrow để có dữ liệu mới nhất từ database
         $borrows->getCollection()->transform(function($borrow) {
-            $borrow->load('items');
+            // Reload hoàn toàn từ database để tránh cache
+            $borrow = Borrow::with(['reader', 'librarian', 'items', 'voucher'])->find($borrow->id);
+            
+            // Đồng bộ tien_ship từ items lên borrow nếu borrow->tien_ship = 0
+            if ($borrow && $borrow->items && $borrow->items->count() > 0) {
+                $tienShipFromItems = $borrow->items->sum('tien_ship');
+                if (floatval($borrow->tien_ship ?? 0) == 0 && $tienShipFromItems > 0) {
+                    $borrow->tien_ship = $tienShipFromItems;
+                    $borrow->save();
+                }
+            }
+            
             return $borrow;
         });
         
-        return view('admin.borrows.index', compact('borrows'));
+        // Tính toán thống kê từ toàn bộ database thay vì từ collection đã paginate
+        $stats = [
+            'dang_muon' => Borrow::where('trang_thai', 'Dang muon')->count(),
+            'qua_han' => Borrow::where('trang_thai', 'Qua han')->count(),
+            'da_tra' => Borrow::where('trang_thai', 'Da tra')->count(),
+            'huy' => Borrow::where('trang_thai', 'Huy')->count(),
+            'hong' => Borrow::whereHas('items', function($q) {
+                $q->where('trang_thai', 'Hong');
+            })->count(),
+            'mat_sach' => Borrow::whereHas('items', function($q) {
+                $q->where('trang_thai', 'Mat sach');
+            })->count(),
+            'tong' => Borrow::count(),
+        ];
+        
+        return response()
+            ->view('admin.borrows.index', compact('borrows', 'stats'))
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            ->header('Pragma', 'no-cache')
+            ->header('Expires', '0');
     }
 
     /* ============================================================
@@ -96,23 +149,40 @@ class BorrowController extends Controller
             ->with('success', 'Cho mượn sách thành công!');
     }
 
+
     /* ============================================================
         3) CHỈNH SỬA PHIẾU MƯỢN
     ============================================================ */
     public function edit($id)
     {
-        $borrow = Borrow::with(['items.book', 'items.inventory', 'reader', 'librarian'])->findOrFail($id);
+        $borrow = Borrow::with([
+            'items.book.category', 
+            'items.inventory', 
+            'reader', 
+            'librarian',
+            'voucher'
+        ])->findOrFail($id);
+        
         $readers = Reader::where('trang_thai', 'Hoat dong')->get();
         $books = Book::all();
         $librarians = User::where('role','admin')->get();
 
-        $vouchers = Voucher::where('reader_id', $borrow->reader_id)
-            ->where('kich_hoat', 1)
+        // Lấy danh sách voucher khả dụng
+        $vouchers = Voucher::where('kich_hoat', 1)
             ->where('trang_thai', 'active')
             ->whereDate('ngay_bat_dau', '<=', now())
             ->whereDate('ngay_ket_thuc', '>=', now())
-            ->where('so_luong', '>', 0)
-            ->get();
+            ->where('so_luong', '>', 0);
+        
+        // Nếu có reader_id thì lọc theo reader
+        if ($borrow->reader_id) {
+            $vouchers = $vouchers->where(function($query) use ($borrow) {
+                $query->where('reader_id', $borrow->reader_id)
+                      ->orWhereNull('reader_id');
+            });
+        }
+        
+        $vouchers = $vouchers->get();
 
         return view('admin.borrows.edit', compact(
             'borrow', 'readers', 'books', 'vouchers', 'librarians'
@@ -133,29 +203,14 @@ class BorrowController extends Controller
             'huyen' => 'required|string|max:255',
             'xa' => 'required|string|max:255',
             'so_nha' => 'required|string|max:255',
-            'trang_thai' => 'required|string|in:Dang muon,Da tra,Qua han,Mat sach',
             'ghi_chu' => 'nullable|string',
             'voucher_id' => 'nullable|exists:vouchers,id',
         ]);
 
         $borrow->update($data);
 
-        // Cập nhật tổng tiền
-        $totalShip = $borrow->items->sum('tien_ship');
-        $discount  = 0;
-
-        if ($borrow->voucher_id) {
-            $voucher = Voucher::find($borrow->voucher_id);
-            if ($voucher && $totalShip >= $voucher->don_toi_thieu) {
-                $discount = $voucher->loai === 'percentage'
-                    ? $totalShip * ($voucher->gia_tri / 100)
-                    : min($totalShip, $voucher->gia_tri);
-            }
-        }
-
-        $borrow->update([
-            'tong_tien' => max(0, $totalShip - $discount)
-        ]);
+        // Cập nhật lại tổng tiền
+        $borrow->recalculateTotals();
 
         return redirect()->route('admin.borrows.index')
             ->with('success', 'Cập nhật phiếu mượn thành công!');
@@ -272,6 +327,21 @@ class BorrowController extends Controller
             'trang_thai' => 'Da tra',
             'ngay_tra_thuc_te' => now()->toDateString(),
         ]);
+        
+        // Cập nhật trạng thái inventory từ 'Dang muon' về 'Co san' khi trả sách
+        if ($item->inventorie_id) {
+            \App\Models\Inventory::where('id', $item->inventorie_id)
+                ->where('status', 'Dang muon')
+                ->update([
+                    'status' => 'Co san',
+                    'updated_at' => now()
+                ]);
+            
+            \Log::info('Updated inventory status after returning book', [
+                'inventory_id' => $item->inventorie_id,
+                'borrow_item_id' => $item->id
+            ]);
+        }
 
         return back()->with('success','Đã trả sách!');
     }
@@ -296,18 +366,41 @@ class BorrowController extends Controller
                 'trang_thai' => 'Dang muon',
                 'ngay_muon' => $item->ngay_muon ?? now(),
             ]);
+            
+            // Cập nhật trạng thái inventory từ 'Co san' sang 'Dang muon'
+            if ($item->inventorie_id) {
+                \App\Models\Inventory::where('id', $item->inventorie_id)
+                    ->where('status', 'Co san')
+                    ->update([
+                        'status' => 'Dang muon',
+                        'updated_at' => now()
+                    ]);
+                
+                \Log::info('Updated inventory status after processing borrow', [
+                    'inventory_id' => $item->inventorie_id,
+                    'borrow_item_id' => $item->id
+                ]);
+            }
         }
 
-        BorrowPayment::create([
-            'borrow_id' => $borrow->id,
-            'amount'    => $borrow->tong_tien ?? 0,
-            'method'    => 'cash',
-            'status'    => 'pending',
-        ]);
+        // Kiểm tra và tạo payment nếu chưa có (chỉ tạo khi chưa có payment nào)
+        $existingPayment = BorrowPayment::where('borrow_id', $borrow->id)->first();
+        
+        if (!$existingPayment) {
+            // Nếu chưa có payment, tạo mới với COD mặc định
+            BorrowPayment::create([
+                'borrow_id' => $borrow->id,
+                'amount'    => $borrow->tong_tien ?? 0,
+                'payment_type' => 'deposit',
+                'payment_method' => 'offline',
+                'payment_status' => 'pending',
+                'note' => 'Thanh toán khi nhận hàng (COD) - Tiền cọc, phí thuê và phí vận chuyển',
+            ]);
+        }
 
         ShippingLog::create([
             'borrow_id' => $borrow->id,
-            'status'    => 'cho_xu_ly',
+            'status'    => 'don_hang_moi',
             'shipper_note' => 'Phiếu mượn đã xác nhận.',
         ]);
 
@@ -338,19 +431,42 @@ class BorrowController extends Controller
                 'trang_thai' => 'Dang muon',
                 'ngay_muon' => $item->ngay_muon ?? now(),
             ]);
+            
+            // Cập nhật trạng thái inventory từ 'Co san' sang 'Dang muon'
+            if ($item->inventorie_id) {
+                \App\Models\Inventory::where('id', $item->inventorie_id)
+                    ->where('status', 'Co san')
+                    ->update([
+                        'status' => 'Dang muon',
+                        'updated_at' => now()
+                    ]);
+                
+                \Log::info('Updated inventory status after approval', [
+                    'inventory_id' => $item->inventorie_id,
+                    'borrow_item_id' => $item->id
+                ]);
+            }
         }
 
-        // Tạo payment và shipping log
-        BorrowPayment::create([
-            'borrow_id' => $borrow->id,
-            'amount'    => $borrow->tong_tien ?? 0,
-            'method'    => 'cash',
-            'status'    => 'pending',
-        ]);
+        // Kiểm tra và tạo payment nếu chưa có (chỉ tạo khi chưa có payment nào)
+        $existingPayment = BorrowPayment::where('borrow_id', $borrow->id)->first();
+        
+        if (!$existingPayment) {
+            // Nếu chưa có payment, tạo mới với COD mặc định
+            BorrowPayment::create([
+                'borrow_id' => $borrow->id,
+                'amount'    => $borrow->tong_tien ?? 0,
+                'payment_type' => 'deposit',
+                'payment_method' => 'offline',
+                'payment_status' => 'pending',
+                'note' => 'Thanh toán khi nhận hàng (COD) - Tiền cọc, phí thuê và phí vận chuyển',
+            ]);
+        }
 
+        // Tạo shipping log
         ShippingLog::create([
             'borrow_id' => $borrow->id,
-            'status'    => 'cho_xu_ly',
+            'status'    => 'don_hang_moi',
             'shipper_note' => 'Phiếu mượn đã được duyệt và chuyển sang đang mượn.',
         ]);
 
@@ -405,7 +521,7 @@ public function clientCancel($id)
     $borrow = Borrow::where('reader_id', $readerId)->findOrFail($id);
 
     // Các trạng thái cho phép hủy
-    if (!in_array($borrow->trang_thai, ['chua_hoan_tat', 'Dang muon'])) {
+    if (!in_array($borrow->trang_thai, ['Cho duyet', 'Dang muon'])) {
         return back()->with('error', 'Không thể hủy đơn này.');
     }
 
@@ -413,6 +529,1179 @@ public function clientCancel($id)
     $borrow->save();
 
     return back()->with('success', 'Đơn đã được hủy.');
+}
+
+/* ============================================================
+    11) XỬ LÝ 11 TRẠNG THÁI MỚI
+============================================================ */
+
+/**
+ * Xác nhận đơn hàng mới -> Chuyển sang Đang chuẩn bị sách
+ */
+public function confirmOrder($id)
+{
+    $borrow = Borrow::findOrFail($id);
+    
+    try {
+        $borrow->transitionTo(
+            Borrow::STATUS_DANG_CHUAN_BI_SACH,
+            request('ghi_chu'),
+            auth()->id()
+        );
+        
+        return back()->with('success', 'Đã xác nhận đơn hàng. Bắt đầu chuẩn bị sách.');
+    } catch (\Exception $e) {
+        return back()->with('error', $e->getMessage());
+    }
+}
+
+/**
+ * Hoàn thành đóng gói -> Chuyển sang Chờ bàn giao vận chuyển
+ */
+public function completePackaging($id)
+{
+    $borrow = Borrow::findOrFail($id);
+    
+    $request = request();
+    $request->validate([
+        'ma_van_don_di' => 'nullable|string|max:100',
+        'don_vi_van_chuyen' => 'nullable|string|max:100',
+    ]);
+    
+    try {
+        // Cập nhật thông tin vận đơn
+        if ($request->filled('ma_van_don_di')) {
+            $borrow->ma_van_don_di = $request->ma_van_don_di;
+        }
+        if ($request->filled('don_vi_van_chuyen')) {
+            $borrow->don_vi_van_chuyen = $request->don_vi_van_chuyen;
+        }
+        $borrow->save();
+        
+        $borrow->transitionTo(
+            Borrow::STATUS_CHO_BAN_GIAO_VAN_CHUYEN,
+            $request->ghi_chu,
+            auth()->id()
+        );
+        
+        return back()->with('success', 'Đã hoàn thành đóng gói. Chờ bàn giao vận chuyển.');
+    } catch (\Exception $e) {
+        return back()->with('error', $e->getMessage());
+    }
+}
+
+/**
+ * Bàn giao cho shipper -> Chuyển sang Đang giao hàng
+ */
+public function handoverToShipper($id)
+{
+    $borrow = Borrow::findOrFail($id);
+    
+    try {
+        $borrow->transitionTo(
+            Borrow::STATUS_DANG_GIAO_HANG,
+            request('ghi_chu'),
+            auth()->id()
+        );
+        
+        // Tạo shipping log
+        ShippingLog::create([
+            'borrow_id' => $borrow->id,
+            'status' => 'dang_giao',
+            'shipper_note' => request('ghi_chu') ?? 'Đã bàn giao cho đơn vị vận chuyển.',
+        ]);
+        
+        return back()->with('success', 'Đã bàn giao cho đơn vị vận chuyển. Đang giao hàng.');
+    } catch (\Exception $e) {
+        return back()->with('error', $e->getMessage());
+    }
+}
+
+/**
+ * Xác nhận giao hàng thành công (Admin) - Chờ xác nhận từ khách hàng
+ */
+public function confirmDeliverySuccess($id)
+{
+    $borrow = Borrow::findOrFail($id);
+    
+    try {
+        $borrow->transitionTo(
+            Borrow::STATUS_GIAO_HANG_THANH_CONG,
+            request('ghi_chu'),
+            auth()->id()
+        );
+        
+        // Reset trạng thái xác nhận từ khách hàng (nếu có)
+        $borrow->customer_confirmed_delivery = false;
+        $borrow->customer_confirmed_delivery_at = null;
+        $borrow->save();
+        
+        // TODO: Gửi email/SMS thông báo cho khách hàng yêu cầu xác nhận
+        
+        return back()->with('success', 'Đã xác nhận giao hàng thành công. Đang chờ khách hàng xác nhận đã nhận sách.');
+    } catch (\Exception $e) {
+        return back()->with('error', $e->getMessage());
+    }
+}
+
+/**
+ * Báo giao hàng thất bại
+ */
+public function reportDeliveryFailed($id)
+{
+    $borrow = Borrow::findOrFail($id);
+    
+    try {
+        $borrow->transitionTo(
+            Borrow::STATUS_GIAO_HANG_THAT_BAI,
+            request('ghi_chu'),
+            auth()->id()
+        );
+        
+        return back()->with('warning', 'Đã báo giao hàng thất bại. Sách sẽ được chuyển hoàn.');
+    } catch (\Exception $e) {
+        return back()->with('error', $e->getMessage());
+    }
+}
+
+/**
+ * Khách hàng xác nhận đã nhận sách
+ */
+public function customerConfirmDelivery($id)
+{
+    $borrow = Borrow::findOrFail($id);
+    
+    // Kiểm tra quyền: chỉ có thể xác nhận đơn của chính mình
+    $user = auth()->user();
+    $reader = $user->reader;
+    
+    if (!$reader || $borrow->reader_id != $reader->id) {
+        return back()->with('error', 'Bạn không có quyền xác nhận đơn này.');
+    }
+    
+    // Kiểm tra trạng thái: có thể xác nhận khi đang ở trạng thái dang_giao_hang hoặc giao_hang_thanh_cong
+    if ($borrow->trang_thai_chi_tiet !== Borrow::STATUS_DANG_GIAO_HANG && 
+        $borrow->trang_thai_chi_tiet !== Borrow::STATUS_GIAO_HANG_THANH_CONG) {
+        return back()->with('error', 'Không thể xác nhận. Đơn hàng chưa ở trạng thái giao hàng.');
+    }
+    
+    // Kiểm tra đã xác nhận chưa
+    if ($borrow->customer_confirmed_delivery) {
+        return back()->with('info', 'Bạn đã xác nhận nhận sách trước đó.');
+    }
+    
+    try {
+        // Refresh lại borrow từ database để đảm bảo có dữ liệu mới nhất
+        $borrow->refresh();
+        
+        $oldStatus = $borrow->trang_thai_chi_tiet;
+        
+        \Log::info('Customer confirming delivery', [
+            'borrow_id' => $borrow->id,
+            'current_status' => $oldStatus,
+            'reader_id' => $borrow->reader_id
+        ]);
+        
+        // Đánh dấu đã xác nhận
+        $borrow->customer_confirmed_delivery = true;
+        $borrow->customer_confirmed_delivery_at = now();
+        
+        // Xử lý theo trạng thái hiện tại
+        if ($borrow->trang_thai_chi_tiet === Borrow::STATUS_DANG_GIAO_HANG) {
+            // Nếu đang ở trạng thái "Đang Giao hàng", chỉ cập nhật thành "Giao hàng Thành công"
+            // Admin sẽ tự cập nhật sang "Đã Mượn" sau đó
+            $borrow->trang_thai_chi_tiet = Borrow::STATUS_GIAO_HANG_THANH_CONG;
+            $borrow->ngay_giao_thanh_cong = now();
+            
+            // Lưu lại thay đổi
+            $borrow->save();
+            
+            // ✅ Tự động cập nhật trạng thái thanh toán khi giao hàng thành công
+            // 1. Chuyển tất cả payment COD (offline) từ pending → success
+            $borrow->payments()
+                ->where('payment_method', 'offline')
+                ->where('payment_status', 'pending')
+                ->whereIn('payment_type', ['deposit', 'borrow_fee', 'shipping_fee'])
+                ->update([
+                    'payment_status' => 'success',
+                    'note' => \DB::raw("CONCAT(COALESCE(note, ''), ' - Đã thanh toán COD khi khách hàng xác nhận nhận sách')"),
+                    'updated_at' => now()
+                ]);
+            
+            // 2. Chuyển tất cả payment Online (online) từ pending → success
+            // (Trường hợp thanh toán online nhưng chưa xác nhận)
+            $borrow->payments()
+                ->where('payment_method', 'online')
+                ->where('payment_status', 'pending')
+                ->whereIn('payment_type', ['deposit', 'borrow_fee', 'shipping_fee'])
+                ->update([
+                    'payment_status' => 'success',
+                    'note' => \DB::raw("CONCAT(COALESCE(note, ''), ' - Xác nhận thanh toán online khi khách hàng xác nhận nhận sách')"),
+                    'updated_at' => now()
+                ]);
+            
+            // Cập nhật ShippingLog nếu có
+            foreach ($borrow->shippingLogs as $log) {
+                if ($log->status === 'dang_giao_hang') {
+                    $log->update([
+                        'status' => 'giao_hang_thanh_cong',
+                        'ngay_giao_thanh_cong' => now(),
+                        'delivered_at' => now(),
+                    ]);
+                }
+            }
+            
+        } elseif ($borrow->trang_thai_chi_tiet === Borrow::STATUS_GIAO_HANG_THANH_CONG) {
+            // Nếu đã ở trạng thái "Giao hàng Thành công", chỉ đánh dấu đã xác nhận
+            // Không tự động chuyển sang "Đã Mượn", admin sẽ tự cập nhật
+            // Chỉ lưu lại thông tin xác nhận
+            $borrow->save();
+            
+            // ✅ Đảm bảo thanh toán đã được cập nhật (nếu chưa)
+            // Cập nhật payment nếu vẫn còn pending
+            $borrow->payments()
+                ->where('payment_status', 'pending')
+                ->whereIn('payment_type', ['deposit', 'borrow_fee', 'shipping_fee'])
+                ->update([
+                    'payment_status' => 'success',
+                    'note' => \DB::raw("CONCAT(COALESCE(note, ''), ' - Đã thanh toán khi khách hàng xác nhận nhận sách')"),
+                    'updated_at' => now()
+                ]);
+        }
+        
+        \Log::info('Customer confirmed delivery and status transitioned successfully', [
+            'borrow_id' => $borrow->id,
+            'old_status' => $oldStatus,
+            'new_status' => $borrow->trang_thai_chi_tiet,
+            'customer_confirmed_at' => $borrow->customer_confirmed_delivery_at
+        ]);
+        
+        if ($oldStatus === Borrow::STATUS_DANG_GIAO_HANG) {
+            return back()->with('success', 'Bạn đã xác nhận nhận sách thành công. Hệ thống đã tự động cập nhật trạng thái "Giao hàng Thành công". Admin sẽ xử lý tiếp theo.');
+        } else {
+            return back()->with('success', 'Bạn đã xác nhận nhận sách thành công. Admin sẽ xử lý tiếp theo.');
+        }
+    } catch (\Exception $e) {
+        \Log::error('Error in customerConfirmDelivery', [
+            'borrow_id' => $borrow->id ?? null,
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Khách hàng từ chối nhận sách
+ */
+public function customerRejectDelivery($id)
+{
+    $borrow = Borrow::findOrFail($id);
+    
+    // Kiểm tra quyền: chỉ có thể từ chối đơn của chính mình
+    $user = auth()->user();
+    $reader = $user->reader;
+    
+    if (!$reader || $borrow->reader_id != $reader->id) {
+        return back()->with('error', 'Bạn không có quyền từ chối đơn này.');
+    }
+    
+    // Kiểm tra trạng thái: có thể từ chối khi đang ở trạng thái dang_giao_hang hoặc giao_hang_thanh_cong
+    if ($borrow->trang_thai_chi_tiet !== Borrow::STATUS_DANG_GIAO_HANG && 
+        $borrow->trang_thai_chi_tiet !== Borrow::STATUS_GIAO_HANG_THANH_CONG) {
+        return back()->with('error', 'Không thể từ chối. Đơn hàng chưa ở trạng thái giao hàng.');
+    }
+    
+    // Kiểm tra đã xác nhận hoặc từ chối chưa
+    if ($borrow->customer_confirmed_delivery) {
+        return back()->with('error', 'Bạn đã xác nhận nhận sách, không thể từ chối.');
+    }
+    
+    if ($borrow->customer_rejected_delivery) {
+        return back()->with('info', 'Bạn đã từ chối nhận sách trước đó.');
+    }
+    
+    // Validate lý do từ chối
+    $request = request();
+    $request->validate([
+        'rejection_reason' => 'required|string|min:10|max:1000',
+    ], [
+        'rejection_reason.required' => 'Vui lòng nhập lý do từ chối nhận sách.',
+        'rejection_reason.min' => 'Lý do từ chối phải có ít nhất 10 ký tự.',
+        'rejection_reason.max' => 'Lý do từ chối không được vượt quá 1000 ký tự.',
+    ]);
+    
+    try {
+        DB::beginTransaction();
+        
+        // Refresh lại borrow từ database để đảm bảo có dữ liệu mới nhất
+        $borrow->refresh();
+        $borrow->load(['reader', 'payments']);
+        
+        $oldStatus = $borrow->trang_thai_chi_tiet;
+        
+        \Log::info('Customer rejecting delivery', [
+            'borrow_id' => $borrow->id,
+            'current_status' => $oldStatus,
+            'reader_id' => $borrow->reader_id,
+            'rejection_reason' => $request->rejection_reason
+        ]);
+        
+        // Đánh dấu đã từ chối
+        $borrow->customer_rejected_delivery = true;
+        $borrow->customer_rejected_delivery_at = now();
+        $borrow->customer_rejection_reason = $request->rejection_reason;
+        
+        // Chuyển trạng thái sang "Giao hàng Thất bại"
+        $borrow->trang_thai_chi_tiet = Borrow::STATUS_GIAO_HANG_THAT_BAI;
+        $borrow->ngay_that_bai_giao_hang = now();
+        
+        // Thêm ghi chú về lý do từ chối
+        $rejectionNote = "\n[Khách hàng từ chối nhận sách - " . now()->format('d/m/Y H:i') . "]\nLý do: " . $request->rejection_reason;
+        $borrow->ghi_chu_that_bai = ($borrow->ghi_chu_that_bai ?? '') . $rejectionNote;
+        
+        // Lưu lại thay đổi
+        $borrow->save();
+        
+        // Cập nhật ShippingLog nếu có
+        foreach ($borrow->shippingLogs as $log) {
+            if (in_array($log->status, ['dang_giao_hang', 'giao_hang_thanh_cong'])) {
+                $log->update([
+                    'status' => 'giao_hang_that_bai',
+                    'ngay_that_bai_giao_hang' => now(),
+                    'ghi_chu' => ($log->ghi_chu ?? '') . $rejectionNote,
+                ]);
+            }
+        }
+        
+        // LƯU Ý: KHÔNG hoàn tiền ngay khi từ chối nhận hàng
+        // Tiền sẽ chỉ được hoàn về ví khi đơn hàng được hoàn tất (completeOrder)
+        // Logic hoàn tiền được xử lý tự động trong BorrowObserver khi trạng thái chuyển sang HOAN_TAT_DON_HANG
+        
+        DB::commit();
+        
+        \Log::info('Customer rejected delivery successfully', [
+            'borrow_id' => $borrow->id,
+            'old_status' => $oldStatus,
+            'new_status' => $borrow->trang_thai_chi_tiet,
+            'customer_rejected_at' => $borrow->customer_rejected_delivery_at,
+            'note' => 'Tiền sẽ được hoàn về ví khi đơn hàng được hoàn tất'
+        ]);
+        
+        // TODO: Gửi email/SMS thông báo cho admin về việc từ chối nhận sách
+        
+        $message = 'Bạn đã từ chối nhận sách. Admin sẽ được thông báo và liên hệ với bạn để xử lý. Tiền sẽ được hoàn về ví của bạn sau khi đơn hàng được hoàn tất. Lý do: ' . $request->rejection_reason;
+        
+        return back()->with('warning', $message);
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Error in customerRejectDelivery', [
+            'borrow_id' => $borrow->id ?? null,
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Khách hàng tạo yêu cầu trả sách
+ */
+public function customerRequestReturn($id)
+{
+    $borrow = Borrow::findOrFail($id);
+    
+    // Kiểm tra quyền: chỉ có thể request return đơn của chính mình
+    $user = auth()->user();
+    $reader = $user->reader;
+    
+    if (!$reader || $borrow->reader_id != $reader->id) {
+        return back()->with('error', 'Bạn không có quyền yêu cầu trả sách cho đơn này.');
+    }
+    
+    // Kiểm tra trạng thái: chỉ có thể request return khi đang ở trạng thái da_muon_dang_luu_hanh
+    if ($borrow->trang_thai_chi_tiet !== Borrow::STATUS_DA_MUON_DANG_LUU_HANH) {
+        return back()->with('error', 'Chỉ có thể yêu cầu trả sách khi sách đang ở trạng thái "Đã mượn (Đang lưu hành)".');
+    }
+    
+    // Kiểm tra đã có yêu cầu trả sách chưa
+    if ($borrow->trang_thai_chi_tiet === Borrow::STATUS_CHO_TRA_SACH) {
+        return back()->with('info', 'Bạn đã tạo yêu cầu trả sách trước đó. Vui lòng chờ admin xử lý.');
+    }
+    
+    try {
+        $ghiChu = request('ghi_chu', '');
+        
+        \Log::info('Customer requesting return', [
+            'borrow_id' => $borrow->id,
+            'current_status' => $borrow->trang_thai_chi_tiet,
+            'reader_id' => $borrow->reader_id,
+            'ghi_chu' => $ghiChu
+        ]);
+        
+        // Chuyển trạng thái sang cho_tra_sach (không tự động chuyển tiếp)
+        $borrow->transitionTo(
+            Borrow::STATUS_CHO_TRA_SACH,
+            $ghiChu,
+            auth()->id()
+        );
+        
+        \Log::info('Customer return request created', [
+            'borrow_id' => $borrow->id,
+            'new_status' => $borrow->trang_thai_chi_tiet
+        ]);
+        
+        return back()->with('success', 'Đã tạo yêu cầu trả sách thành công. Vui lòng chờ admin xử lý.');
+    } catch (\Exception $e) {
+        \Log::error('Error in customerRequestReturn', [
+            'borrow_id' => $borrow->id ?? null,
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Khách hàng xác nhận hoàn trả sách (chuyển từ cho_tra_sach sang dang_van_chuyen_tra_ve)
+ */
+public function customerReturnBook(Request $request, $id)
+{
+    $borrow = Borrow::findOrFail($id);
+    
+    // Kiểm tra quyền: chỉ có thể return đơn của chính mình
+    $user = auth()->user();
+    $reader = $user->reader;
+    
+    if (!$reader || $borrow->reader_id != $reader->id) {
+        return back()->with('error', 'Bạn không có quyền hoàn trả sách cho đơn này.');
+    }
+    
+    // Kiểm tra trạng thái: chỉ có thể return khi đang ở trạng thái cho_tra_sach
+    if ($borrow->trang_thai_chi_tiet !== Borrow::STATUS_CHO_TRA_SACH) {
+        return back()->with('error', 'Chỉ có thể hoàn trả sách khi đơn đang ở trạng thái "Chờ Trả sách".');
+    }
+    
+    try {
+        // Validate tình trạng sách
+        $request->validate([
+            'tinh_trang_sach' => 'required|in:binh_thuong,hong_nhe,hong_nang,mat_sach',
+            'anh_hoan_tra' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120', // Max 5MB
+            'ghi_chu' => 'nullable|string|max:1000',
+        ], [
+            'tinh_trang_sach.required' => 'Vui lòng chọn tình trạng sách.',
+            'tinh_trang_sach.in' => 'Tình trạng sách không hợp lệ.',
+            'anh_hoan_tra.required' => 'Vui lòng tải lên ảnh minh chứng hoàn trả.',
+            'anh_hoan_tra.image' => 'File phải là ảnh.',
+            'anh_hoan_tra.mimes' => 'Ảnh phải có định dạng: jpeg, png, jpg, gif, webp.',
+            'anh_hoan_tra.max' => 'Kích thước ảnh không được vượt quá 5MB.',
+        ]);
+
+        $tinhTrangSach = $request->input('tinh_trang_sach');
+        $ghiChu = $request->input('ghi_chu', 'Khách hàng xác nhận hoàn trả sách');
+        
+        // Upload ảnh hoàn trả
+     $anhHoanTra = null;
+if ($request->hasFile('anh_hoan_tra')) {
+    try {
+        $uploadResult = FileUploadService::uploadImage(
+            $request->file('anh_hoan_tra'),
+            'return-books-new', // <--- folder mới
+            [
+                'max_size' => 5120, // 5MB
+                'resize' => true,
+                'width' => 1200,
+                'height' => 1200,
+            ]
+        );
+        $anhHoanTra = $uploadResult['path']; // đường dẫn relative sẽ là return-books-new/xxx.jpg
+    } catch (\Exception $e) {
+        \Log::error('Error uploading return image', [
+            'borrow_id' => $borrow->id,
+            'error' => $e->getMessage(),
+        ]);
+        return back()->with('error', 'Lỗi khi tải ảnh: ' . $e->getMessage());
+    }
+}
+
+        
+        \Log::info('Customer returning book', [
+            'borrow_id' => $borrow->id,
+            'current_status' => $borrow->trang_thai_chi_tiet,
+            'reader_id' => $borrow->reader_id,
+            'tinh_trang_sach' => $tinhTrangSach,
+            'anh_hoan_tra' => $anhHoanTra,
+            'ghi_chu' => $ghiChu
+        ]);
+        
+        // Cập nhật tình trạng sách và ảnh hoàn trả
+        $borrow->tinh_trang_sach = $tinhTrangSach;
+        $borrow->anh_hoan_tra = $anhHoanTra;
+        $borrow->save();
+        
+        // Nếu sách bị hỏng hoặc mất, tự động tạo fine và cập nhật dữ liệu sách
+        if (in_array($tinhTrangSach, ['hong_nhe', 'hong_nang', 'mat_sach'])) {
+            $this->handleBookDamageOrLoss($borrow, $tinhTrangSach, $anhHoanTra, $ghiChu, $request);
+        }
+        
+        // Chuyển trạng thái sang dang_van_chuyen_tra_ve
+        $borrow->transitionTo(
+            Borrow::STATUS_DANG_VAN_CHUYEN_TRA_VE,
+            $ghiChu,
+            auth()->id()
+        );
+        
+        // Cập nhật ShippingLog nếu có
+        foreach ($borrow->shippingLogs as $log) {
+            if ($log->status === 'cho_tra_sach') {
+                $log->update([
+                    'status' => 'dang_van_chuyen_tra_ve',
+                    'ngay_bat_dau_tra' => now(),
+                ]);
+            }
+        }
+        
+        \Log::info('Customer return book confirmed, status changed to shipping', [
+            'borrow_id' => $borrow->id,
+            'new_status' => $borrow->trang_thai_chi_tiet,
+            'tinh_trang_sach' => $tinhTrangSach
+        ]);
+        
+        $message = 'Đã xác nhận hoàn trả sách thành công. Sách đang được vận chuyển trả về thư viện.';
+        if (in_array($tinhTrangSach, ['hong_nhe', 'hong_nang', 'mat_sach'])) {
+            $message .= ' Đã tự động tạo phạt và cập nhật dữ liệu sách.';
+        }
+        
+        return back()->with('success', $message);
+    } catch (\Exception $e) {
+        \Log::error('Error in customerReturnBook', [
+            'borrow_id' => $borrow->id ?? null,
+            'error' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Tạo yêu cầu trả sách (Admin)
+ */
+public function requestReturn($id)
+{
+    $borrow = Borrow::findOrFail($id);
+    
+    try {
+        $borrow->transitionTo(
+            Borrow::STATUS_CHO_TRA_SACH,
+            request('ghi_chu'),
+            auth()->id()
+        );
+        
+        return back()->with('success', 'Đã chuyển đơn sang trạng thái "Chờ Trả sách". Khách hàng sẽ thấy nút hoàn trả.');
+    } catch (\Exception $e) {
+        return back()->with('error', $e->getMessage());
+    }
+}
+
+/**
+ * Xác nhận đang vận chuyển trả về
+ */
+public function confirmReturnShipping($id)
+{
+    $borrow = Borrow::findOrFail($id);
+    
+    $request = request();
+    $request->validate([
+        'ma_van_don_ve' => 'nullable|string|max:100',
+    ]);
+    
+    try {
+        if ($request->filled('ma_van_don_ve')) {
+            $borrow->ma_van_don_ve = $request->ma_van_don_ve;
+            $borrow->save();
+        }
+        
+        $borrow->transitionTo(
+            Borrow::STATUS_DANG_VAN_CHUYEN_TRA_VE,
+            $request->ghi_chu,
+            auth()->id()
+        );
+        
+        return back()->with('success', 'Sách đang được vận chuyển trả về.');
+    } catch (\Exception $e) {
+        return back()->with('error', $e->getMessage());
+    }
+}
+
+/**
+ * Xác nhận đã nhận và kiểm tra sách
+ */
+public function confirmReceiveAndCheck($id)
+{
+    $borrow = Borrow::findOrFail($id);
+    
+    $request = request();
+    $request->validate([
+        'tinh_trang_sach' => 'required|in:binh_thuong,hong_nhe,hong_nang,mat_sach',
+        'phi_hong_sach' => 'nullable|numeric|min:0',
+    ]);
+    
+    try {
+        // Cập nhật tình trạng sách và phí hỏng
+        $borrow->tinh_trang_sach = $request->tinh_trang_sach;
+        
+        if ($request->filled('phi_hong_sach')) {
+            $borrow->phi_hong_sach = $request->phi_hong_sach;
+        } else {
+            // Tự động tính phí hỏng
+            $borrow->phi_hong_sach = $borrow->calculateDamageFee();
+        }
+        
+        $borrow->save();
+        
+        $borrow->transitionTo(
+            Borrow::STATUS_DA_NHAN_VA_KIEM_TRA,
+            $request->ghi_chu,
+            auth()->id()
+        );
+        
+        // Cập nhật trạng thái items
+        $borrow->items()->update([
+            'trang_thai' => 'Da tra',
+            'ngay_tra_thuc_te' => now(),
+        ]);
+        
+        return back()->with('success', 'Đã nhận và kiểm tra sách. Phí hỏng (nếu có): ' . number_format($borrow->phi_hong_sach) . ' VNĐ');
+    } catch (\Exception $e) {
+        return back()->with('error', $e->getMessage());
+    }
+}
+
+/**
+ * Hoàn tất đơn hàng
+ * 
+ * Khi khách đã xác nhận nhận sách và trả sách về, chỉ hoàn tiền cọc (đã trừ phí hỏng sách nếu có)
+ * Áp dụng cho mọi hình thức thanh toán (online và offline) vì lúc này khách đã mượn và đã thanh toán tiền thuê
+ */
+public function completeOrder($id)
+{
+    $borrow = Borrow::with(['reader', 'items'])->findOrFail($id);
+    
+    try {
+        DB::beginTransaction();
+        
+        // Đảm bảo tien_coc được tính lại từ items (nếu chưa đúng)
+        $borrow->recalculateTotals();
+        $borrow->refresh();
+        
+        // Log thông tin ban đầu để debug
+        \Log::info('Starting completeOrder', [
+            'borrow_id' => $borrow->id,
+            'tien_coc' => $borrow->tien_coc,
+            'phi_hong_sach' => $borrow->phi_hong_sach,
+            'reader_id' => $borrow->reader_id,
+            'has_reader' => $borrow->reader ? true : false,
+            'reader_user_id' => $borrow->reader ? $borrow->reader->user_id : null
+        ]);
+        
+        // Tính toán tiền hoàn cọc (tiền cọc - phí hỏng sách nếu có)
+        // Chỉ hoàn tiền cọc, không hoàn tiền thuê vì khách đã mượn và sử dụng sách
+        // LƯU Ý: Hoàn tiền sẽ được xử lý tự động bởi BorrowObserver khi transitionTo() được gọi
+        $borrow->updateRefundAmount();
+        // Refresh lại để lấy giá trị tien_coc_hoan_tra mới nhất
+        $borrow->refresh();
+        
+        $borrow->transitionTo(
+            Borrow::STATUS_HOAN_TAT_DON_HANG,
+            request('ghi_chu') ?? 'Đơn hàng đã hoàn tất. Tiền cọc đã hoàn trả: ' . number_format($borrow->tien_coc_hoan_tra) . ' VNĐ vào ví',
+            auth()->id()
+        );
+        
+        // Cập nhật inventory về trạng thái 'Co san' (Có sẵn)
+        foreach ($borrow->items as $item) {
+            if ($item->inventory) {
+                $item->inventory->update([
+                    'status' => 'Co san'
+                ]);
+            }
+        }
+        
+        DB::commit();
+        
+        return back()->with('success', 'Đã hoàn tất đơn hàng. Tiền cọc hoàn trả: ' . number_format($borrow->tien_coc_hoan_tra) . ' VNĐ đã được chuyển vào ví của bạn.');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Error completing order and refunding to wallet: ' . $e->getMessage(), [
+            'borrow_id' => $id,
+            'trace' => $e->getTraceAsString()
+        ]);
+        return back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Xem chi tiết trạng thái và lịch sử
+ */
+public function statusDetail($id)
+{
+    $borrow = Borrow::with([
+        'reader', 'librarian', 'items.book',
+        'nguoiChuanBi', 'nguoiGiaoHang', 'nguoiKiemTra', 'nguoiHoanCoc'
+    ])->findOrFail($id);
+    
+    // Lấy config trạng thái
+    $allStatuses = config('borrow_status.statuses');
+    
+    return view('admin.borrows.status_detail', compact('borrow', 'allStatuses'));
+}
+
+/**
+ * Hoàn tiền cho đơn đã hủy (nếu chưa được hoàn)
+ */
+public function refundCancelledOrder($id)
+{
+    try {
+        $borrow = Borrow::with(['reader', 'items', 'payments'])->findOrFail($id);
+        
+        // Kiểm tra đơn có phải đã hủy không
+        if ($borrow->trang_thai !== 'Huy') {
+            return back()->with('error', 'Đơn hàng này chưa bị hủy. Chỉ có thể hoàn tiền cho đơn đã hủy.');
+        }
+        
+        // Kiểm tra đã có transaction hoàn tiền chưa
+        $existingTransaction = \App\Models\WalletTransaction::where('reference_type', Borrow::class)
+            ->where('reference_id', $borrow->id)
+            ->where('type', 'refund')
+            ->first();
+        
+        if ($existingTransaction) {
+            return back()->with('info', 'Đơn hàng này đã được hoàn tiền rồi. Số tiền: ' . number_format($existingTransaction->amount) . ' VNĐ');
+        }
+        
+        DB::beginTransaction();
+        
+        // Kiểm tra các điều kiện
+        if (!$borrow->reader) {
+            return back()->with('error', 'Không tìm thấy thông tin độc giả');
+        }
+        
+        if (!$borrow->reader->user_id) {
+            return back()->with('error', 'Độc giả chưa liên kết với tài khoản user');
+        }
+        
+        // Tính lại tổng tiền từ items
+        $borrow->recalculateTotals();
+        $borrow->refresh();
+        
+        if ($borrow->tien_coc <= 0) {
+            return back()->with('error', 'Đơn hàng không có tiền cọc');
+        }
+        
+            // Chỉ hoàn tiền nếu khách đã thanh toán ONLINE (đã trả tiền rồi)
+            // COD/Offline không cần hoàn vì chưa thanh toán
+            $hasOnlinePayment = $borrow->payments()
+                ->where('payment_method', 'online')
+                ->where('payment_status', 'success')
+                ->exists();
+
+            // Xác định số tiền cần hoàn
+            $refundAmount = 0;
+            $refundDescription = '';
+
+            if ($hasOnlinePayment) {
+                // Online: hoàn đầy đủ - tiền cọc + tiền thuê + tiền ship (nếu có)
+                $refundAmount = $borrow->tien_coc + $borrow->tien_thue + ($borrow->tien_ship ?? 0);
+                $refundDescription = 'Hoàn tiền cho đơn mượn #' . $borrow->id . ' (Đơn hàng đã hủy - thanh toán online)';
+                
+                $details = [];
+                if ($borrow->tien_coc > 0) {
+                    $details[] = 'Tiền cọc: ' . number_format($borrow->tien_coc, 0, ',', '.') . ' VNĐ';
+                }
+                if ($borrow->tien_thue > 0) {
+                    $details[] = 'Phí thuê: ' . number_format($borrow->tien_thue, 0, ',', '.') . ' VNĐ';
+                }
+                if (($borrow->tien_ship ?? 0) > 0) {
+                    $details[] = 'Phí ship: ' . number_format($borrow->tien_ship, 0, ',', '.') . ' VNĐ';
+                }
+                
+                if (!empty($details)) {
+                    $refundDescription .= ' - ' . implode(', ', $details);
+                }
+            } else {
+                // COD/Offline: KHÔNG hoàn tiền vì chưa thanh toán
+                return back()->with('info', 'Đơn hàng này sử dụng thanh toán khi nhận hàng (COD), chưa thanh toán nên không cần hoàn tiền.');
+            }
+        
+        if ($refundAmount <= 0) {
+            return back()->with('error', 'Không có tiền cần hoàn');
+        }
+        
+        $wallet = Wallet::getOrCreateForUser($borrow->reader->user_id);
+        $balanceBefore = $wallet->balance;
+        
+        $wallet->refund(
+            $refundAmount,
+            $refundDescription,
+            $borrow
+        );
+        
+        $wallet->refresh();
+        $balanceAfter = $wallet->balance;
+        
+        DB::commit();
+        
+        \Log::info('Manually refunded cancelled order', [
+            'borrow_id' => $borrow->id,
+            'user_id' => $borrow->reader->user_id,
+            'amount' => $refundAmount,
+            'wallet_id' => $wallet->id,
+            'balance_before' => $balanceBefore,
+            'balance_after' => $balanceAfter
+        ]);
+        
+        return back()->with('success', 'Đã hoàn tiền thành công! Số tiền: ' . number_format($refundAmount) . ' VNĐ đã được chuyển vào ví của khách hàng.');
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Error refunding cancelled order', [
+            'borrow_id' => $id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Kiểm tra và sửa các đơn hàng đã hoàn thành nhưng chưa được hoàn tiền cọc
+ */
+public function checkAndFixRefunds()
+{
+    try {
+        // Tìm các đơn hàng đã hoàn thành
+        $completedBorrows = Borrow::where('trang_thai_chi_tiet', Borrow::STATUS_HOAN_TAT_DON_HANG)
+            ->with(['reader', 'items'])
+            ->get();
+
+        $results = [
+            'total' => $completedBorrows->count(),
+            'fixed' => 0,
+            'skipped' => 0,
+            'errors' => 0,
+            'details' => []
+        ];
+
+        foreach ($completedBorrows as $borrow) {
+            $detail = [
+                'borrow_id' => $borrow->id,
+                'status' => 'skipped',
+                'message' => '',
+                'amount' => 0
+            ];
+
+            // Kiểm tra các điều kiện
+            if (!$borrow->reader) {
+                $detail['message'] = 'Không có thông tin độc giả';
+                $results['skipped']++;
+                $results['details'][] = $detail;
+                continue;
+            }
+
+            if (!$borrow->reader->user_id) {
+                $detail['message'] = 'Độc giả chưa liên kết với user (user_id = null)';
+                $results['skipped']++;
+                $results['details'][] = $detail;
+                continue;
+            }
+
+            // Tính lại tổng tiền từ items
+            $borrow->recalculateTotals();
+            $borrow->refresh();
+
+            if ($borrow->tien_coc <= 0) {
+                $detail['message'] = 'Đơn hàng không có tiền cọc';
+                $results['skipped']++;
+                $results['details'][] = $detail;
+                continue;
+            }
+
+            // Tính lại tien_coc_hoan_tra
+            $borrow->updateRefundAmount();
+            $borrow->refresh();
+
+            if ($borrow->tien_coc_hoan_tra <= 0) {
+                $detail['message'] = 'Tiền cọc hoàn trả <= 0 (có thể do phí hỏng sách)';
+                $results['skipped']++;
+                $results['details'][] = $detail;
+                continue;
+            }
+
+            // Kiểm tra xem đã có transaction hoàn tiền chưa
+            $existingTransaction = \App\Models\WalletTransaction::where('reference_type', Borrow::class)
+                ->where('reference_id', $borrow->id)
+                ->where('type', 'refund')
+                ->first();
+
+            if ($existingTransaction) {
+                $detail['status'] = 'already_refunded';
+                $detail['message'] = 'Đã có giao dịch hoàn tiền';
+                $detail['amount'] = $existingTransaction->amount;
+                $results['skipped']++;
+                $results['details'][] = $detail;
+                continue;
+            }
+
+            // Thử hoàn tiền
+            try {
+                DB::beginTransaction();
+
+                $wallet = Wallet::getOrCreateForUser($borrow->reader->user_id);
+                $balanceBefore = $wallet->balance;
+
+                $description = 'Hoàn tiền cọc cho đơn mượn #' . $borrow->id;
+                if ($borrow->phi_hong_sach > 0) {
+                    $description .= ' (Đã trừ phí hỏng sách: ' . number_format($borrow->phi_hong_sach, 0, ',', '.') . ' VNĐ)';
+                }
+
+                $wallet->refund(
+                    $borrow->tien_coc_hoan_tra,
+                    $description,
+                    $borrow
+                );
+
+                $wallet->refresh();
+                $balanceAfter = $wallet->balance;
+
+                DB::commit();
+
+                $detail['status'] = 'fixed';
+                $detail['message'] = 'Đã hoàn tiền thành công';
+                $detail['amount'] = $borrow->tien_coc_hoan_tra;
+                $detail['balance_before'] = $balanceBefore;
+                $detail['balance_after'] = $balanceAfter;
+                $detail['user_id'] = $borrow->reader->user_id;
+
+                $results['fixed']++;
+
+                \Log::info('Fixed refund for completed order', [
+                    'borrow_id' => $borrow->id,
+                    'user_id' => $borrow->reader->user_id,
+                    'amount' => $borrow->tien_coc_hoan_tra,
+                    'wallet_id' => $wallet->id
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                $detail['status'] = 'error';
+                $detail['message'] = 'Lỗi: ' . $e->getMessage();
+                $results['errors']++;
+
+                \Log::error('Error fixing refund for order', [
+                    'borrow_id' => $borrow->id,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
+
+            $results['details'][] = $detail;
+        }
+
+        // Nếu request là AJAX hoặc có header Accept: application/json, trả về JSON
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json($results, 200);
+        }
+        
+        // Nếu không, trả về view HTML
+        return view('admin.borrows.check_refunds_result', compact('results'));
+
+    } catch (\Exception $e) {
+        \Log::error('Error in checkAndFixRefunds: ' . $e->getMessage());
+        
+        if (request()->wantsJson() || request()->ajax()) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
+        
+        return back()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Xử lý tự động khi khách báo hỏng/mất sách
+ * Tạo fine và cập nhật dữ liệu sách
+ */
+private function handleBookDamageOrLoss($borrow, $tinhTrangSach, $anhHoanTra, $ghiChu, $request)
+{
+    try {
+        // Load borrow với items và reader
+        $borrow->load(['borrowItems.book', 'borrowItems.inventory', 'reader']);
+        
+        foreach ($borrow->borrowItems as $item) {
+            if (!$item->book || !$item->inventory) {
+                continue;
+            }
+            
+            $book = $item->book;
+            $inventory = $item->inventory;
+            
+            // Xác định loại phạt và mức độ hư hỏng
+            $fineType = 'damaged_book';
+            $damageSeverity = 'nhe';
+            $conditionAfter = 'Hong';
+            
+            if ($tinhTrangSach === 'mat_sach') {
+                $fineType = 'lost_book';
+                $damageSeverity = 'mat_sach';
+                $conditionAfter = 'Mat';
+            } elseif ($tinhTrangSach === 'hong_nang') {
+                $damageSeverity = 'nang';
+                $conditionAfter = 'Hong';
+            } elseif ($tinhTrangSach === 'hong_nhe') {
+                $damageSeverity = 'nhe';
+                $conditionAfter = 'Trung binh'; // Hỏng nhẹ thì tình trạng sau là trung bình
+            }
+            
+            // Tính tiền phạt
+            $gia = $book->gia;
+            $loai = $book->loai_sach;
+            $tinhTrangKhiMuon = $inventory->condition;
+            
+            if ($tinhTrangSach === 'mat_sach') {
+                // Mất sách: phạt 100% nếu sách quý, 80% nếu mới/tốt, 70% nếu cũ
+                if ($loai === 'quy') {
+                    $phatGoc = $gia;
+                } else {
+                    switch ($tinhTrangKhiMuon) {
+                        case 'Moi':
+                        case 'Tot':
+                            $phatGoc = round($gia * 0.8);
+                            break;
+                        default:
+                            $phatGoc = round($gia * 0.7);
+                    }
+                }
+            } else {
+                // Hỏng sách: tính theo mức độ
+                if ($loai === 'quy') {
+                    $phatGoc = $gia; // 100%
+                } else {
+                    switch ($tinhTrangKhiMuon) {
+                        case 'Moi':
+                        case 'Tot':
+                            $phatGoc = $damageSeverity === 'nang' 
+                                ? round($gia * 0.8) 
+                                : round($gia * 0.5); // Hỏng nhẹ phạt ít hơn
+                            break;
+                        default:
+                            $phatGoc = $damageSeverity === 'nang' 
+                                ? round($gia * 0.7) 
+                                : round($gia * 0.4);
+                    }
+                }
+            }
+            
+            // Xác định loại hư hỏng
+            $damageType = 'khac';
+            $damageDescription = $ghiChu ?: 'Khách hàng báo ' . ($tinhTrangSach === 'mat_sach' ? 'mất sách' : 'sách bị hỏng');
+            
+            if ($request->filled('damage_type')) {
+                $damageType = $request->damage_type;
+            }
+            
+            if ($request->filled('damage_description')) {
+                $damageDescription = $request->damage_description;
+            }
+            
+            // Xử lý ảnh: copy từ anh_hoan_tra sang damage_images
+            $damageImages = [];
+            if ($anhHoanTra) {
+                // Copy ảnh vào thư mục fines/damage_images
+                $sourcePath = storage_path('app/public/' . $anhHoanTra);
+                if (file_exists($sourcePath)) {
+                    $newPath = 'fines/damage_images/' . basename($anhHoanTra);
+                    $destinationPath = storage_path('app/public/' . $newPath);
+                    
+                    // Tạo thư mục nếu chưa có
+                    $dir = dirname($destinationPath);
+                    if (!is_dir($dir)) {
+                        mkdir($dir, 0755, true);
+                    }
+                    
+                    if (copy($sourcePath, $destinationPath)) {
+                        $damageImages[] = $newPath;
+                    }
+                }
+            }
+            
+            // Cập nhật BorrowItem
+            $item->update([
+                'trang_thai' => $tinhTrangSach === 'mat_sach' ? 'Mat sach' : 'Hong',
+                'tien_phat' => $phatGoc,
+            ]);
+            
+            // Cập nhật Inventory
+            if ($inventory) {
+                $inventory->update([
+                    'status' => $tinhTrangSach === 'mat_sach' ? 'Mat' : 'Hong',
+                    'condition' => $conditionAfter,
+                ]);
+            }
+            
+            // Nếu mất sách, trừ số lượng sách
+            if ($tinhTrangSach === 'mat_sach' && $book->so_luong > 0) {
+                $book->decrement('so_luong');
+            }
+            
+            // Kiểm tra xem đã có fine cho item này chưa (tránh tạo trùng)
+            $existingFine = Fine::where('borrow_item_id', $item->id)
+                ->where('type', $fineType)
+                ->where('status', 'pending')
+                ->first();
+            
+              if (!$existingFine) {
+Fine::create([
+    'borrow_id'       => $borrow->id,
+    'borrow_item_id' => $item->id,
+    'reader_id'      => $borrow->reader_id,
+
+    'amount'         => $phatGoc,
+    'img'            => $anhHoanTra, // ⭐ DÙNG Ở ĐÂY
+    'type'           => $fineType,
+    'status'         => 'pending',
+
+    'description'    => $damageDescription,
+    'notes'          => $ghiChu,
+    'created_by'     => auth()->id() ?? 1,
+]);
+
+
+                
+                \Log::info('Auto-created fine for damaged/lost book', [
+                    'borrow_id' => $borrow->id,
+                    'borrow_item_id' => $item->id,
+                    'fine_type' => $fineType,
+                    'amount' => $phatGoc,
+                ]);
+            }
+        }
+    } catch (\Exception $e) {
+        \Log::error('Error in handleBookDamageOrLoss', [
+            'borrow_id' => $borrow->id ?? null,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        // Không throw exception để không làm gián đoạn quá trình trả sách
+    }
 }
 
 }

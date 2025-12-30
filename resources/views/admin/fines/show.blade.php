@@ -3,6 +3,9 @@
 @section('title', 'Chi tiết phạt #' . $fine->id)
 
 @section('content')
+@php
+    use Illuminate\Support\Facades\Storage;
+@endphp
 <link href="{{ asset('css/fines-management.css') }}" rel="stylesheet">
 
 <div class="container-fluid fines-management">
@@ -145,6 +148,109 @@
                                     </div>
                                 </div>
                             @endif
+
+                            <!-- Thông tin hư hỏng chi tiết -->
+                            @if(($fine->type === 'damaged_book' || $fine->type === 'lost_book') && ($fine->damage_description || $fine->hasDamageImages()))
+                                <div class="row mt-4">
+                                    <div class="col-md-12">
+                                        <h4 class="mb-3">
+                                            <i class="fas fa-exclamation-triangle text-warning"></i> 
+                                            Chi tiết hư hỏng/Mất sách
+                                        </h4>
+                                        
+                                        @if($fine->damage_severity)
+                                            <div class="row mb-3">
+                                                <div class="col-md-6">
+                                                    <strong>Mức độ hư hỏng:</strong>
+                                                    <span class="badge badge-{{ $fine->damage_severity == 'nang' || $fine->damage_severity == 'mat_sach' ? 'danger' : ($fine->damage_severity == 'trung_binh' ? 'warning' : 'info') }}">
+                                                        {{ $fine->damage_severity_text }}
+                                                    </span>
+                                                </div>
+                                                @if($fine->damage_type)
+                                                <div class="col-md-6">
+                                                    <strong>Loại hư hỏng:</strong> 
+                                                    {{ ucfirst(str_replace('_', ' ', $fine->damage_type)) }}
+                                                </div>
+                                                @endif
+                                            </div>
+                                        @endif
+
+                                        @if($fine->condition_before || $fine->condition_after)
+                                            <div class="row mb-3">
+                                                @if($fine->condition_before)
+                                                <div class="col-md-6">
+                                                    <strong>Tình trạng trước khi mượn:</strong> 
+                                                    <span class="badge badge-secondary">{{ $fine->condition_before }}</span>
+                                                </div>
+                                                @endif
+                                                @if($fine->condition_after)
+                                                <div class="col-md-6">
+                                                    <strong>Tình trạng sau khi trả:</strong> 
+                                                    <span class="badge badge-{{ $fine->condition_after == 'Mat' ? 'danger' : ($fine->condition_after == 'Hong' ? 'warning' : 'info') }}">
+                                                        {{ $fine->condition_after }}
+                                                    </span>
+                                                </div>
+                                                @endif
+                                            </div>
+                                        @endif
+
+                                        @if($fine->damage_description)
+                                            <div class="row mb-3">
+                                                <div class="col-md-12">
+                                                    <strong>Mô tả chi tiết:</strong>
+                                                    <div class="fines-alert alert-warning mt-2">
+                                                        {{ $fine->damage_description }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        @if($fine->hasDamageImages())
+                                            <div class="row mb-3">
+                                                <div class="col-md-12">
+                                                    <strong>Ảnh minh chứng:</strong>
+                                                    <div class="row mt-2">
+                                                        @foreach($fine->damage_images as $image)
+                                                            <div class="col-md-3 mb-3">
+                                                                <a href="{{ Storage::url($image) }}" target="_blank" class="d-block">
+                                                                    <img src="{{ Storage::url($image) }}" 
+                                                                         alt="Ảnh hư hỏng {{ $loop->index + 1 }}" 
+                                                                         class="img-thumbnail" 
+                                                                         style="width: 100%; height: 200px; object-fit: cover; cursor: pointer;">
+                                                                </a>
+                                                                <small class="text-muted">Ảnh {{ $loop->index + 1 }}</small>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        @if($fine->inspection_notes)
+                                            <div class="row mb-3">
+                                                <div class="col-md-12">
+                                                    <strong>Ghi chú kiểm tra:</strong>
+                                                    <div class="fines-alert alert-info mt-2">
+                                                        {{ $fine->inspection_notes }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        @endif
+
+                                        @if($fine->inspected_by && $fine->inspected_at)
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                    <small class="text-muted">
+                                                        <i class="fas fa-user-check"></i> 
+                                                        Kiểm tra bởi: <strong>{{ $fine->inspector->name ?? 'N/A' }}</strong> 
+                                                        vào {{ $fine->inspected_at->format('d/m/Y H:i') }}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endif
                         </div>
                     </div>
 
@@ -219,6 +325,7 @@
 </td>
 
             </tr>
+            @if($fine->borrowItem->inventory)
             <tr>
                 <td><strong>tình trạng :</strong></td>
                 <td>@switch( $fine->borrowItem->inventory->condition)
@@ -238,10 +345,11 @@
                         Hỏng
                         @break
                     @default
-                        
+                        Chưa xác định
                 @endswitch</td>
 
             </tr>
+            @endif
             <tr>
                 <td><strong>Tác giả:</strong></td>
                 <td>{{ $fine->borrowItem->book->tac_gia ?? 'Chưa có' }}</td>
@@ -259,6 +367,63 @@
             </a>
         </div>
     </div>
+@elseif($fine->borrow && $fine->borrow->borrowItems && $fine->borrow->borrowItems->count() > 0)
+    @php
+        $firstItem = $fine->borrow->borrowItems->first();
+    @endphp
+    @if($firstItem->book)
+    <div class="fines-filter mt-3">
+        <h3><i class="fas fa-book"></i> Thông tin sách <small class="text-warning">(Dữ liệu cũ)</small></h3>
+
+        <div class="text-center mb-3">
+            <i class="fas fa-book fa-3x text-success"></i>
+        </div>
+
+        <table class="table table-borderless">
+            <tr>
+                <td><strong>Tên sách:</strong></td>
+                <td>{{ $firstItem->book->ten_sach }}</td>
+            </tr>
+            <tr>
+                <td><strong>Loại sách:</strong></td>
+                <td>
+                    @switch($firstItem->book->loai_sach)
+                        @case('binh_thuong')
+                            phổ thông
+                            @break
+                        @case('quy')
+                            Sách quý
+                            @break
+                        @case('tham_khao')
+                            Tham khảo
+                            @break
+                        @default
+                            Không xác định
+                    @endswitch
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Tác giả:</strong></td>
+                <td>{{ $firstItem->book->tac_gia ?? 'Chưa có' }}</td>
+            </tr>
+            <tr>
+                <td><strong>Nhà xuất bản:</strong></td>
+                <td>{{ $firstItem->book->nha_xuat_ban ?? 'Chưa có' }}</td>
+            </tr>
+        </table>
+
+        <div class="alert alert-warning">
+            <i class="fas fa-info-circle"></i> Đây là dữ liệu cũ. Vui lòng cập nhật phạt với thông tin BorrowItem cụ thể.
+        </div>
+
+        <div class="text-center">
+            <a href="{{ route('admin.books.show', $firstItem->book->id) }}"
+               class="btn btn-success btn-sm">
+                <i class="fas fa-eye"></i> Xem chi tiết sách
+            </a>
+        </div>
+    </div>
+    @endif
 @endif
 
                     </div>

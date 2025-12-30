@@ -4,14 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use App\Models\Reader;
 use App\Models\Librarian;
 use Illuminate\Http\Request;
 
 class UserManagementController extends Controller
 {
     /**
-     * Dashboard tổng hợp quản lý người dùng, độc giả và thủ thư
+     * Dashboard tổng hợp quản lý người dùng và thủ thư
      */
     public function dashboard(Request $request)
     {
@@ -29,16 +28,6 @@ class UserManagementController extends Controller
         $newUsersThisWeek = User::where('created_at', '>=', now()->startOfWeek())
             ->count();
         
-        // Thống kê độc giả
-        $totalReaders = Reader::count();
-        $activeReaders = Reader::where('trang_thai', 'Hoat dong')->count();
-        $suspendedReaders = Reader::where('trang_thai', 'Tam khoa')->count();
-        $expiredReaders = Reader::where('trang_thai', 'Het han')->count();
-        
-        // Thống kê độc giả mới trong tháng
-        $newReadersThisMonth = Reader::whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->count();
         
         // Thống kê thủ thư
         $totalLibrarians = Librarian::count();
@@ -50,7 +39,6 @@ class UserManagementController extends Controller
         
         // Query cho danh sách
         $userQuery = User::query();
-        $readerQuery = Reader::query();
         $librarianQuery = Librarian::with('user');
         
         // Filter users
@@ -64,20 +52,6 @@ class UserManagementController extends Controller
         
         if ($request->filled('user_role')) {
             $userQuery->where('role', $request->get('user_role'));
-        }
-        
-        // Filter readers
-        if ($request->filled('reader_search')) {
-            $search = $request->get('reader_search');
-            $readerQuery->where(function($q) use ($search) {
-                $q->where('ho_ten', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('so_the_doc_gia', 'like', "%{$search}%");
-            });
-        }
-        
-        if ($request->filled('reader_status')) {
-            $readerQuery->where('trang_thai', $request->get('reader_status'));
         }
         
         // Filter librarians
@@ -95,7 +69,6 @@ class UserManagementController extends Controller
         }
         
         $users = $userQuery->orderBy('created_at', 'desc')->paginate(10, ['*'], 'users_page');
-        $readers = $readerQuery->orderBy('created_at', 'desc')->paginate(10, ['*'], 'readers_page');
         $librarians = $librarianQuery->orderBy('created_at', 'desc')->paginate(10, ['*'], 'librarians_page');
         
         return view('admin.user-management.dashboard', compact(
@@ -104,17 +77,11 @@ class UserManagementController extends Controller
             'regularUsers',
             'newUsersThisMonth',
             'newUsersThisWeek',
-            'totalReaders',
-            'activeReaders',
-            'suspendedReaders',
-            'expiredReaders',
-            'newReadersThisMonth',
             'totalLibrarians',
             'activeLibrarians',
             'inactiveLibrarians',
             'expiringContracts',
             'users',
-            'readers',
             'librarians'
         ));
     }

@@ -9,6 +9,7 @@ use App\Models\BorrowItem;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class FineController extends Controller
@@ -17,65 +18,170 @@ class FineController extends Controller
     public function index(Request $request)
 {
     // Lấy tất cả fines, kể cả đã xoá mềm
-    $query = Fine::withTrashed()->with(['borrowItem.book', 'reader', 'creator']);
+    // Load cả borrowItem (nếu có) và borrow với items để fallback cho dữ liệu cũ
+    $query = Fine::withTrashed();
+    
+    // Eager load các quan hệ - không dùng whereHas để không loại bỏ dữ liệu cũ
+    $query->with([
+        'borrowItem.book', 
+        'borrowItem.inventory',
+        'borrow.borrowItems.book', // Load items từ borrow để fallback cho dữ liệu cũ
+        'borrow.reader',
+        'reader', 
+        'creator',
+        'inspector'
+    ]);
 
+    // Lọc theo trạng thái
     if ($request->filled('status')) {
         $query->where('status', $request->status);
     }
 
+    // Lọc theo loại phạt
     if ($request->filled('type')) {
         $query->where('type', $request->type);
     }
 
+    // Lọc theo độc giả
     if ($request->filled('reader_id')) {
         $query->where('reader_id', $request->reader_id);
     }
 
-    $fines = $query->orderBy('created_at', 'desc')->paginate(20);
-    $readers = Reader::all();
+    // Lọc chỉ quá hạn - chỉ áp dụng khi có request overdue
+    if ($request->filled('overdue') && $request->overdue == '1') {
+        $query->where('due_date', '<', Carbon::today())
+              ->where('status', 'pending');
+    }
 
-    return view('admin.fines.index', compact('fines', 'readers'));
+    // Tìm kiếm theo tên độc giả hoặc mã số thẻ
+    if ($request->filled('search')) {
+        $search = $request->search;
+        // Dùng leftJoin để không loại bỏ fines không có reader
+        $query->where(function($q) use ($search) {
+            $q->whereHas('reader', function($subQ) use ($search) {
+                $subQ->where('ho_ten', 'like', "%{$search}%")
+                     ->orWhere('ma_so_the', 'like', "%{$search}%");
+            })->orWhere('id', 'like', "%{$search}%"); // Tìm theo ID nếu không có reader
+        });
+    }
+
+    // Sắp xếp
+    $sortBy = $request->get('sort_by', 'created_at');
+    $sortOrder = $request->get('sort_order', 'desc');
+    $query->orderBy($sortBy, $sortOrder);
+
+    $fines = $query->paginate(20)->appends($request->query());
+    $readers = Reader::orderBy('ho_ten')->get();
+
+    // Thống kê nhanh - dùng withTrashed để đếm cả dữ liệu đã xóa
+    $stats = [
+        'total' => Fine::withTrashed()->count(),
+        'pending' => Fine::withTrashed()->where('status', 'pending')->count(),
+        'paid' => Fine::withTrashed()->where('status', 'paid')->count(),
+        'overdue' => Fine::withTrashed()
+                        ->where('due_date', '<', Carbon::today())
+                        ->where('status', 'pending')
+                        ->count(),
+        'total_amount' => Fine::withTrashed()
+                        ->where('status', 'pending')
+                        ->sum('amount') ?? 0,
+    ];
+
+    return view('admin.fines.index', compact('fines', 'readers', 'stats'));
 }
 
     // Form tạo phạt mới
     public function create(Request $request)
     {
-        $borrowId = $request->get('borrow_id');
-        $borrow = null;
+        $borrowItemId = $request->get('borrow_item_id');
+        $borrowItem = null;
 
-        if ($borrowId) {
-            $borrow = Borrow::with(['reader'])->findOrFail($borrowId);
+        if ($borrowItemId) {
+            $borrowItem = BorrowItem::with(['book', 'borrow.reader', 'inventory'])->findOrFail($borrowItemId);
         }
 
-        // Lấy tất cả borrow quá hạn hoặc đã trả
-        $borrows = Borrow::with(['reader'])
-            ->where('trang_thai', 'Qua han')
-            ->orWhere('trang_thai', 'Da tra')
+        // Lấy tất cả borrow items có thể tạo phạt (quá hạn, đã trả, hoặc mất sách)
+        $borrowItems = BorrowItem::with(['book', 'borrow.reader', 'inventory'])
+            ->whereIn('trang_thai', ['Qua han', 'Da tra', 'Mat sach'])
+            ->orWhere(function($query) {
+                $query->where('trang_thai', 'Dang muon')
+                      ->whereDate('ngay_hen_tra', '<', Carbon::today());
+            })
+            ->orderBy('ngay_hen_tra', 'desc')
             ->get();
 
-        return view('admin.fines.create', compact('borrow', 'borrows'));
+        return view('admin.fines.create', compact('borrowItem', 'borrowItems'));
     }
 
     // Lưu phạt mới
     public function store(Request $request)
     {
         $request->validate([
-            'borrow_id' => 'required|exists:borrows,id',
+            'borrow_item_id' => 'required|exists:borrow_items,id',
             'amount' => 'required|numeric|min:0',
             'type' => 'required|in:late_return,damaged_book,lost_book,other',
             'description' => 'nullable|string|max:500',
+            'damage_description' => 'nullable|string|max:1000',
+            'damage_severity' => 'nullable|in:nhe,trung_binh,nang,mat_sach',
+            'damage_type' => 'nullable|string|max:255',
+            'condition_before' => 'nullable|string|max:255',
+            'condition_after' => 'nullable|string|max:255',
+            'damage_images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // Max 5MB per image
+            'inspection_notes' => 'nullable|string|max:1000',
             'due_date' => 'required|date|after_or_equal:today',
             'notes' => 'nullable|string|max:500',
         ]);
 
-        $borrow = Borrow::findOrFail($request->borrow_id);
+        $borrowItem = BorrowItem::with(['borrow.reader', 'book'])->findOrFail($request->borrow_item_id);
+        $borrow = $borrowItem->borrow;
+
+        if (!$borrow) {
+            return back()->withErrors(['borrow_item_id' => 'Không tìm thấy phiếu mượn liên quan.'])->withInput();
+        }
+
+        // Kiểm tra xem đã có phạt cho borrow_item này chưa (nếu là loại late_return)
+        if ($request->type === 'late_return') {
+            $existingFine = Fine::where('borrow_item_id', $borrowItem->id)
+                ->where('type', 'late_return')
+                ->where('status', 'pending')
+                ->first();
+            
+            if ($existingFine) {
+                return back()->withErrors(['borrow_item_id' => 'Đã tồn tại phạt trả muộn cho sách này.'])->withInput();
+            }
+        }
+
+        // Xử lý upload ảnh hư hỏng
+        $damageImages = [];
+        if ($request->hasFile('damage_images')) {
+            foreach ($request->file('damage_images') as $image) {
+                $path = $image->store('fines/damage_images', 'public');
+                $damageImages[] = $path;
+            }
+        }
+
+        // Lấy tình trạng sách trước khi mượn từ inventory
+        $conditionBefore = null;
+        if ($borrowItem->inventory) {
+            $conditionBefore = $borrowItem->inventory->condition;
+        }
 
         $fine = Fine::create([
             'borrow_id' => $borrow->id,
+            'borrow_item_id' => $borrowItem->id,
             'reader_id' => $borrow->reader_id,
             'amount' => $request->amount,
             'type' => $request->type,
             'description' => $request->description,
+            'damage_description' => $request->damage_description,
+            'damage_images' => !empty($damageImages) ? $damageImages : null,
+            'damage_severity' => $request->damage_severity,
+            'damage_type' => $request->damage_type,
+            'condition_before' => $request->condition_before ?? $conditionBefore,
+            'condition_after' => $request->condition_after,
+            'inspected_by' => Auth::id(),
+            'inspected_at' => now(),
+            'inspection_notes' => $request->inspection_notes,
             'due_date' => $request->due_date,
             'notes' => $request->notes,
             'status' => 'pending',
@@ -88,6 +194,7 @@ class FineController extends Controller
             $data = [
                 'reader_name' => $borrow->reader->ho_ten,
                 'borrow_id' => $borrow->id,
+                'book_name' => $borrowItem->book->ten_sach ?? 'N/A',
                 'fine_amount' => number_format($fine->amount, 0, ',', '.') . ' VND',
                 'due_date' => Carbon::parse($fine->due_date)->format('d/m/Y'),
                 'fine_type' => $this->getFineTypeText($fine->type),
@@ -109,7 +216,10 @@ class FineController extends Controller
     public function show($id)
 {
     $fine = Fine::with([
-        'borrowItem.book',   // cần cái này
+        'borrowItem.book',
+        'borrowItem.inventory',
+        'borrow.borrowItems.book', // Fallback cho dữ liệu cũ
+        'borrow.reader',
         'reader',
         'creator'
     ])->findOrFail($id);
@@ -120,7 +230,14 @@ class FineController extends Controller
     // Form edit
     public function edit($id)
     {
-        $fine = Fine::findOrFail($id);
+        $fine = Fine::with([
+            'borrowItem.book',
+            'borrowItem.inventory',
+            'borrow.borrowItems.book', // Fallback cho dữ liệu cũ
+            'borrow.reader',
+            'reader',
+            'creator'
+        ])->findOrFail($id);
         return view('admin.fines.edit', compact('fine'));
     }
 
@@ -133,19 +250,63 @@ class FineController extends Controller
             'amount' => 'required|numeric|min:0',
             'type' => 'required|in:late_return,damaged_book,lost_book,other',
             'description' => 'nullable|string|max:500',
+            'damage_description' => 'nullable|string|max:1000',
+            'damage_severity' => 'nullable|in:nhe,trung_binh,nang,mat_sach',
+            'damage_type' => 'nullable|string|max:255',
+            'condition_before' => 'nullable|string|max:255',
+            'condition_after' => 'nullable|string|max:255',
+            'damage_images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
+            'inspection_notes' => 'nullable|string|max:1000',
             'status' => 'required|in:pending,paid,waived,cancelled',
             'due_date' => 'required|date',
             'notes' => 'nullable|string|max:500',
         ]);
 
+        // Xử lý upload ảnh hư hỏng mới (nếu có)
+        $damageImages = $fine->damage_images ?? [];
+        if ($request->hasFile('damage_images')) {
+            foreach ($request->file('damage_images') as $image) {
+                $path = $image->store('fines/damage_images', 'public');
+                $damageImages[] = $path;
+            }
+        }
+
+        // Xóa ảnh nếu có request
+        if ($request->filled('remove_images')) {
+            $removeImages = is_array($request->remove_images) ? $request->remove_images : [$request->remove_images];
+            foreach ($removeImages as $imagePath) {
+                if (($key = array_search($imagePath, $damageImages)) !== false) {
+                    // Xóa file khỏi storage
+                    if (\Storage::disk('public')->exists($imagePath)) {
+                        \Storage::disk('public')->delete($imagePath);
+                    }
+                    unset($damageImages[$key]);
+                }
+            }
+            $damageImages = array_values($damageImages); // Re-index array
+        }
+
         $updateData = [
             'amount' => $request->amount,
             'type' => $request->type,
             'description' => $request->description,
+            'damage_description' => $request->damage_description,
+            'damage_images' => !empty($damageImages) ? $damageImages : null,
+            'damage_severity' => $request->damage_severity,
+            'damage_type' => $request->damage_type,
+            'condition_before' => $request->condition_before,
+            'condition_after' => $request->condition_after,
+            'inspection_notes' => $request->inspection_notes,
             'status' => $request->status,
             'due_date' => $request->due_date,
             'notes' => $request->notes,
         ];
+
+        // Cập nhật thông tin kiểm tra nếu có thay đổi về hư hỏng
+        if ($request->filled('damage_description') || $request->hasFile('damage_images')) {
+            $updateData['inspected_by'] = Auth::id();
+            $updateData['inspected_at'] = now();
+        }
 
         if ($request->status === 'paid' && $fine->status !== 'paid') {
             $updateData['paid_date'] = Carbon::today();
@@ -189,9 +350,7 @@ public function waive($id)
     $fine->delete();
 
     // Nếu muốn xoá luôn borrow_item liên quan:
-    if ($fine->borrowItem) {
-        $fine->borrowItem->delete();
-    }
+   
 
     return back()->with('success', 'Phạt đã được miễn và xoá mềm!');
 }
@@ -217,45 +376,54 @@ public function createLateReturnFines()
     $today = Carbon::today();
 
     // Lấy tất cả borrow_items đang mượn và quá hạn
-    $overdueItems = BorrowItem::with('borrow.reader')
+    $overdueItems = BorrowItem::with(['borrow.reader', 'book'])
         ->where('trang_thai', 'Dang muon')
         ->whereDate('ngay_hen_tra', '<', $today)
         ->get();
 
     $createdCount = 0;
     $updatedCount = 0;
+    $skippedCount = 0;
 
     foreach ($overdueItems as $item) {
         $borrow = $item->borrow;
 
-        if (!$borrow) continue;
+        if (!$borrow) {
+            $skippedCount++;
+            continue;
+        }
 
-        // Kiểm tra đã có phạt trả muộn chưa (pending)
-        $existingFine = Fine::where('borrow_id', $borrow->id)
+        // Kiểm tra đã có phạt trả muộn cho borrow_item này chưa (pending)
+        $existingFine = Fine::where('borrow_item_id', $item->id)
             ->where('type', 'late_return')
             ->where('status', 'pending')
             ->first();
 
         // Số ngày quá hạn
-        $daysOverdue = $today->diffInDays($item->ngay_hen_tra, false) * -1;
-        if ($daysOverdue <= 0) continue;
+        $daysOverdue = $today->diffInDays(Carbon::parse($item->ngay_hen_tra), false) * -1;
+        if ($daysOverdue <= 0) {
+            $skippedCount++;
+            continue;
+        }
 
         $fineAmount = $daysOverdue * 5000; // 5000 VND/ngày
 
         if ($existingFine) {
             // Cập nhật số tiền phạt nếu đã tồn tại
             $existingFine->amount = $fineAmount;
-            $existingFine->description = "Trả sách muộn {$daysOverdue} ngày (hạn trả: {$item->ngay_hen_tra})";
+            $existingFine->description = "Trả sách muộn {$daysOverdue} ngày (hạn trả: " . Carbon::parse($item->ngay_hen_tra)->format('d/m/Y') . ")";
+            $existingFine->due_date = $today->copy()->addDays(30);
             $existingFine->save();
             $updatedCount++;
         } else {
             // Tạo mới phạt trả muộn
             Fine::create([
                 'borrow_id' => $borrow->id,
+                'borrow_item_id' => $item->id,
                 'reader_id' => $borrow->reader_id,
                 'amount' => $fineAmount,
                 'type' => 'late_return',
-                'description' => "Trả sách muộn {$daysOverdue} ngày (hạn trả: {$item->ngay_hen_tra})",
+                'description' => "Trả sách muộn {$daysOverdue} ngày (hạn trả: " . Carbon::parse($item->ngay_hen_tra)->format('d/m/Y') . ")",
                 'due_date' => $today->copy()->addDays(30),
                 'status' => 'pending',
                 'notes' => 'Tự động tạo bởi hệ thống',
@@ -267,30 +435,58 @@ public function createLateReturnFines()
 
     return response()->json([
         'status' => 'success',
-        'message' => "Đã tạo {$createdCount} phạt mới và cập nhật {$updatedCount} phạt hiện có."
+        'message' => "Đã tạo {$createdCount} phạt mới, cập nhật {$updatedCount} phạt hiện có, bỏ qua {$skippedCount} mục."
     ]);
 }
     // Báo cáo phạt
     public function report(Request $request)
     {
-        $query = Fine::with(['borrow', 'reader']);
+        $query = Fine::with([
+            'borrowItem.book',
+            'borrowItem.inventory',
+            'borrow.borrowItems.book', // Fallback cho dữ liệu cũ
+            'borrow.reader',
+            'reader',
+            'creator'
+        ]);
 
+        // Lọc theo ngày tạo
         if ($request->filled('from_date')) {
-            $query->where('created_at', '>=', $request->from_date);
+            $query->whereDate('created_at', '>=', $request->from_date);
         }
         if ($request->filled('to_date')) {
-            $query->where('created_at', '<=', $request->to_date);
+            $query->whereDate('created_at', '<=', $request->to_date);
         }
 
-        $fines = $query->get();
+        // Lọc theo trạng thái
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
 
+        // Lọc theo loại phạt
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        $fines = $query->orderBy('created_at', 'desc')->get();
+
+        $today = Carbon::today();
         $stats = [
             'total_fines' => $fines->count(),
             'total_amount' => $fines->sum('amount'),
             'pending_amount' => $fines->where('status','pending')->sum('amount'),
             'paid_amount' => $fines->where('status','paid')->sum('amount'),
             'waived_amount' => $fines->where('status','waived')->sum('amount'),
-            'overdue_count' => $fines->where('status','pending')->filter(fn($f)=>Carbon::today()->gt(Carbon::parse($f->due_date)))->count(),
+            'cancelled_amount' => $fines->where('status','cancelled')->sum('amount'),
+            'overdue_count' => $fines->where('status','pending')
+                ->filter(fn($f) => $f->due_date < $today)->count(),
+            'overdue_amount' => $fines->where('status','pending')
+                ->filter(fn($f) => $f->due_date < $today)->sum('amount'),
+            // Thống kê theo loại
+            'late_return_count' => $fines->where('type', 'late_return')->count(),
+            'damaged_book_count' => $fines->where('type', 'damaged_book')->count(),
+            'lost_book_count' => $fines->where('type', 'lost_book')->count(),
+            'other_count' => $fines->where('type', 'other')->count(),
         ];
 
         return view('admin.fines.report', compact('fines','stats'));

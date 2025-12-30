@@ -12,7 +12,30 @@
         </h1>
         <p class="page-subtitle">Thống kê và báo cáo tổng hợp về kho sách</p>
     </div>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <form action="{{ route('admin.inventory.report.sync') }}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn đồng bộ hóa dữ liệu kho?\n\n✓ Liên kết Inventory với BorrowItem\n✓ Đồng bộ trạng thái mượn/trả\n✓ Sửa lỗi dữ liệu không khớp');">
+            @csrf
+            <button type="submit" class="btn btn-success">
+                <i class="fas fa-sync-alt"></i>
+                Đồng Bộ Kho
+            </button>
+        </form>
+    </div>
 </div>
+
+@if(session('success'))
+    <div class="alert alert-success" style="white-space: pre-line; margin-top: 20px;">
+        <i class="fas fa-check-circle"></i>
+        {{ session('success') }}
+    </div>
+@endif
+
+@if(session('error'))
+    <div class="alert alert-danger" style="margin-top: 20px;">
+        <i class="fas fa-exclamation-circle"></i>
+        {{ session('error') }}
+    </div>
+@endif
 
 <!-- Thống kê tổng quan -->
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 25px;">
@@ -200,22 +223,6 @@
             <span>Cần xử lý</span>
         </div>
     </div>
-    <div class="card" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; position: relative; min-height: 180px; display: flex; flex-direction: column; justify-content: space-between;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
-            <h6 style="font-size: 13px; font-weight: 700; color: #374151; text-transform: uppercase; margin: 0; letter-spacing: 0.5px; line-height: 1.4;">SÁCH ĐÃ BÁN</h6>
-            <div style="width: 44px; height: 44px; background: #e0e7ff; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                <i class="fas fa-shopping-cart" style="font-size: 22px; color: #6366f1;"></i>
-            </div>
-        </div>
-        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
-            <h3 style="font-size: 32px; font-weight: 700; color: #1f2937; margin: 0 0 8px 0; line-height: 1.2;">{{ number_format($stats['sold_books']) }}</h3>
-            <p style="font-size: 13px; color: #6b7280; margin: 0 0 12px 0; line-height: 1.4;">Sách đã thanh lý</p>
-        </div>
-        <div style="display: flex; align-items: center; gap: 6px; color: #6366f1; font-size: 12px; margin-top: auto;">
-            <i class="fas fa-check-circle"></i>
-            <span>Đã thanh lý</span>
-        </div>
-    </div>
 </div>
 
     <!-- Chi tiết theo từng sách -->
@@ -241,7 +248,6 @@
                             <th>Sách hỏng</th>
                             <th>Sách mất</th>
                             <th>ĐÃ MƯỢN</th>
-                            <th>Đã bán</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -276,13 +282,10 @@
                                 <td>
                                     <span class="badge badge-warning">{{ $item['borrowed'] }}</span>
                                 </td>
-                                <td>
-                                    <span class="badge badge-danger">{{ $item['sold'] ?? 0 }}</span>
-                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="12" class="text-center">Chưa có sách nào trong kho</td>
+                                <td colspan="11" class="text-center">Chưa có sách nào trong kho</td>
                             </tr>
                         @endforelse
                     </tbody>

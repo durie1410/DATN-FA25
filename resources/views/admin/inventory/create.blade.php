@@ -7,18 +7,22 @@
 <div class="page-header">
     <div>
         <h1 class="page-title">
-            <i class="fas fa-plus"></i>
+            <i class="fas fa-boxes" style="color: #22c55e;"></i>
             Thêm sách vào kho
         </h1>
-        <p class="page-subtitle">Nhập thông tin sách để thêm vào kho hoặc trưng bày</p>
-    </div>
-    <div>
-        <a href="{{ route('admin.inventory.index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i>
-            Quay lại
-        </a>
+        <p class="page-subtitle">Nhập thông tin để thêm sách vào kho hoặc trưng bày</p>
     </div>
 </div>
+
+@if($errors->any())
+    <div class="alert alert-danger">
+        <ul>
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
 
 @if(session('success'))
     <div class="alert alert-success">
@@ -34,165 +38,140 @@
     </div>
 @endif
 
-<!-- Form -->
-<div class="card">
-    <div class="card-header">
-        <h3 class="card-title">
-            <i class="fas fa-edit"></i>
-            Thông tin sách
-        </h3>
-    </div>
+<div class="card" style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 25px;">
     <form action="{{ route('admin.inventory.store') }}" method="POST">
         @csrf
-        <div class="card-body" style="padding: 25px;">
+        
+        <!-- Số phiếu và Ngày nhập -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Số phiếu</label>
+                    <input type="text" class="form-control" value="{{ $receiptNumber ?? 'Auto-generated' }}" readonly>
+                    <small class="form-text text-muted">Số phiếu được tạo tự động</small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Ngày nhập <span class="text-danger">*</span></label>
+                    <input type="date" name="receipt_date" class="form-control" value="{{ old('receipt_date', date('Y-m-d')) }}" required>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loại nhập -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="mb-3">
+                    <label class="form-label">Loại nhập <span class="text-danger">*</span></label>
+                    <select name="book_input_type" id="book_input_type" class="form-control" required onchange="toggleBookInput()">
+                        <option value="existing" {{ old('book_input_type', 'existing') == 'existing' ? 'selected' : '' }}>Chọn sách có sẵn</option>
+                        <option value="new" {{ old('book_input_type') == 'new' ? 'selected' : '' }}>Thêm sách mới</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chọn sách có sẵn -->
+        <div id="existing_book_section">
             <div class="row">
-                <div class="col-md-12">
-                    <div class="form-group">
-                        <label>Loại nhập <span class="text-danger">*</span></label>
-                        <select name="book_input_type" id="book_input_type" class="form-control" required onchange="toggleBookInput()">
-                            <option value="existing" {{ old('book_input_type', 'existing') == 'existing' ? 'selected' : '' }}>Chọn sách có sẵn</option>
-                            <option value="new" {{ old('book_input_type') == 'new' ? 'selected' : '' }}>Thêm sách mới</option>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Sách <span class="text-danger">*</span></label>
+                        <select name="book_id" id="book_id" class="form-control">
+                            <option value="">-- Chọn sách --</option>
+                            @foreach($books as $book)
+                                <option value="{{ $book->id }}" {{ old('book_id') == $book->id ? 'selected' : '' }}>
+                                    {{ $book->ten_sach }} - {{ $book->tac_gia }}
+                                </option>
+                            @endforeach
                         </select>
                     </div>
                 </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Số lượng <span class="text-danger">*</span></label>
+                        <input type="number" name="quantity" class="form-control" value="{{ old('quantity', 1) }}" min="1" required>
+                    </div>
+                </div>
             </div>
+        </div>
 
-            <!-- Chọn sách có sẵn -->
-            <div id="existing_book_section">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Sách <span class="text-danger">*</span></label>
-                            <select name="book_id" id="book_id" class="form-control">
-                                <option value="">-- Chọn sách --</option>
-                                @foreach($books as $book)
-                                    <option value="{{ $book->id }}" {{ old('book_id') == $book->id ? 'selected' : '' }}>
-                                        {{ $book->ten_sach }} - {{ $book->tac_gia }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('book_id')
-                                <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
+        <!-- Thêm sách mới -->
+        <div id="new_book_section" style="display: none;">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Thông tin:</strong> Nhập thông tin sách mới. Sách sẽ được tự động tạo trong hệ thống khi nhập kho.
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Tên sách <span class="text-danger">*</span></label>
+                        <input type="text" name="ten_sach" id="ten_sach" class="form-control" value="{{ old('ten_sach') }}" placeholder="Nhập tên sách">
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Mã vạch</label>
-                            <input type="text" 
-                                   name="barcode" 
-                                   class="form-control" 
-                                   value="{{ old('barcode') }}"
-                                   placeholder="Để trống để tự động tạo">
-                            <small class="form-text text-muted">Nếu để trống, hệ thống sẽ tự động tạo mã vạch</small>
-                            @error('barcode')
-                                <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Tác giả <span class="text-danger">*</span></label>
+                        <input type="text" name="tac_gia" id="tac_gia" class="form-control" value="{{ old('tac_gia') }}" placeholder="Nhập tên tác giả">
                     </div>
                 </div>
             </div>
-
-            <!-- Thêm sách mới -->
-            <div id="new_book_section" style="display: none;">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i>
-                    <strong>Thông tin:</strong> Nhập thông tin sách mới. Sách sẽ được tự động tạo trong hệ thống khi thêm vào kho.
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Tên sách <span class="text-danger">*</span></label>
-                            <input type="text" name="ten_sach" id="ten_sach" class="form-control" value="{{ old('ten_sach') }}" placeholder="Nhập tên sách">
-                            @error('ten_sach')
-                                <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Tác giả <span class="text-danger">*</span></label>
-                            <input type="text" name="tac_gia" id="tac_gia" class="form-control" value="{{ old('tac_gia') }}" placeholder="Nhập tên tác giả">
-                            @error('tac_gia')
-                                <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Thể loại <span class="text-danger">*</span></label>
+                        <select name="category_id" id="category_id" class="form-control">
+                            <option value="">-- Chọn thể loại --</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                    {{ $category->ten_the_loai }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Thể loại <span class="text-danger">*</span></label>
-                            <select name="category_id" id="category_id" class="form-control">
-                                <option value="">-- Chọn thể loại --</option>
-                                @foreach($categories as $category)
-                                    <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
-                                        {{ $category->ten_the_loai }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('category_id')
-                                <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Nhà xuất bản</label>
-                            <select name="nha_xuat_ban_id" id="nha_xuat_ban_id" class="form-control">
-                                <option value="">-- Chọn nhà xuất bản --</option>
-                                @foreach($publishers as $publisher)
-                                    <option value="{{ $publisher->id }}" {{ old('nha_xuat_ban_id') == $publisher->id ? 'selected' : '' }}>
-                                        {{ $publisher->ten_nha_xuat_ban }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('nha_xuat_ban_id')
-                                <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Năm xuất bản</label>
-                            <input type="number" name="nam_xuat_ban" id="nam_xuat_ban" class="form-control" value="{{ old('nam_xuat_ban', date('Y')) }}" min="1900" max="{{ date('Y') }}">
-                            @error('nam_xuat_ban')
-                                <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Nhà xuất bản</label>
+                        <select name="nha_xuat_ban_id" id="nha_xuat_ban_id" class="form-control">
+                            <option value="">-- Chọn nhà xuất bản --</option>
+                            @foreach($publishers as $publisher)
+                                <option value="{{ $publisher->id }}" {{ old('nha_xuat_ban_id') == $publisher->id ? 'selected' : '' }}>
+                                    {{ $publisher->ten_nha_xuat_ban }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Giá (VNĐ)</label>
-                            <input type="number" name="gia" id="gia" class="form-control" value="{{ old('gia') }}" min="0" step="1000">
-                            @error('gia')
-                                <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Năm xuất bản</label>
+                        <input type="number" name="nam_xuat_ban" id="nam_xuat_ban" class="form-control" value="{{ old('nam_xuat_ban', date('Y')) }}" min="1900" max="{{ date('Y') }}">
                     </div>
-                </div>
-                <div class="form-group">
-                    <label>Mô tả</label>
-                    <textarea name="mo_ta" id="mo_ta" class="form-control" rows="3" placeholder="Mô tả về sách...">{{ old('mo_ta') }}</textarea>
-                    @error('mo_ta')
-                        <div class="text-danger">{{ $message }}</div>
-                    @enderror
-                </div>
-                <div class="form-group">
-                    <label>Mã vạch</label>
-                    <input type="text" 
-                           name="barcode" 
-                           class="form-control" 
-                           value="{{ old('barcode') }}"
-                           placeholder="Để trống để tự động tạo">
-                    <small class="form-text text-muted">Nếu để trống, hệ thống sẽ tự động tạo mã vạch</small>
-                    @error('barcode')
-                        <div class="text-danger">{{ $message }}</div>
-                    @enderror
                 </div>
             </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Giá (VNĐ)</label>
+                        <input type="number" name="gia" id="gia" class="form-control" value="{{ old('gia') }}" min="0" step="1000">
+                    </div>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Mô tả</label>
+                <textarea name="mo_ta" id="mo_ta" class="form-control" rows="3" placeholder="Mô tả về sách...">{{ old('mo_ta') }}</textarea>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Số lượng <span class="text-danger">*</span></label>
+                        <input type="number" name="quantity" class="form-control" value="{{ old('quantity', 1) }}" min="1" required>
+                    </div>
+                </div>
+            </div>
+        </div>
 
             <script>
             function toggleBookInput() {
@@ -223,57 +202,50 @@
             });
             </script>
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label>Loại lưu trữ <span class="text-danger">*</span></label>
-                        <select name="storage_type" id="storage_type" class="form-control" required onchange="updateLocationOptions()">
-                            <option value="">-- Chọn loại --</option>
-                            <option value="Kho" {{ old('storage_type') == 'Kho' ? 'selected' : '' }}>Kho</option>
-                            <option value="Trung bay" {{ old('storage_type') == 'Trung bay' ? 'selected' : '' }}>Trưng bày</option>
-                        </select>
-                        @error('storage_type')
-                            <div class="text-danger">{{ $message }}</div>
-                        @enderror
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label>Vị trí <span class="text-danger">*</span></label>
-                        <div style="display: flex; gap: 5px;">
-                            <select name="location" id="location" class="form-control" style="flex: 1;" onchange="handleLocationChange()">
-                                <option value="">-- Chọn hoặc nhập mới --</option>
-                                <optgroup label="Vị trí trong kho" id="locations_stock_group">
-                                    @foreach($locationsInStock as $loc)
-                                        <option value="{{ $loc['location'] }}" {{ old('location') == $loc['location'] ? 'selected' : '' }}>
-                                            {{ $loc['location'] }} ({{ $loc['count'] }} sách)
-                                        </option>
-                                    @endforeach
-                                </optgroup>
-                                <optgroup label="Vị trí trưng bày" id="locations_display_group">
-                                    @foreach($locationsOnDisplay as $loc)
-                                        <option value="{{ $loc['location'] }}" {{ old('location') == $loc['location'] ? 'selected' : '' }}>
-                                            {{ $loc['location'] }} ({{ $loc['count'] }} sách)
-                                        </option>
-                                    @endforeach
-                                </optgroup>
-                            </select>
-                            <input type="text" 
-                                   id="location_input" 
-                                   class="form-control" 
-                                   style="flex: 1; display: none;" 
-                                   placeholder="Nhập vị trí mới..."
-                                   onblur="saveNewLocation()">
-                        </div>
-                        <small class="form-text text-muted">
-                            <i class="fas fa-info-circle"></i> Chọn vị trí có sẵn hoặc nhập vị trí mới
-                        </small>
-                        @error('location')
-                            <div class="text-danger">{{ $message }}</div>
-                        @enderror
-                    </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Loại lưu trữ <span class="text-danger">*</span></label>
+                    <select name="storage_type" id="storage_type" class="form-control" required onchange="updateLocationOptions()">
+                        <option value="Kho" {{ old('storage_type', 'Kho') == 'Kho' ? 'selected' : '' }}>Kho</option>
+                        <option value="Trung bay" {{ old('storage_type') == 'Trung bay' ? 'selected' : '' }}>Trưng bày</option>
+                    </select>
                 </div>
             </div>
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label">Vị trí lưu trữ <span class="text-danger">*</span></label>
+                    <div style="display: flex; gap: 5px;">
+                        <select name="location" id="location" class="form-control" style="flex: 1;" onchange="handleLocationChange()">
+                            <option value="">-- Chọn hoặc nhập mới --</option>
+                            <optgroup label="Vị trí trong kho" id="locations_stock_group">
+                                @foreach($locationsInStock as $loc)
+                                    <option value="{{ $loc['location'] }}" {{ old('location') == $loc['location'] ? 'selected' : '' }}>
+                                        {{ $loc['location'] }} ({{ $loc['count'] }} sách)
+                                    </option>
+                                @endforeach
+                            </optgroup>
+                            <optgroup label="Vị trí trưng bày" id="locations_display_group">
+                                @foreach($locationsOnDisplay as $loc)
+                                    <option value="{{ $loc['location'] }}" {{ old('location') == $loc['location'] ? 'selected' : '' }}>
+                                        {{ $loc['location'] }} ({{ $loc['count'] }} sách)
+                                    </option>
+                                @endforeach
+                            </optgroup>
+                        </select>
+                        <input type="text" 
+                               id="location_input" 
+                               class="form-control" 
+                               style="flex: 1; display: none;" 
+                               placeholder="Nhập vị trí mới..."
+                               onblur="saveNewLocation()">
+                    </div>
+                    <small class="form-text text-muted">
+                        <i class="fas fa-info-circle"></i> Chọn vị trí có sẵn hoặc nhập vị trí mới
+                    </small>
+                </div>
+            </div>
+        </div>
 
             <script>
             const locationsInStock = @json($locationsInStock);
@@ -377,89 +349,40 @@
             });
             </script>
 
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label>Tình trạng sách <span class="text-danger">*</span></label>
-                        <select name="condition" class="form-control" required>
-                            <option value="">-- Chọn tình trạng --</option>
-                            <option value="Moi" {{ old('condition') == 'Moi' ? 'selected' : '' }}>Mới</option>
-                            <option value="Cu" {{ old('condition') == 'Cu' ? 'selected' : '' }}>Cũ</option>
-                            <option value="Hong" {{ old('condition') == 'Hong' ? 'selected' : '' }}>Hỏng</option>
-                        </select>
-                        @error('condition')
-                            <div class="text-danger">{{ $message }}</div>
-                        @enderror
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label>Trạng thái <span class="text-danger">*</span></label>
-                        <select name="status" class="form-control" required>
-                            <option value="">-- Chọn trạng thái --</option>
-                            <option value="Co san" {{ old('status') == 'Co san' ? 'selected' : '' }}>Có sẵn</option>
-                            <option value="Dang muon" {{ old('status') == 'Dang muon' ? 'selected' : '' }}>Đang mượn</option>
-                            <option value="Mat" {{ old('status') == 'Mat' ? 'selected' : '' }}>Mất</option>
-                            <option value="Hong" {{ old('status') == 'Hong' ? 'selected' : '' }}>Hỏng</option>
-                            <option value="Thanh ly" {{ old('status') == 'Thanh ly' ? 'selected' : '' }}>Thanh lý</option>
-                        </select>
-                        @error('status')
-                            <div class="text-danger">{{ $message }}</div>
-                        @enderror
-                    </div>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label class="form-label">Giá mua đơn vị (VNĐ)</label>
+                    <input type="number" name="unit_price" class="form-control" value="{{ old('unit_price') }}" min="0" step="0.01">
                 </div>
             </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label>Giá mua (VNĐ)</label>
-                        <input type="number" 
-                               name="purchase_price" 
-                               class="form-control" 
-                               value="{{ old('purchase_price') }}"
-                               min="0"
-                               step="1000"
-                               placeholder="0">
-                        @error('purchase_price')
-                            <div class="text-danger">{{ $message }}</div>
-                        @enderror
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label>Ngày mua</label>
-                        <input type="date" 
-                               name="purchase_date" 
-                               class="form-control" 
-                               value="{{ old('purchase_date', date('Y-m-d')) }}">
-                        @error('purchase_date')
-                            <div class="text-danger">{{ $message }}</div>
-                        @enderror
-                    </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label class="form-label">Nhà cung cấp</label>
+                    <input type="text" name="supplier" class="form-control" value="{{ old('supplier') }}">
                 </div>
             </div>
-
-            <div class="form-group">
-                <label>Ghi chú</label>
-                <textarea name="notes" 
-                          class="form-control" 
-                          rows="3"
-                          placeholder="Ghi chú về sách...">{{ old('notes') }}</textarea>
-                @error('notes')
-                    <div class="text-danger">{{ $message }}</div>
-                @enderror
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <label class="form-label">Ghi chú</label>
+                    <textarea name="notes" class="form-control" rows="2">{{ old('notes') }}</textarea>
+                </div>
             </div>
         </div>
-        <div class="card-footer" style="padding: 20px 25px; background: #f8f9fa; border-top: 1px solid #dee2e6;">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-save"></i>
-                Lưu
-            </button>
-            <a href="{{ route('admin.inventory.index') }}" class="btn btn-secondary">
-                <i class="fas fa-times"></i>
-                Hủy
+
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i>
+            <strong>Lưu ý:</strong> Sách sẽ được nhập vào kho bởi <strong>{{ auth()->user()->name }}</strong>. 
+            Hệ thống sẽ tự động tạo mã vạch và các bản ghi inventory cho số lượng được chọn.
+        </div>
+
+        <div class="d-flex justify-content-between" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <a href="{{ route('admin.inventory.index') }}" class="btn btn-secondary" style="background: white; color: #1f2937; border: 1px solid #e5e7eb; padding: 12px 20px; border-radius: 10px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fas fa-times"></i> Hủy
             </a>
+            <button type="submit" class="btn btn-primary" style="background: #22c55e; color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fas fa-save"></i> Thêm Vào Kho
+            </button>
         </div>
     </form>
 </div>

@@ -10,7 +10,7 @@
             <i class="fas fa-users" style="color: #22c55e;"></i>
             Tổng quan
         </h1>
-        <p class="page-subtitle">Quản lý và theo dõi người dùng và độc giả</p>
+        <p class="page-subtitle">Quản lý và theo dõi người dùng</p>
     </div>
     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
         <a href="{{ route('admin.users.create') }}" class="btn btn-primary" style="background: #22c55e; color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px;">
@@ -20,10 +20,6 @@
         <a href="{{ route('admin.users.index') }}" class="btn btn-info" style="background: #3b82f6; color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px;">
             <i class="fas fa-users"></i>
             Quản Lý Người Dùng
-        </a>
-        <a href="{{ route('admin.readers.statistics') }}" class="btn btn-secondary" style="background: #6b7280; color: white; border: none; padding: 12px 20px; border-radius: 10px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px;">
-            <i class="fas fa-file-alt"></i>
-            Báo Cáo Thống Kê
         </a>
     </div>
 </div>
@@ -65,18 +61,6 @@
         </div>
     </div>
 
-    <!-- Card 3: Độc giả -->
-    <div class="card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none; border-radius: 12px; padding: 24px; position: relative; min-height: 180px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        <h6 style="font-size: 13px; font-weight: 700; text-transform: uppercase; margin: 0 0 16px 0; letter-spacing: 0.5px; line-height: 1.4; opacity: 0.9;">TỔNG ĐỘC GIẢ</h6>
-        <h3 style="font-size: 42px; font-weight: 700; margin: 0 0 8px 0; line-height: 1.2;">{{ $totalReaders }}</h3>
-        <div style="margin-top: 12px; font-size: 14px; opacity: 0.9;">
-            <i class="fas fa-check-circle"></i> {{ $activeReaders }} hoạt động
-            <span style="margin-left: 12px;"><i class="fas fa-exclamation-triangle"></i> {{ $suspendedReaders + $expiredReaders }} cần xử lý</span>
-        </div>
-        <div style="position: absolute; bottom: 24px; right: 24px; opacity: 0.3;">
-            <i class="fas fa-book-reader" style="font-size: 64px;"></i>
-        </div>
-    </div>
 
 </div>
 
@@ -102,19 +86,6 @@
                     <option value="user" {{ request('user_role') == 'user' ? 'selected' : '' }}>Người dùng</option>
                 </select>
             </div>
-            <div>
-                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Tìm kiếm độc giả</label>
-                <input type="text" name="reader_search" class="form-control" value="{{ request('reader_search') }}" placeholder="Tên, email, số thẻ..." style="width: 100%;">
-            </div>
-            <div>
-                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Trạng thái độc giả</label>
-                <select name="reader_status" class="form-control" style="width: 100%;">
-                    <option value="">-- Tất cả trạng thái --</option>
-                    <option value="Hoat dong" {{ request('reader_status') == 'Hoat dong' ? 'selected' : '' }}>Hoạt động</option>
-                    <option value="Tam khoa" {{ request('reader_status') == 'Tam khoa' ? 'selected' : '' }}>Tạm khóa</option>
-                    <option value="Het han" {{ request('reader_status') == 'Het han' ? 'selected' : '' }}>Hết hạn</option>
-                </select>
-            </div>
         </div>
         <div style="display: flex; gap: 10px; justify-content: flex-start;">
             <button type="submit" class="btn btn-primary" style="background: #22c55e; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px;">
@@ -136,11 +107,6 @@
             <li class="nav-item" style="margin: 0;">
                 <a class="nav-link active" href="#users" style="color: #1f2937; padding: 15px 20px; border: none; border-bottom: 3px solid #22c55e; display: block; text-decoration: none; cursor: pointer; transition: all 0.3s;">
                     <i class="fas fa-users"></i> Người Dùng ({{ $totalUsers }})
-                </a>
-            </li>
-            <li class="nav-item" style="margin: 0;">
-                <a class="nav-link" href="#readers" style="color: #1f2937; padding: 15px 20px; border: none; display: block; text-decoration: none; cursor: pointer; transition: all 0.3s;">
-                    <i class="fas fa-book-reader"></i> Độc Giả ({{ $totalReaders }})
                 </a>
             </li>
         </ul>
@@ -196,55 +162,6 @@
                 </div>
                 <div style="padding: 20px;">
                     {{ $users->appends(request()->except('users_page'))->links() }}
-                </div>
-            </div>
-
-            <!-- Tab Độc Giả -->
-            <div id="readers" class="tab-pane" style="display: none;">
-                <div class="table-responsive" style="padding: 20px;">
-                    <table class="table table-striped" style="margin: 0;">
-                        <thead>
-                            <tr>
-                                <th>Số thẻ</th>
-                                <th>Họ tên</th>
-                                <th>Email</th>
-                                <th>Số điện thoại</th>
-                                <th>Trạng thái</th>
-                                <th>Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($readers as $reader)
-                                <tr>
-                                    <td><strong>{{ $reader->so_the_doc_gia }}</strong></td>
-                                    <td>{{ $reader->ho_ten }}</td>
-                                    <td>{{ $reader->email }}</td>
-                                    <td>{{ $reader->so_dien_thoai }}</td>
-                                    <td>
-                                        @if($reader->trang_thai == 'Hoat dong')
-                                            <span class="badge badge-success">Hoạt động</span>
-                                        @elseif($reader->trang_thai == 'Tam khoa')
-                                            <span class="badge badge-warning">Tạm khóa</span>
-                                        @else
-                                            <span class="badge badge-danger">Hết hạn</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        <a href="{{ route('admin.readers.show', $reader->id) }}" class="btn btn-sm btn-info">
-                                            <i class="fas fa-eye"></i> Xem
-                                        </a>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="6" class="text-center">Không có độc giả nào</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-                <div style="padding: 20px;">
-                    {{ $readers->appends(request()->except('readers_page'))->links() }}
                 </div>
             </div>
 

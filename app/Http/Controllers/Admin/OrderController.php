@@ -103,6 +103,7 @@ class OrderController extends Controller
         $request->validate([
             'status' => 'nullable|in:pending,confirmed,processing,preparing,packing,sent_to_post_office,shipping,shipped,delivered,delivery_failed,cancelled',
             'payment_status' => 'nullable|in:pending,paid,failed,refunded',
+            'payment_method' => 'nullable|in:cash_on_delivery,bank_transfer,momo,vnpay',
         ]);
 
         $order = Order::findOrFail($id);
@@ -111,16 +112,42 @@ class OrderController extends Controller
         try {
             DB::beginTransaction();
 
+            // Cập nhật payment_method trước (nếu có)
+            if ($request->filled('payment_method')) {
+                $order->payment_method = $request->payment_method;
+                
+                // Tự động cập nhật payment_status dựa trên phương thức thanh toán
+                if (!$request->filled('payment_status')) {
+                    if (in_array($request->payment_method, ['vnpay', 'momo', 'bank_transfer'])) {
+                        // Online payment -> Đã thanh toán
+                        $order->payment_status = 'paid';
+                    } elseif ($request->payment_method === 'cash_on_delivery') {
+                        // COD: Tùy thuộc vào trạng thái giao hàng
+                        if (in_array($order->status, ['delivered'])) {
+                            $order->payment_status = 'paid';
+                        } elseif (in_array($order->status, ['delivery_failed', 'cancelled'])) {
+                            $order->payment_status = 'pending';
+                        } else {
+                            // Đơn hàng chưa giao -> Chưa thanh toán
+                            $order->payment_status = 'pending';
+                        }
+                    }
+                }
+            }
+
             if ($request->filled('status')) {
                 $order->status = $request->status;
                 
-                // Tự động cập nhật trạng thái thanh toán thành "Đã thanh toán" 
-                // khi trạng thái đơn hàng được cập nhật thành "Đã giao thành công"
-                if ($request->status === 'delivered' && !$request->filled('payment_status')) {
-                    // Chỉ tự động cập nhật nếu payment_status chưa được chỉ định trong request
-                    // và trạng thái thanh toán hiện tại chưa phải là "đã thanh toán"
-                    if ($order->payment_status !== 'paid') {
+                // Logic tự động cập nhật trạng thái thanh toán dựa trên phương thức và trạng thái đơn
+                if (!$request->filled('payment_status')) {
+                    // COD: Giao hàng thành công -> Đã thanh toán
+                    if ($request->status === 'delivered' && $order->payment_method === 'cash_on_delivery') {
                         $order->payment_status = 'paid';
+                    }
+                    
+                    // COD: Giao hàng thất bại -> Chưa thanh toán
+                    if ($request->status === 'delivery_failed' && $order->payment_method === 'cash_on_delivery') {
+                        $order->payment_status = 'pending';
                     }
                 }
                 
@@ -170,6 +197,7 @@ class OrderController extends Controller
                 }
             }
 
+            // Cho phép admin ghi đè thủ công nếu cần
             if ($request->filled('payment_status')) {
                 $order->payment_status = $request->payment_status;
             }
@@ -178,7 +206,21 @@ class OrderController extends Controller
 
             DB::commit();
 
-            return redirect()->back()->with('success', 'Cập nhật trạng thái đơn hàng thành công!');
+            // Tạo thông báo chi tiết
+            $message = 'Cập nhật đơn hàng thành công!';
+            
+            // Thêm thông tin về cập nhật tự động
+            if ($request->filled('payment_method') && in_array($request->payment_method, ['vnpay', 'momo', 'bank_transfer'])) {
+                $message .= ' Trạng thái thanh toán đã tự động chuyển sang "Đã thanh toán" do sử dụng phương thức online.';
+            } elseif ($request->filled('status')) {
+                if ($request->status === 'delivered' && $order->payment_method === 'cash_on_delivery' && !$request->filled('payment_status')) {
+                    $message .= ' Trạng thái thanh toán đã tự động chuyển sang "Đã thanh toán" do giao hàng thành công (COD).';
+                } elseif ($request->status === 'delivery_failed' && $order->payment_method === 'cash_on_delivery' && !$request->filled('payment_status')) {
+                    $message .= ' Trạng thái thanh toán đã tự động chuyển về "Chưa thanh toán" do giao hàng thất bại (COD).';
+                }
+            }
+
+            return redirect()->back()->with('success', $message);
         } catch (\Exception $e) {
             DB::rollback();
             

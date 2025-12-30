@@ -84,11 +84,12 @@
             <div class="col-md-6">
                 <label class="form-label">Trạng thái</label>
                 <select name="trang_thai" class="form-control">
-                    <option value="chua_hoan_tat">chưa hoàn tất</option>
+                    <option value="Cho duyet">Chờ duyệt</option>
                     <option value="Dang muon">Đang mượn</option>
                     <option value="Da tra">Đã trả</option>
                     <option value="Qua han">Quá hạn</option>
                     <option value="Mat sach">Mất sách</option>
+                    <option value="Huy">Hủy</option>
                 </select>
             </div>
         </div>
@@ -188,7 +189,8 @@ function selectReader(reader) {
     if (bookId) {
         const bookPriceText = document.getElementById('bookPrice').textContent.replace(/[^\d]/g, '');
         const bookPrice = parseInt(bookPriceText) || 0;
-        const deposit = Math.round(bookPrice * 0.2);
+        // Tiền cọc = giá sách (1:1)
+        const deposit = bookPrice;
         document.getElementById('depositInput').value = deposit;
     }
 
@@ -253,15 +255,8 @@ function selectBook(book) {
     document.getElementById('bookPrice').textContent = price.toLocaleString('vi-VN') + '₫';
 
     // --- Xác định tiền cọc ---
-    const readerId = document.getElementById('readerId').value;
-    let deposit = 0;
-    if (readerId) {
-        // Nếu có độc giả → cọc 20%
-        deposit = Math.round(price * 0.2);
-    } else {
-        // Nếu chưa chọn độc giả → cọc 100%
-        deposit = price;
-    }
+    // Tiền cọc = giá sách (1:1) cho tất cả trường hợp
+    const deposit = price;
     document.getElementById('depositInput').value = deposit;
 
     // --- Tiền ship để trống, người dùng nhập tay ---

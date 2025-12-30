@@ -9,9 +9,12 @@ use App\Models\PurchasableBook;
 use App\Models\Borrow;
 use App\Models\Book;
 use App\Models\Document;
+use App\Http\Controllers\Controller;
+use App\Services\FileUploadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
 
 class UserAccountController extends Controller
@@ -24,6 +27,10 @@ class UserAccountController extends Controller
         $user = auth()->user();
         // Load relationship reader để sidebar hiển thị "Sách đang mượn" ngay
         $user->load('reader');
+        
+        // Kiểm tra và refresh user để đảm bảo có dữ liệu mới nhất
+        $user->refresh();
+        
         return view('account', compact('user'));
     }
 
@@ -35,23 +42,88 @@ class UserAccountController extends Controller
         try {
             $user = auth()->user();
             
-            $request->validate([
+            // Validation rules
+            $validationRules = [
                 'phone' => 'nullable|string|max:20',
-                'province' => 'nullable|string|max:255',
-                'district' => 'nullable|string|max:255',
-                'address' => 'nullable|string|max:500',
-                'so_cccd' => 'nullable|string|max:20',
+                'province' => 'required|string|max:255',
+                'district' => 'required|string|max:255',
+                'address' => 'required|string|max:500',
+                'so_cccd' => 'required|string|max:20',
+                'ngay_sinh' => 'nullable|date|before:today',
+                'gioi_tinh' => 'nullable|in:Nam,Nu,Khac',
+            ];
+            
+            // Chỉ bắt buộc upload ảnh nếu chưa có ảnh
+            if (!$user->cccd_image) {
+                $validationRules['cccd_image'] = 'required|image|mimes:jpeg,jpg,png,webp|max:2048';
+            } else {
+                $validationRules['cccd_image'] = 'nullable|image|mimes:jpeg,jpg,png,webp|max:2048';
+            }
+            
+            $request->validate($validationRules, [
+                'province.required' => 'Vui lòng chọn Tỉnh/Thành phố',
+                'district.required' => 'Vui lòng chọn Quận/Huyện',
+                'address.required' => 'Vui lòng nhập địa chỉ nhận hàng',
+                'so_cccd.required' => 'Vui lòng nhập số CCCD/CMND',
+                'cccd_image.required' => 'Vui lòng upload ảnh CCCD/CMND',
+                'cccd_image.image' => 'File phải là ảnh (JPG, PNG, WEBP)',
+                'cccd_image.mimes' => 'Định dạng ảnh không hợp lệ. Chỉ chấp nhận: JPG, PNG, WEBP',
+                'cccd_image.max' => 'Kích thước ảnh không được vượt quá 2MB',
+                'address.max' => 'Địa chỉ không được vượt quá 500 ký tự',
+                'province.max' => 'Tỉnh/Thành phố không được vượt quá 255 ký tự',
+                'district.max' => 'Quận/Huyện không được vượt quá 255 ký tự',
             ]);
 
+            // Xử lý upload ảnh CCCD
+            if ($request->hasFile('cccd_image')) {
+                try {
+                    // Xóa ảnh cũ nếu có
+                    if ($user->cccd_image && Storage::disk('public')->exists($user->cccd_image)) {
+                        Storage::disk('public')->delete($user->cccd_image);
+                    }
+                    
+                    // Upload ảnh mới
+                    $uploadResult = FileUploadService::uploadImage(
+                        $request->file('cccd_image'),
+                        'cccd_images',
+                        [
+                            'max_size' => 2048, // 2MB
+                            'resize' => false, // Giữ nguyên kích thước để đảm bảo chất lượng
+                        ]
+                    );
+                    
+                    $user->cccd_image = $uploadResult['path'];
+                } catch (\Exception $e) {
+                    return redirect()->route('account')
+                        ->with('error', 'Lỗi khi upload ảnh CCCD: ' . $e->getMessage())
+                        ->withInput();
+                }
+            }
+            
             // Cập nhật thông tin
             $user->phone = $request->phone ?? null;
             $user->province = $request->province ?? null;
             $user->district = $request->district ?? null;
             $user->address = $request->address ?? null;
             $user->so_cccd = $request->so_cccd ?? null;
+            $user->ngay_sinh = $request->ngay_sinh ?? null;
+            $user->gioi_tinh = $request->gioi_tinh ?? null;
             
             if (!$user->save()) {
                 return redirect()->route('account')->with('error', 'Không thể cập nhật thông tin. Vui lòng thử lại.');
+            }
+
+            // Cập nhật reader nếu có (đồng bộ thông tin)
+            if ($user->reader) {
+                $reader = $user->reader;
+                $reader->ho_ten = $user->name;
+                $reader->email = $user->email;
+                $reader->so_dien_thoai = $user->phone;
+                $reader->so_cccd = $user->so_cccd;
+                $reader->ngay_sinh = $user->ngay_sinh;
+                $reader->gioi_tinh = $user->gioi_tinh;
+                $reader->dia_chi = $user->address;
+                $reader->save();
             }
 
             return redirect()->route('account')->with('success', 'Cập nhật thông tin thành công!');
@@ -141,9 +213,12 @@ public function borrowedBooks()
         
         // Luôn trả về paginator để tránh lỗi trong view
         if ($reader) {
-            // Lấy sách đang mượn (Borrow) qua Reader với trạng thái 'Dang muon'
+            // Lấy sách đang mượn (Borrow) qua Reader - bao gồm cả trạng thái chờ xác nhận
             $borrows = Borrow::where('reader_id', $reader->id)
-                ->where('trang_thai', 'Dang muon')
+                ->where(function($query) {
+                    $query->where('trang_thai', 'Dang muon')
+                          ->orWhere('trang_thai_chi_tiet', 'giao_hang_thanh_cong');
+                })
                 ->with(['borrowItems.book', 'borrowItems.inventory', 'librarian', 'reader'])
                 ->orderBy('ngay_muon', 'desc')
                 ->paginate(12);

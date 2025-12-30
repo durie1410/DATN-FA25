@@ -276,6 +276,14 @@ class HomeController extends Controller
 
     public function borrowBook(Request $request)
     {
+        // Nếu items tồn tại và là MẢNG RỖNG thì mới coi là giỏ trống
+if (is_array($request->items ?? null) && count($request->items) === 0) {
+    return response()->json([
+        'success' => false,
+        'message' => 'Giỏ sách của bạn đang trống'
+    ], 400);
+}
+
         // Kiểm tra xem request có items[] không (kiểu mới) hay là kiểu cũ
         $hasItemsArray = $request->has('items') && is_array($request->items);
         
@@ -285,7 +293,7 @@ class HomeController extends Controller
                 'items' => 'required|array|min:1',
                 'items.*.book_id' => 'required|exists:books,id',
                 'items.*.borrow_days' => 'required|integer|min:1|max:30',
-                'items.*.distance' => 'nullable|numeric|min:0',
+                'items.*.distance' => 'nullable|numeric|min:0|max:10',
                 'note' => 'nullable|string|max:1000',
             ]);
         } else {
@@ -305,13 +313,48 @@ class HomeController extends Controller
             ], 401);
         }
 
-        $reader = Reader::where('user_id', auth()->id())->first();
-        if (!$reader) {
+        $user = auth()->user();
+        
+        // Kiểm tra thông tin user có đầy đủ không
+        if (!$user->hasCompleteProfile()) {
+            $missingFields = $user->getMissingFields();
             return response()->json([
                 'success' => false,
-                'message' => 'Bạn chưa có thẻ độc giả. Vui lòng đăng ký thẻ độc giả trước khi mượn sách.',
-                'redirect' => route('register.reader.form')
+                'message' => 'Vui lòng cập nhật đầy đủ thông tin cá nhân trước khi mượn sách. Các trường còn thiếu: ' . implode(', ', $missingFields),
+                'redirect' => route('account')
             ], 400);
+        }
+        
+        // Tự động tạo reader nếu chưa có (từ thông tin user)
+        $reader = $user->reader;
+        if (!$reader) {
+            // Tạo số thẻ độc giả unique
+            $soTheDocGia = 'RD' . strtoupper(\Illuminate\Support\Str::random(6));
+            $maxAttempts = 10;
+            $attempt = 0;
+            while (Reader::where('so_the_doc_gia', $soTheDocGia)->exists() && $attempt < $maxAttempts) {
+                $soTheDocGia = 'RD' . strtoupper(\Illuminate\Support\Str::random(6));
+                $attempt++;
+            }
+            if ($attempt >= $maxAttempts) {
+                $soTheDocGia = 'RD' . strtoupper(\Illuminate\Support\Str::random(4)) . time();
+            }
+            
+            // Tạo reader từ thông tin user
+            $reader = Reader::create([
+                'user_id' => $user->id,
+                'ho_ten' => $user->name,
+                'email' => $user->email,
+                'so_dien_thoai' => $user->phone,
+                'so_cccd' => $user->so_cccd,
+                'ngay_sinh' => $user->ngay_sinh,
+                'gioi_tinh' => $user->gioi_tinh,
+                'dia_chi' => $user->address,
+                'so_the_doc_gia' => $soTheDocGia,
+                'ngay_cap_the' => now(),
+                'ngay_het_han' => now()->addYear(),
+                'trang_thai' => 'Hoat dong',
+            ]);
         }
 
         if ($reader->trang_thai !== 'Hoat dong') {
@@ -419,7 +462,7 @@ class HomeController extends Controller
                         'xa' => count($parts) > 0 ? trim($parts[0]) : '',
                         'so_nha' => '',
                         'ngay_muon' => $ngayMuon,
-                        'trang_thai' => 'Dang muon',
+                        'trang_thai' => 'Cho duyet',
                         'tien_coc' => $totalTienCoc,
                         'tien_thue' => $totalTienThue,
                         'tien_ship' => $tienShip,
@@ -729,7 +772,7 @@ class HomeController extends Controller
             'xa' => count($parts) > 0 ? trim($parts[0]) : '',
             'so_nha' => '',
             'ngay_muon' => $ngayMuon,
-            'trang_thai' => 'Dang muon',
+            'trang_thai' => 'Cho duyet',
             'tien_coc' => $totalTienCoc,
             'tien_thue' => $totalTienThue,
             'tien_ship' => $totalTienShip,
@@ -783,6 +826,18 @@ class HomeController extends Controller
                 'borrow_item_ids' => collect($borrowItems)->pluck('id')->toArray(),
                 'quantity' => $quantity
             ]
+        ]);
+    }
+
+    /**
+     * Hiển thị trang chính sách giá
+     */
+    public function pricingPolicy()
+    {
+        $pricingConfig = config('pricing');
+        
+        return view('pricing-policy', [
+            'pricing' => $pricingConfig
         ]);
     }
 

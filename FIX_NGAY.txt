@@ -1,0 +1,65 @@
+═══════════════════════════════════════════════════════════
+   FIX LỖI "BẢNG WALLETS KHÔNG TỒN TẠI" - CÁCH NHANH NHẤT
+═══════════════════════════════════════════════════════════
+
+CÁCH 1: CHẠY SQL TRỰC TIẾP TRONG PHPMYADMIN (KHUYẾN NGHỊ)
+
+Bước 1: Mở phpMyAdmin
+  → Truy cập: http://localhost/phpmyadmin
+  → Hoặc mở từ Laragon panel
+
+Bước 2: Chọn database
+  → Click vào database "quanlythuvien" ở bên trái
+
+Bước 3: Chạy SQL
+  → Click tab "SQL" ở trên cùng
+  → Mở file: CREATE_WALLET_TABLES_SIMPLE.sql
+  → Copy TOÀN BỘ nội dung (Ctrl+A, Ctrl+C)
+  → Paste vào ô SQL (Ctrl+V)
+  → Click nút "Go" hoặc nhấn Ctrl+Enter
+
+Bước 4: Kiểm tra
+  → Xem danh sách bảng bên trái
+  → Tìm 2 bảng: wallets và wallet_transactions
+  → Nếu thấy → Thành công!
+
+Bước 5: Test trang web
+  → Truy cập: http://quanlythuviennn.test/account/wallet
+  → Nếu thấy trang ví (số dư = 0 VNĐ) → Hoàn tất!
+
+═══════════════════════════════════════════════════════════
+
+CÁCH 2: CHẠY FILE BATCH (Windows)
+
+1. Tìm file: FIX_WALLET_TABLES.bat
+2. Double-click để chạy
+3. Đợi script chạy xong
+4. Kiểm tra kết quả
+
+═══════════════════════════════════════════════════════════
+
+CÁCH 3: CHẠY PHP SCRIPT
+
+Mở Command Prompt trong thư mục project:
+  cd d:\laragon\www\quanlythuviennn
+  php fix_create_wallet_tables.php
+
+═══════════════════════════════════════════════════════════
+
+NẾU VẪN GẶP LỖI:
+
+1. Kiểm tra file .env - đảm bảo cấu hình database đúng
+2. Kiểm tra tên database là "quanlythuvien" (không phải "quanlythuviennn")
+3. Đảm bảo user database có quyền CREATE TABLE
+
+═══════════════════════════════════════════════════════════
+
+FILE QUAN TRỌNG:
+  → CREATE_WALLET_TABLES_SIMPLE.sql (File SQL để chạy trong phpMyAdmin)
+  → FIX_WALLET_TABLES.bat (File batch để chạy tự động)
+  → fix_create_wallet_tables.php (Script PHP để chạy thủ công)
+
+═══════════════════════════════════════════════════════════
+
+
+

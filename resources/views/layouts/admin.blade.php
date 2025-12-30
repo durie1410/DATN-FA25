@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
@@ -1116,12 +1116,6 @@
                     <i class="fas fa-users-cog"></i>
                     <span>Admin</span>
                 </a>
-                @if(Route::has('admin.readers.index'))
-                <a href="{{ route('admin.readers.index') }}" class="menu-item {{ request()->routeIs('admin.readers.*') ? 'active' : '' }}">
-                    <i class="fas fa-book-reader"></i>
-                    <span>Độc giả</span>
-                </a>
-                @endif
 
                 <!-- Mượn trả sách -->
                 <div class="menu-section-title">MƯỢN TRẢ SÁCH</div>
@@ -1131,34 +1125,30 @@
                     <i class="fas fa-clipboard-check"></i>
                     <span>Đặt Trước</span>
                 </a>
-                <a href="{{ route('admin.vouchers.index') }}" class="menu-item {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}">
-                    <i class="fas fa-clipboard-check"></i>
-                    <span>voucher</span>
-                </a>
-                
                 @endif
                 @endcan
-                <a href="{{ route('admin.borrows.index')}}" class="menu-item">
-                    <i class="fas fa-undo"></i>
-                    <span>Quản lý mượn sách</span>
+                <a href="{{ route('admin.borrows.index') }}" class="menu-item {{ request()->routeIs('admin.borrows.*') ? 'active' : '' }}">
+                    <i class="fas fa-book-reader"></i>
+                    <span>📚 Mượn/Trả Sách (CHI TIẾT)</span>
                 </a>
-<a href="{{ route('admin.shipping_logs.index') }}" 
-   class="menu-item d-flex align-items-center gap-2 
-          {{ request()->routeIs('admin.shipping_logs.*') ? 'active' : '' }}">
-    <i class="bi bi-truck fs-5"></i>
-    <span>Đơn mượn</span>
-</a>
+                <a href="{{ route('admin.shipping_logs.index') }}" 
+                   class="menu-item d-flex align-items-center gap-2 
+                          {{ request()->routeIs('admin.shipping_logs.*') ? 'active' : '' }}">
+                    <i class="bi bi-truck fs-5"></i>
+                    <span>🚚 Giao Hàng (Đơn Mua)</span>
+                </a>
+                @if(Route::has('admin.vouchers.index'))
+                <a href="{{ route('admin.vouchers.index') }}" class="menu-item {{ request()->routeIs('admin.vouchers.*') ? 'active' : '' }}">
+                    <i class="fas fa-ticket-alt"></i>
+                    <span>Vouchers</span>
+                </a>
+                @endif
 
 
 
 
                 <!-- Tài chính -->
-                @if(Route::has('admin.fines.index'))
-                <a href="{{ route('admin.fines.index') }}" class="menu-item {{ request()->routeIs('admin.fines.*') ? 'active' : '' }}">
-                    <i class="fas fa-money-bill-wave"></i>
-                    <span>Quản lý phí phạt</span>
-                </a>
-                @endif
+              
 
                 <!-- Hệ thống -->
                 <div class="menu-section-title">HỆ THỐNG</div>

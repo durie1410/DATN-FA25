@@ -21,11 +21,70 @@
 .status-Qua-han { background-color: #ffc107; color: #000; } /* vàng */
 .status-Mat-sach { background-color: #dc3545; }     /* đỏ */
 .status-Hong { background-color: #fd7e14; }        /* cam */
+.status-Huy { background-color: #6c757d; }         /* xám */
 .status-Khong-xac-dinh { background-color: #6c757d; } /* xám */
+
+/* Status badges cho trạng thái chi tiết */
+.status-detail-badge {
+    font-size: 0.95rem;
+    padding: 0.5em 1em;
+    border-radius: 0.3rem;
+}
+.status-cho_xu_ly { 
+    background-color: #6c757d !important; 
+    color: #fff !important;
+}
+.status-dang_chuan_bi { 
+    background-color: #0dcaf0 !important; 
+    color: #000 !important;
+}
+.status-dang_giao { 
+    background-color: #0d6efd !important; 
+    color: #fff !important;
+}
+.status-da_giao_thanh_cong { 
+    background-color: #198754 !important; 
+    color: #fff !important;
+}
+.status-giao_that_bai { 
+    background-color: #dc3545 !important; 
+    color: #fff !important;
+}
+.status-tra_lai_sach { 
+    background-color: #fd7e14 !important; 
+    color: #fff !important;
+}
+.status-dang_gui_lai { 
+    background-color: #0d6efd !important; 
+    color: #fff !important;
+}
+.status-da_nhan_hang { 
+    background-color: #198754 !important; 
+    color: #fff !important;
+}
+.status-dang_kiem_tra { 
+    background-color: #ffc107 !important; 
+    color: #000 !important;
+}
+.status-thanh_toan_coc { 
+    background-color: #20c997 !important; 
+    color: #fff !important;
+}
+.status-hoan_thanh { 
+    background-color: #198754 !important; 
+    color: #fff !important;
+}
 
 </style>
 <div class="admin-table">
-    <h3><i class="fas fa-file-alt"></i> Chi tiết phiếu mượn</h3>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3><i class="fas fa-file-alt"></i> Chi tiết phiếu mượn</h3>
+        <div>
+            <a href="{{ route('admin.borrows.index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
 
 <div class="card mb-4 shadow-sm border-0">
     <div class="card-header bg-primary text-white">
@@ -75,6 +134,46 @@
                             <span class="badge bg-warning text-dark">{{ $borrow->trang_thai }}</span>
                     @endswitch
                 </p>
+                
+                @if($borrow->trang_thai_chi_tiet)
+                <p class="mb-1">
+                    <strong>Trạng thái chi tiết:</strong>
+                    @php
+                        $statusClass = 'status-' . $borrow->trang_thai_chi_tiet;
+                    @endphp
+                    <span class="badge {{ $statusClass }} status-detail-badge">
+                        {{ $borrow->trang_thai_chi_tiet_label ?? $borrow->trang_thai_chi_tiet }}
+                    </span>
+                </p>
+                @endif
+                
+                @if($borrow->tinh_trang_sach)
+                <p class="mb-1">
+                    <strong>Tình trạng sách:</strong>
+                    <span class="badge 
+                        @if($borrow->tinh_trang_sach == 'binh_thuong') bg-success
+                        @elseif($borrow->tinh_trang_sach == 'hong_nhe') bg-warning text-dark
+                        @elseif($borrow->tinh_trang_sach == 'hong_nang') bg-orange
+                        @else bg-danger
+                        @endif">
+                        {{ $borrow->tinh_trang_sach_label }}
+                    </span>
+                </p>
+                @endif
+                
+                @if($borrow->phi_hong_sach > 0)
+                <p class="mb-1">
+                    <strong>Phí hỏng sách:</strong>
+                    <span class="text-danger fw-bold">{{ number_format($borrow->phi_hong_sach) }}₫</span>
+                </p>
+                @endif
+                
+                @if($borrow->tien_coc_hoan_tra !== null)
+                <p class="mb-1">
+                    <strong>Tiền cọc hoàn trả:</strong>
+                    <span class="text-success fw-bold">{{ number_format($borrow->tien_coc_hoan_tra) }}₫</span>
+                </p>
+                @endif
                 <p class="mb-1">
                     <strong>Tổng tiền:</strong>
                     <span class="fw-bold text-success">{{ number_format($borrow->tong_tien) }}₫</span>
@@ -153,6 +252,7 @@
             @case('Qua han') Quá hạn @break
             @case('Mat sach') Mất sách @break
             @case('Hong') Hỏng @break
+            @case('Huy') Đã hủy @break
             @default Không xác định
         @endswitch
     </span>

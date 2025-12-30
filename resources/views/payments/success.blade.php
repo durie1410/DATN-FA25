@@ -226,7 +226,7 @@
 
         <div class="action-buttons">
             @if($payment->borrow)
-                <a href="{{ route('admin.borrows.show', $payment->borrow->id) }}" class="btn btn-primary">
+                <a href="{{ route('orders.index') }}" class="btn btn-primary">
                     <i class="fas fa-file-alt"></i> Xem phiếu mượn
                 </a>
             @endif

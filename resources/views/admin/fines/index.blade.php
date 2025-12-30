@@ -36,7 +36,15 @@
         <div class="fines-filter">
             <form method="GET">
                 <div class="row">
-                    <div class="col-md-3">
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>Tìm kiếm:</label>
+                            <input type="text" name="search" class="form-control" 
+                                   value="{{ request('search') }}" 
+                                   placeholder="Tên, mã số thẻ...">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
                         <div class="form-group">
                             <label>Trạng thái:</label>
                             <select name="status" class="form-control">
@@ -48,7 +56,7 @@
                             </select>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="form-group">
                             <label>Loại phạt:</label>
                             <select name="type" class="form-control">
@@ -60,7 +68,7 @@
                             </select>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                         <div class="form-group">
                             <label>Độc giả:</label>
                             <select name="reader_id" class="form-control">
@@ -73,20 +81,30 @@
                             </select>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>Sắp xếp:</label>
+                            <select name="sort_by" class="form-control">
+                                <option value="created_at" {{ request('sort_by') == 'created_at' ? 'selected' : '' }}>Ngày tạo</option>
+                                <option value="amount" {{ request('sort_by') == 'amount' ? 'selected' : '' }}>Số tiền</option>
+                                <option value="due_date" {{ request('sort_by') == 'due_date' ? 'selected' : '' }}>Hạn thanh toán</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
                         <div class="form-group">
                             <label>&nbsp;</label>
                             <div>
-                                <button type="submit" class="btn btn-primary">
+                                <button type="submit" class="btn btn-primary btn-block">
                                     <i class="fas fa-search"></i> Lọc
                                 </button>
-                                <a href="{{ route('admin.fines.index') }}" class="btn btn-secondary">
+                                <a href="{{ route('admin.fines.index') }}" class="btn btn-secondary btn-block">
                                     <i class="fas fa-times"></i> Xóa lọc
                                 </a>
                                 @if(request('overdue'))
                                     <input type="hidden" name="overdue" value="1">
                                 @endif
-                                <button type="button" class="btn btn-danger" onclick="filterOverdue()">
+                                <button type="button" class="btn btn-danger btn-block" onclick="filterOverdue()">
                                     <i class="fas fa-exclamation-circle"></i> Chỉ quá hạn
                                 </button>
                             </div>
@@ -103,28 +121,29 @@
                     <i class="fas fa-clock"></i>
                 </div>
                 <div class="stat-label">Chưa thanh toán</div>
-                <div class="stat-value">{{ $fines->where('status', 'pending')->count() }}</div>
+                <div class="stat-value">{{ $stats['pending'] ?? $fines->where('status', 'pending')->count() }}</div>
+                <div class="stat-amount">{{ number_format(($stats['total_amount'] ?? $fines->where('status', 'pending')->sum('amount')), 0, ',', '.') }} VND</div>
             </div>
             <div class="fines-stat-card paid">
                 <div class="stat-icon">
                     <i class="fas fa-check"></i>
                 </div>
                 <div class="stat-label">Đã thanh toán</div>
-                <div class="stat-value">{{ $fines->where('status', 'paid')->count() }}</div>
+                <div class="stat-value">{{ $stats['paid'] ?? $fines->where('status', 'paid')->count() }}</div>
             </div>
             <div class="fines-stat-card overdue">
                 <div class="stat-icon">
                     <i class="fas fa-exclamation-triangle"></i>
                 </div>
                 <div class="stat-label">Quá hạn</div>
-                <div class="stat-value">{{ $fines->filter(function($fine) { return $fine->isOverdue(); })->count() }}</div>
+                <div class="stat-value">{{ $stats['overdue'] ?? $fines->filter(function($fine) { return $fine->isOverdue(); })->count() }}</div>
             </div>
             <div class="fines-stat-card total">
                 <div class="stat-icon">
                     <i class="fas fa-money-bill-wave"></i>
                 </div>
-                <div class="stat-label">Tổng tiền</div>
-                <div class="stat-value">{{ number_format($fines->sum('amount'), 0, ',', '.') }} VND</div>
+                <div class="stat-label">Tổng số phạt</div>
+                <div class="stat-value">{{ $stats['total'] ?? $fines->count() }}</div>
             </div>
         </div>
 
@@ -150,21 +169,39 @@
                             <tr class="{{ $fine->isOverdue() ? 'table-danger' : '' }}">
                                 <td><strong>#{{ $fine->id }}</strong></td>
                                 <td>
-                                    <div>
-                                        <strong>{{ $fine->reader->ho_ten }}</strong><br>
-                                        <small class="text-muted">{{ $fine->reader->ma_so_the }}</small>
-                                    </div>
+                                    @if($fine->reader)
+                                        <div>
+                                            <strong>{{ $fine->reader->ho_ten }}</strong><br>
+                                            <small class="text-muted">{{ $fine->reader->ma_so_the }}</small>
+                                        </div>
+                                    @else
+                                        <span class="text-muted">Reader ID: {{ $fine->reader_id }}</span><br>
+                                        <small class="text-warning">Không tìm thấy độc giả</small>
+                                    @endif
                                 </td>
                                 <td>
-@if($fine->borrowItem && $fine->borrowItem->book)
-    <strong>{{ $fine->borrowItem->book->ten_sach }}</strong><br>
-    <small class="text-muted">{{ $fine->borrowItem->book->ma_sach }}</small>
-@else
-    <span class="text-muted">Không có thông tin</span>
-@endif
-
-
-
+                                    @if($fine->borrowItem && $fine->borrowItem->book)
+                                        <strong>{{ $fine->borrowItem->book->ten_sach }}</strong><br>
+                                        <small class="text-muted">Mã: {{ $fine->borrowItem->book->ma_sach }}</small><br>
+                                        <small class="text-info">Item #{{ $fine->borrowItem->id }}</small>
+                                    @elseif($fine->borrow && $fine->borrow->borrowItems && $fine->borrow->borrowItems->count() > 0)
+                                        @php
+                                            $firstItem = $fine->borrow->borrowItems->first();
+                                        @endphp
+                                        @if($firstItem->book)
+                                            <strong>{{ $firstItem->book->ten_sach }}</strong><br>
+                                            <small class="text-muted">Mã: {{ $firstItem->book->ma_sach }}</small><br>
+                                            <small class="text-warning">(Dữ liệu cũ - Phiếu #{{ $fine->borrow->id }})</small>
+                                        @else
+                                            <span class="text-muted">Phiếu #{{ $fine->borrow->id }}</span><br>
+                                            <small class="text-warning">Chưa có thông tin sách</small>
+                                        @endif
+                                    @elseif($fine->borrow)
+                                        <span class="text-muted">Phiếu #{{ $fine->borrow->id }}</span><br>
+                                        <small class="text-warning">Chưa có thông tin sách</small>
+                                    @else
+                                        <span class="text-muted">Không có thông tin</span>
+                                    @endif
                                 </td>
                                 <td>
                                     @switch($fine->type)
@@ -173,9 +210,20 @@
                                             @break
                                         @case('damaged_book')
                                             <span class="fines-badge damaged-book">Làm hỏng</span>
+                                            @if($fine->damage_severity)
+                                                <br><small class="badge badge-{{ $fine->damage_severity == 'nang' ? 'danger' : ($fine->damage_severity == 'trung_binh' ? 'warning' : 'info') }}">
+                                                    {{ $fine->damage_severity_text }}
+                                                </small>
+                                            @endif
+                                            @if($fine->hasDamageImages())
+                                                <br><small class="text-info"><i class="fas fa-images"></i> Có ảnh</small>
+                                            @endif
                                             @break
                                         @case('lost_book')
                                             <span class="fines-badge lost-book">Mất sách</span>
+                                            @if($fine->hasDamageImages())
+                                                <br><small class="text-info"><i class="fas fa-images"></i> Có ảnh</small>
+                                            @endif
                                             @break
                                         @default
                                             <span class="fines-badge other">Khác</span>
@@ -207,12 +255,17 @@
                                     @endswitch
                                 </td>
                                 <td>
-                                    {{ $fine->due_date->format('d/m/Y') }}
+<img src="{{ asset('storage/' . $fine->img) }}" alt="Ảnh hoàn trả" style="max-width:120px; border-radius:6px;">
+
+
+   
+    
+                                    {{-- {{ $fine->due_date->format('d/m/Y') }} --}}
                                     @if($fine->isOverdue())
                                         <br><small class="text-danger">Quá hạn</small>
-                                    @endif
-                                </td>
-                                <td>{{ $fine->created_at->format('d/m/Y H:i') }}</td>
+                                    @endif    <td>{{ $fine->created_at->format('d/m/Y H:i') }}</td>
+                                {{-- </td>
+                            
                                 <td>
                                     <div class="btn-group" role="group">
                                         <a href="{{ route('admin.fines.show', $fine->id) }}" class="btn btn-info btn-sm" title="Xem chi tiết">
@@ -240,7 +293,7 @@
 
                                         @endif
                                     </div>
-                                </td>
+                                </td> --}}
                             </tr>
                         @empty
                             <tr>

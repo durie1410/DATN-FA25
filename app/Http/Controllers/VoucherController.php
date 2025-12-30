@@ -12,7 +12,7 @@ class VoucherController extends Controller
      */
     public function index()
     {
-        $vouchers = Voucher::withTrashed()->paginate(10); // lấy cả đã xoá
+        $vouchers = Voucher::withTrashed()->with('user.reader')->paginate(10); // lấy cả đã xoá và load user + reader
         return view('admin.vouchers.index', compact('vouchers'));
     }
 
@@ -21,7 +21,8 @@ class VoucherController extends Controller
      */
     public function create()
     {
-        $readers = \App\Models\Reader::all();
+        // Lấy readers có user_id (vì vouchers.reader_id tham chiếu users table)
+        $readers = \App\Models\Reader::whereNotNull('user_id')->with('user')->get();
         return view('admin.vouchers.create', compact('readers'));
     }
 
@@ -31,7 +32,7 @@ class VoucherController extends Controller
    public function store(Request $request)
 {
     $validated = $request->validate([
-        'reader_id' => 'required|exists:readers,id', // nếu voucher có thể gắn độc giả
+        'reader_id' => 'nullable|exists:users,id', // reader_id tham chiếu users table, có thể null
         'ma' => 'required|string|max:255|unique:vouchers,ma',
         'loai' => 'required|in:percentage,fixed',
         'gia_tri' => 'required|numeric|min:0',
@@ -41,7 +42,7 @@ class VoucherController extends Controller
         'ngay_bat_dau' => 'required|date',
         'ngay_ket_thuc' => 'required|date|after_or_equal:ngay_bat_dau',
     ],[
-       'reader_id.required'=> 'Vui lòng nhập  thành viên.',
+       'reader_id.exists'=> 'Người dùng không tồn tại.',
     'ma.required' => 'Vui lòng nhập mã giảm giá.',
     'ma.unique' => 'Mã giảm giá đã tồn tại.',
     'loai.required' => 'Vui lòng chọn loại giảm giá.',
@@ -72,7 +73,8 @@ class VoucherController extends Controller
     public function edit($id)
     {
         $voucher = Voucher::withTrashed()->findOrFail($id);
-        $readers = \App\Models\Reader::all();
+        // Lấy readers có user_id (vì vouchers.reader_id tham chiếu users table)
+        $readers = \App\Models\Reader::whereNotNull('user_id')->with('user')->get();
         return view('admin.vouchers.edit', compact('voucher', 'readers'));
     }
 
@@ -84,7 +86,7 @@ public function update(Request $request, $id)
     $voucher = Voucher::withTrashed()->findOrFail($id);
 
     $validated = $request->validate([
-        'reader_id' => 'required|exists:readers,id',
+        'reader_id' => 'nullable|exists:users,id', // reader_id tham chiếu users table, có thể null
         'ma' => 'required|string|max:255|unique:vouchers,ma,' . $voucher->id,
         'loai' => 'required|in:percentage,fixed',
         'gia_tri' => 'required|numeric|min:0',
@@ -95,7 +97,7 @@ public function update(Request $request, $id)
         'kich_hoat' => 'required|in:0,1',
         'trang_thai' => 'required|in:active,inactive,expired',
     ], [
-        'reader_id.required' => 'Vui lòng nhập thành viên.',
+        'reader_id.exists' => 'Người dùng không tồn tại.',
         'ma.required' => 'Vui lòng nhập mã giảm giá.',
         'ma.unique' => 'Mã giảm giá đã tồn tại.',
         'loai.required' => 'Vui lòng chọn loại giảm giá.',

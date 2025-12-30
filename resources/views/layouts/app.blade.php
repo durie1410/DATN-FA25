@@ -206,10 +206,6 @@
             <i class="fas fa-user-plus"></i>
             <span>Đăng ký</span>
         </a>
-        <a href="{{ route('register.reader.form') }}" class="mobile-nav-item {{ request()->routeIs('register.reader.*') ? 'active' : '' }}">
-            <i class="fas fa-book-reader"></i>
-            <span>Đăng ký độc giả</span>
-        </a>
         @endauth
     </nav>
 

@@ -36,7 +36,7 @@
 </div>
 
 @if(session('success'))
-    <div class="alert alert-success">
+    <div class="alert alert-success" style="white-space: pre-line;">
         <i class="fas fa-check-circle"></i>
         {{ session('success') }}
     </div>

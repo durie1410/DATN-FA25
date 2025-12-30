@@ -167,6 +167,17 @@
         <div class="error-message">
             <strong><i class="fas fa-exclamation-triangle"></i> Lý do:</strong>
             <p>{{ session('error') }}</p>
+            
+            @if(str_contains(session('error'), 'chữ ký') || str_contains(session('error'), 'Xác thực'))
+            <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                <strong style="color: #856404; display: block; margin-bottom: 8px;">💡 Hướng dẫn sửa lỗi này:</strong>
+                <ol style="margin: 8px 0 0 20px; color: #856404; line-height: 1.8;">
+                    <li>Mở file <code style="background: #fff; padding: 2px 6px; border-radius: 3px;">fix_vnpay_now.bat</code> trong thư mục project</li>
+                    <li>Hoặc truy cập: <a href="{{ url('/vnpay-debug') }}" style="color: #0066cc; text-decoration: underline;">Trang kiểm tra VNPay</a></li>
+                    <li>Xem hướng dẫn chi tiết trong file: <code style="background: #fff; padding: 2px 6px; border-radius: 3px;">README_VNPAY_FIX.txt</code></li>
+                </ol>
+            </div>
+            @endif
         </div>
         @endif
 

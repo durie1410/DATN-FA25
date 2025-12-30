@@ -25,18 +25,21 @@
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Độc giả <span class="text-danger">*</span></label>
-                                    <select name="reader_id" class="form-select @error('reader_id') is-invalid @enderror" required>
-                                        <option value="">-- Chọn độc giả --</option>
+                                    <label class="form-label">Độc giả</label>
+                                    <select name="reader_id" class="form-select @error('reader_id') is-invalid @enderror">
+                                        <option value="">-- Chọn độc giả (tùy chọn) --</option>
                                         @foreach($readers as $reader)
-                                            <option value="{{ $reader->id }}" {{ old('reader_id', $voucher->reader_id) == $reader->id ? 'selected' : '' }}>
-                                                {{ $reader->ho_ten }} ({{ $reader->so_the_doc_gia }})
-                                            </option>
+                                            @if($reader->user_id)
+                                                <option value="{{ $reader->user_id }}" {{ old('reader_id', $voucher->reader_id) == $reader->user_id ? 'selected' : '' }}>
+                                                    {{ $reader->ho_ten }} ({{ $reader->so_the_doc_gia }})
+                                                </option>
+                                            @endif
                                         @endforeach
                                     </select>
                                     @error('reader_id')
                                         <div class="invalid-feedback">{{ $message }}</div>
                                     @enderror
+                                    <small class="form-text text-muted">Để trống nếu voucher áp dụng cho tất cả người dùng</small>
                                 </div>
                             </div>
                             <div class="col-md-6">

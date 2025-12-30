@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Borrow;
 use App\Models\BorrowPayment;
+use App\Models\Order;
 use App\Services\VnPayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -151,8 +152,24 @@ class VnPayController extends Controller
                 // Cập nhật trạng thái phiếu mượn nếu là thanh toán cọc
                 $borrow = $payment->borrow;
                 if ($payment->payment_type === 'deposit' && $borrow) {
-                    // Có thể cập nhật trạng thái phiếu mượn ở đây nếu cần
-                    // Ví dụ: chuyển từ 'cho_xu_ly' sang 'da_thu_coc'
+                    // Cập nhật trạng thái inventory khi thanh toán thành công
+                    $borrowItems = $borrow->items;
+                    foreach ($borrowItems as $item) {
+                        if ($item->inventorie_id) {
+                            // Cập nhật status của inventory từ 'Co san' sang 'Dang muon'
+                            \App\Models\Inventory::where('id', $item->inventorie_id)
+                                ->where('status', 'Co san')
+                                ->update([
+                                    'status' => 'Dang muon',
+                                    'updated_at' => now()
+                                ]);
+                            
+                            Log::info('Updated inventory status after payment', [
+                                'inventory_id' => $item->inventorie_id,
+                                'borrow_id' => $borrow->id
+                            ]);
+                        }
+                    }
                 }
 
                 DB::commit();

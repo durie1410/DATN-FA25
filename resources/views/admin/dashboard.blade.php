@@ -16,7 +16,7 @@
 </div>
 
 <!-- Stats Cards -->
-<div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+<div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
     <!-- Total Books -->
     <div class="stat-card" style="animation: slideInUp 0.5s var(--ease-smooth) 0.1s both;">
         <div class="stat-header">
@@ -28,8 +28,8 @@
         <div class="stat-value">{{ $totalBooks ?? 0 }}</div>
         <div class="stat-label">Quyển sách trong hệ thống</div>
         <div class="stat-trend" style="margin-top: 12px; font-size: 12px; color: var(--primary-color); display: flex; align-items: center; gap: 6px;">
-            <i class="fas fa-arrow-up"></i>
-            <span>+12% so với tháng trước</span>
+            <i class="fas fa-check-circle"></i>
+            <span>Có trong kho</span>
         </div>
     </div>
     
@@ -49,24 +49,8 @@
         </div>
     </div>
     
-    <!-- Sold Books -->
-    <div class="stat-card" style="animation: slideInUp 0.5s var(--ease-smooth) 0.3s both;">
-        <div class="stat-header">
-            <div class="stat-title">Sách Đã Bán</div>
-            <div class="stat-icon primary">
-                <i class="fas fa-shopping-cart"></i>
-            </div>
-        </div>
-        <div class="stat-value">{{ $totalSoldBooks ?? 0 }}</div>
-        <div class="stat-label">Quyển sách đã được bán</div>
-        <div class="stat-trend" style="margin-top: 12px; font-size: 12px; color: var(--primary-color); display: flex; align-items: center; gap: 6px;">
-            <i class="fas fa-chart-line"></i>
-            <span>Tổng số lượng bán</span>
-        </div>
-    </div>
-    
     <!-- Reservations -->
-    <div class="stat-card" style="animation: slideInUp 0.5s var(--ease-smooth) 0.4s both;">
+    <div class="stat-card" style="animation: slideInUp 0.5s var(--ease-smooth) 0.3s both;">
         <div class="stat-header">
             <div class="stat-title">Đặt Trước</div>
             <div class="stat-icon primary">
@@ -86,7 +70,7 @@
                 <i class="fas fa-money-bill-wave"></i>
                 Tổng Hợp Tiền
             </h3>
-            <p style="font-size: 13px; color: #888; margin: 5px 0 0 0;">Thống kê doanh thu từ bán sách, mượn sách và tiền phạt</p>
+            <p style="font-size: 13px; color: #888; margin: 5px 0 0 0;">Thống kê doanh thu từ mượn sách, đặt trước và tiền phạt</p>
         </div>
     </div>
     <div style="padding: 25px;">
@@ -103,10 +87,7 @@
                 <div class="stat-value" style="color: var(--primary-color); font-size: 32px;">{{ number_format($totalRevenue ?? 0, 0, ',', '.') }} <span style="font-size: 16px;">VNĐ</span></div>
                 <div class="stat-label" style="margin-top: 8px;">
                     <div style="display: flex; justify-content: space-between; font-size: 12px; color: #888;">
-                        <span>• Bán sách: {{ number_format($totalRevenueFromSales ?? 0, 0, ',', '.') }} VNĐ</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #888; margin-top: 4px;">
-                        <span>• Mượn sách: {{ number_format($totalRevenueFromBorrows ?? 0, 0, ',', '.') }} VNĐ</span>
+                        <span>Từ mượn sách & đặt trước</span>
                     </div>
                 </div>
             </div>
@@ -122,10 +103,7 @@
                 <div class="stat-value" style="color: #28a745; font-size: 32px;">{{ number_format($monthlyRevenue ?? 0, 0, ',', '.') }} <span style="font-size: 16px;">VNĐ</span></div>
                 <div class="stat-label" style="margin-top: 8px;">
                     <div style="display: flex; justify-content: space-between; font-size: 12px; color: #888;">
-                        <span>• Bán sách: {{ number_format($monthlyRevenueFromSales ?? 0, 0, ',', '.') }} VNĐ</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #888; margin-top: 4px;">
-                        <span>• Mượn sách: {{ number_format($monthlyRevenueFromBorrows ?? 0, 0, ',', '.') }} VNĐ</span>
+                        <span>Từ mượn & đặt trước</span>
                     </div>
                 </div>
                 @if(isset($revenueChangePercent) && $revenueChangePercent != 0)
@@ -147,10 +125,7 @@
                 <div class="stat-value" style="color: var(--secondary-color); font-size: 32px;">{{ number_format($todayRevenue ?? 0, 0, ',', '.') }} <span style="font-size: 16px;">VNĐ</span></div>
                 <div class="stat-label" style="margin-top: 8px;">
                     <div style="display: flex; justify-content: space-between; font-size: 12px; color: #888;">
-                        <span>• Bán sách: {{ number_format($todayRevenueFromSales ?? 0, 0, ',', '.') }} VNĐ</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #888; margin-top: 4px;">
-                        <span>• Mượn sách: {{ number_format($todayRevenueFromBorrows ?? 0, 0, ',', '.') }} VNĐ</span>
+                        <span>Từ mượn & đặt trước</span>
                     </div>
                 </div>
             </div>
@@ -158,18 +133,6 @@
         
         <!-- Chi tiết từng nguồn và tiền phạt -->
         <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); gap: 20px;">
-            <!-- Revenue from Sales -->
-            <div class="stat-card" style="background: linear-gradient(135deg, rgba(0, 123, 255, 0.1), rgba(0, 123, 255, 0.05)); border: 1px solid rgba(0, 123, 255, 0.2);">
-                <div class="stat-header">
-                    <div class="stat-title">Tiền Bán Sách</div>
-                    <div class="stat-icon" style="background: rgba(0, 123, 255, 0.2); color: #007bff;">
-                        <i class="fas fa-shopping-cart"></i>
-                    </div>
-                </div>
-                <div class="stat-value" style="color: #007bff;">{{ number_format($totalRevenueFromSales ?? 0, 0, ',', '.') }} <span style="font-size: 18px;">VNĐ</span></div>
-                <div class="stat-label">Tổng từ đơn hàng đã thanh toán</div>
-            </div>
-            
             <!-- Revenue from Borrows -->
             <div class="stat-card" style="background: linear-gradient(135deg, rgba(111, 66, 193, 0.1), rgba(111, 66, 193, 0.05)); border: 1px solid rgba(111, 66, 193, 0.2);">
                 <div class="stat-header">
@@ -182,6 +145,18 @@
                 <div class="stat-label">Tổng từ phiếu mượn</div>
             </div>
             
+            <!-- Revenue from Orders -->
+            <div class="stat-card" style="background: linear-gradient(135deg, rgba(0, 123, 255, 0.1), rgba(0, 123, 255, 0.05)); border: 1px solid rgba(0, 123, 255, 0.2);">
+                <div class="stat-header">
+                    <div class="stat-title">Tiền Đặt Trước</div>
+                    <div class="stat-icon" style="background: rgba(0, 123, 255, 0.2); color: #007bff;">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                </div>
+                <div class="stat-value" style="color: #007bff;">{{ number_format($totalRevenueFromOrders ?? 0, 0, ',', '.') }} <span style="font-size: 18px;">VNĐ</span></div>
+                <div class="stat-label">Tổng từ đơn đặt hàng</div>
+            </div>
+            
             <!-- Fines Paid -->
             <div class="stat-card" style="background: linear-gradient(135deg, rgba(40, 167, 69, 0.1), rgba(40, 167, 69, 0.05)); border: 1px solid rgba(40, 167, 69, 0.2);">
                 <div class="stat-header">
@@ -191,7 +166,7 @@
                     </div>
                 </div>
                 <div class="stat-value" style="color: #28a745;">{{ number_format($totalFinesPaid ?? 0, 0, ',', '.') }} <span style="font-size: 18px;">VNĐ</span></div>
-                <div class="stat-label">Tổng tiền phạt đã thanh toán</div>
+                <div class="stat-label">Tiền phạt đã thanh toán</div>
             </div>
             
             <!-- Fines Pending -->
@@ -203,7 +178,7 @@
                     </div>
                 </div>
                 <div class="stat-value" style="color: #ff6b6b;">{{ number_format($totalFinesPending ?? 0, 0, ',', '.') }} <span style="font-size: 18px;">VNĐ</span></div>
-                <div class="stat-label">Tổng tiền phạt chưa thanh toán</div>
+                <div class="stat-label">Tiền phạt chưa thanh toán</div>
                 @if(isset($totalFinesOverdue) && $totalFinesOverdue > 0)
                 <div class="stat-trend" style="margin-top: 12px; font-size: 12px; color: #ff6b6b; display: flex; align-items: center; gap: 6px;">
                     <i class="fas fa-clock"></i>

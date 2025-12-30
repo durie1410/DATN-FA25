@@ -34,6 +34,9 @@
                 </div>
             </div>
             <div class="user-actions">
+                <a href="{{ route('pricing.policy') }}" class="auth-link" style="margin-right: 15px;" title="Chính sách giá">
+                    <i class="fas fa-tags"></i> Chính sách giá
+                </a>
                 @auth
                     <a href="{{ route('borrow-cart.index') }}" class="cart-link" id="borrow-cart-link" title="Giỏ sách">
                         <i class="fas fa-shopping-cart"></i>
@@ -53,9 +56,6 @@
                             @if(auth()->user()->reader)
                             <a href="{{ route('account.borrowed-books') }}" class="dropdown-item">
                                 <span>📚</span> Sách đang mượn
-                            </a>
-                            <a href="{{ route('account.reader-info') }}" class="dropdown-item">
-                                <span>👥</span> Thông tin độc giả
                             </a>
                             @endif
                             <a href="{{ route('account') }}" class="dropdown-item">

@@ -38,9 +38,6 @@
                         <a href="{{ route('account.borrowed-books') }}" class="dropdown-item">
                             <span>📚</span> Sách đang mượn
                         </a>
-                        <a href="{{ route('account.reader-info') }}" class="dropdown-item">
-                            <span>👥</span> Thông tin độc giả
-                        </a>
                         @endif
                         <a href="{{ route('account') }}" class="dropdown-item">
                             <span>👤</span> Thông tin tài khoản

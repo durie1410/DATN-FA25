@@ -1758,11 +1758,6 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ route('register.reader.form') }}">
-                                <i class="fas fa-book-reader"></i> Đăng ký độc giả
-                            </a>
-                        </li>
-                        <li class="nav-item">
                             <a class="nav-link" href="{{ route('register') }}">
                                 <i class="fas fa-user-plus"></i> Đăng ký
                             </a>

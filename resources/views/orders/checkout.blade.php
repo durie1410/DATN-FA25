@@ -112,9 +112,20 @@
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label for="customer_address" class="form-label">Địa chỉ giao hàng</label>
+                            <label for="customer_address" class="form-label">Địa chỉ giao hàng <span class="text-danger">*</span></label>
                             <textarea class="form-control" id="customer_address" name="customer_address" rows="3" 
-                                      placeholder="Nhập địa chỉ chi tiết để giao hàng..."></textarea>
+                                      placeholder="Nhập địa chỉ chi tiết để giao hàng..." required></textarea>
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i> Hệ thống sẽ tự động tính phí vận chuyển dựa trên khoảng cách từ địa chỉ của bạn đến thư viện.
+                            </small>
+                            <div id="shipping-info" class="mt-2" style="display: none;">
+                                <div class="alert alert-info mb-0 py-2">
+                                    <small>
+                                        <i class="fas fa-map-marker-alt"></i> Khoảng cách: <span id="shipping-distance">0</span> km | 
+                                        Phí vận chuyển: <span id="shipping-fee-display" class="fw-bold">0</span> VNĐ
+                                    </small>
+                                </div>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label for="notes" class="form-label">Ghi chú</label>
@@ -131,9 +142,10 @@
                     </div>
                     <div class="card-body">
                         <div class="alert alert-info">
-                            <h6><i class="fas fa-gift"></i> Ưu đãi đặc biệt:</h6>
+                            <h6><i class="fas fa-gift"></i> Chính sách vận chuyển:</h6>
                             <ul class="mb-0">
-                                <li><i class="fas fa-check text-success"></i> Miễn phí vận chuyển cho tất cả đơn hàng</li>
+                                <li><i class="fas fa-check text-success"></i> Miễn phí vận chuyển trong vòng 5km đầu tiên</li>
+                                <li><i class="fas fa-check text-success"></i> Từ km thứ 6: 5,000 VNĐ/km</li>
                                 <li><i class="fas fa-check text-success"></i> Hỗ trợ khách hàng 24/7</li>
                             </ul>
                         </div>
@@ -191,11 +203,11 @@
                         <div class="border-top pt-3">
                             <div class="d-flex justify-content-between mb-2">
                                 <span>Tạm tính:</span>
-                                <span>{{ number_format($selectedTotal, 0, ',', '.') }} VNĐ</span>
+                                <span id="subtotal-display">{{ number_format($selectedTotal, 0, ',', '.') }} VNĐ</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
                                 <span>Phí vận chuyển:</span>
-                                <span class="text-success">Miễn phí</span>
+                                <span id="shipping-amount-display" class="text-muted">Vui lòng nhập địa chỉ</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
                                 <span>Thuế:</span>
@@ -204,7 +216,7 @@
                             <hr>
                             <div class="d-flex justify-content-between">
                                 <strong>Tổng cộng:</strong>
-                                <strong class="text-primary">{{ number_format($selectedTotal, 0, ',', '.') }} VNĐ</strong>
+                                <strong class="text-primary" id="total-amount-display">{{ number_format($selectedTotal, 0, ',', '.') }} VNĐ</strong>
                             </div>
                         </div>
 
@@ -274,6 +286,110 @@
             }
         } catch (e) {
             console.error('Error initializing toast:', e);
+        }
+
+        // Tính phí vận chuyển tự động
+        const customerAddressInput = document.getElementById('customer_address');
+        const shippingInfo = document.getElementById('shipping-info');
+        const shippingDistance = document.getElementById('shipping-distance');
+        const shippingFeeDisplay = document.getElementById('shipping-fee-display');
+        const shippingAmountDisplay = document.getElementById('shipping-amount-display');
+        const totalAmountDisplay = document.getElementById('total-amount-display');
+        const subtotalDisplay = document.getElementById('subtotal-display');
+        
+        let shippingFee = 0;
+        let subtotal = {{ $selectedTotal }};
+        let calculateTimeout = null;
+
+        // Khởi tạo hiển thị ban đầu
+        if (customerAddressInput && customerAddressInput.value.trim().length >= 10) {
+            // Nếu đã có địa chỉ, tính ngay
+            calculateShippingFee(customerAddressInput.value.trim());
+        } else {
+            // Nếu chưa có địa chỉ, hiển thị mặc định
+            shippingAmountDisplay.textContent = 'Vui lòng nhập địa chỉ';
+            shippingAmountDisplay.className = 'text-muted';
+            updateTotal();
+        }
+
+        // Hàm tính phí vận chuyển
+        function calculateShippingFee(address) {
+            if (!address || address.trim().length < 10) {
+                shippingInfo.style.display = 'none';
+                shippingFee = 0;
+                shippingAmountDisplay.textContent = 'Vui lòng nhập địa chỉ';
+                shippingAmountDisplay.className = 'text-muted';
+                updateTotal();
+                return;
+            }
+
+            shippingAmountDisplay.textContent = 'Đang tính...';
+            shippingAmountDisplay.className = 'text-info';
+
+            fetch('/api/shipping/calculate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                                   document.querySelector('input[name="_token"]')?.value,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ address: address })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    shippingFee = data.shipping_fee || 0;
+                    const distance = data.distance || 0;
+                    
+                    shippingDistance.textContent = distance.toFixed(2);
+                    shippingFeeDisplay.textContent = new Intl.NumberFormat('vi-VN').format(shippingFee);
+                    shippingAmountDisplay.textContent = shippingFee > 0 
+                        ? new Intl.NumberFormat('vi-VN').format(shippingFee) + ' VNĐ'
+                        : 'Miễn phí';
+                    shippingAmountDisplay.className = shippingFee > 0 ? 'text-primary' : 'text-success';
+                    shippingInfo.style.display = 'block';
+                } else {
+                    shippingFee = 0;
+                    shippingAmountDisplay.textContent = 'Không thể tính phí';
+                    shippingAmountDisplay.className = 'text-warning';
+                    shippingInfo.style.display = 'none';
+                }
+                updateTotal();
+            })
+            .catch(error => {
+                console.error('Error calculating shipping:', error);
+                shippingFee = 0;
+                shippingAmountDisplay.textContent = 'Lỗi tính phí';
+                shippingAmountDisplay.className = 'text-danger';
+                shippingInfo.style.display = 'none';
+                updateTotal();
+            });
+        }
+
+        // Hàm cập nhật tổng tiền
+        function updateTotal() {
+            const total = subtotal + shippingFee;
+            totalAmountDisplay.textContent = new Intl.NumberFormat('vi-VN').format(total) + ' VNĐ';
+        }
+
+        // Lắng nghe sự kiện nhập địa chỉ (debounce để tránh gọi API quá nhiều)
+        if (customerAddressInput) {
+            customerAddressInput.addEventListener('input', function() {
+                clearTimeout(calculateTimeout);
+                const address = this.value.trim();
+                
+                // Chờ 1 giây sau khi người dùng ngừng nhập
+                calculateTimeout = setTimeout(() => {
+                    calculateShippingFee(address);
+                }, 1000);
+            });
+
+            // Tính phí ngay khi blur (rời khỏi ô input)
+            customerAddressInput.addEventListener('blur', function() {
+                clearTimeout(calculateTimeout);
+                calculateShippingFee(this.value.trim());
+            });
         }
 
     // Xử lý thay đổi phương thức thanh toán
@@ -446,26 +562,12 @@
                 console.log('Redirect URL:', data.redirect_url);
                 showToast('success', data.message || 'Đặt hàng thành công!');
                 
-                // Redirect ngay lập tức với cache-busting
+                // Redirect ngay lập tức về trang lịch sử mua hàng
                 const redirectUrl = data.redirect_url || '{{ route("orders.index") }}';
                 console.log('Redirecting to:', redirectUrl);
                 
-                // Force GET request - sử dụng window.location.replace để tránh history và cache
-                // Thêm timestamp để force reload và clear cache
-                // Sử dụng window.location.href để đảm bảo redirect hoạt động
-                setTimeout(() => {
-                    // Clear any cached data
-                    if ('caches' in window) {
-                        caches.keys().then(names => {
-                            names.forEach(name => caches.delete(name));
-                        });
-                    }
-                    
-                    // Redirect với cache-busting parameter
-                    const finalUrl = redirectUrl + '?_nocache=' + Date.now() + '&order=' + encodeURIComponent(data.order_number || '');
-                    console.log('Final redirect URL:', finalUrl);
-                    window.location.href = finalUrl;
-                }, 1000);
+                // Redirect ngay lập tức, không đợi
+                window.location.href = redirectUrl;
             } else {
                 console.error('Order creation failed:', data.message);
                 showToast('error', data.message || 'Có lỗi xảy ra khi đặt hàng');

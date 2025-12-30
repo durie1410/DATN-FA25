@@ -7,6 +7,11 @@ use App\Models\OrderItem;
 use App\Models\PurchasableBook;
 use App\Models\Book;
 use App\Models\Inventory;
+use App\Models\Borrow;
+use App\Models\Reader;
+use App\Models\Wallet;
+use App\Models\BorrowPayment;
+use App\Services\ShippingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -114,13 +119,15 @@ class OrderController extends Controller
                 'customer_name' => 'required|string|max:255',
                 'customer_email' => 'required|email|max:255',
                 'customer_phone' => 'nullable|string|max:20',
-                'customer_address' => 'nullable|string|max:500',
+                'customer_address' => 'required|string|min:10|max:500',
                 'payment_method' => 'required|in:cash_on_delivery,bank_transfer',
                 'notes' => 'nullable|string|max:1000',
             ], [
                 'customer_name.required' => 'Vui lòng nhập họ và tên',
                 'customer_email.required' => 'Vui lòng nhập email',
                 'customer_email.email' => 'Email không hợp lệ',
+                'customer_address.required' => 'Vui lòng nhập địa chỉ giao hàng',
+                'customer_address.min' => 'Địa chỉ phải có ít nhất 10 ký tự',
                 'payment_method.required' => 'Vui lòng chọn phương thức thanh toán',
                 'payment_method.in' => 'Phương thức thanh toán không hợp lệ',
             ]);
@@ -172,6 +179,16 @@ class OrderController extends Controller
         // Tính tổng tiền
         $selectedTotal = $purchasableBook->gia * $quantity;
         
+        // Tính phí vận chuyển tự động từ địa chỉ khách hàng
+        $shippingService = new ShippingService();
+        $shippingResult = $shippingService->calculateShipping($request->customer_address ?? '');
+        
+        $shippingAmount = $shippingResult['success'] ? $shippingResult['shipping_fee'] : 0;
+        $distance = $shippingResult['success'] ? $shippingResult['distance'] : 0;
+        
+        // Tính tổng tiền bao gồm phí vận chuyển
+        $totalAmount = $selectedTotal + $shippingAmount;
+        
         // Tạo item để xử lý
         $orderItem = (object) [
             'purchasable_book_id' => $purchasableBook->id,
@@ -205,12 +222,12 @@ class OrderController extends Controller
                 'customer_address' => $request->customer_address,
                 'subtotal' => $selectedTotal,
                 'tax_amount' => 0,
-                'shipping_amount' => 0,
-                'total_amount' => $selectedTotal,
+                'shipping_amount' => $shippingAmount,
+                'total_amount' => $totalAmount,
                 'status' => 'pending',
                 'payment_status' => $paymentStatus,
                 'payment_method' => $request->payment_method,
-                'notes' => $request->notes,
+                'notes' => trim(($request->notes ?? '') . ($distance > 0 ? " (Khoảng cách: {$distance}km)" : '')),
             ]);
 
             // Tạo order item và cập nhật số lượng tồn kho
@@ -314,20 +331,40 @@ class OrderController extends Controller
     /**
      * Hiển thị chi tiết đơn hàng
      */
+    /**
+     * Hiển thị chi tiết đơn mượn cho khách hàng
+     */
     public function show($id)
     {
-        $order = Order::with('items')->findOrFail($id);
-        
-        // Kiểm tra quyền truy cập
-        if (!$this->canAccessOrder($order)) {
-            abort(403, 'Bạn không có quyền xem đơn hàng này');
-        }
+        try {
+            $borrow = Borrow::with(['items.book', 'items.inventory', 'reader', 'payments', 'voucher'])
+                ->findOrFail($id);
+            
+            // Kiểm tra quyền truy cập - chỉ reader của đơn mượn mới được xem
+            if (!Auth::check()) {
+                return redirect()->route('login')->with('error', 'Vui lòng đăng nhập để xem chi tiết đơn mượn');
+            }
 
-        return view('orders.show', compact('order'));
+            $reader = Auth::user()->reader;
+            if (!$reader || $borrow->reader_id !== $reader->id) {
+                abort(403, 'Bạn không có quyền xem đơn mượn này');
+            }
+
+            return view('orders.show', compact('borrow'));
+            
+        } catch (\Exception $e) {
+            \Log::error('Error viewing borrow details', [
+                'borrow_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return redirect()->route('orders.index')
+                ->with('error', 'Không tìm thấy đơn mượn này');
+        }
     }
 
     /**
-     * Hiển thị danh sách đơn hàng của user
+     * Hiển thị danh sách đơn mượn sách của user
      */
     public function index(Request $request)
     {
@@ -352,21 +389,39 @@ class OrderController extends Controller
             abort(405, 'Method not allowed');
         }
         
-        $query = Order::with('items');
-        
+        // Load relationship reader để sidebar hiển thị "Sách đang mượn" ngay
         if (Auth::check()) {
-            $query->forUser(Auth::id());
-            // Load relationship reader để sidebar hiển thị "Sách đang mượn" ngay
             Auth::user()->load('reader');
-        } else {
-            $query->forSession(Session::getId());
         }
         
-        $orders = $query->orderBy('created_at', 'desc')->paginate(10);
+        // Lấy đơn mượn sách (nếu user có reader)
+        if (Auth::check()) {
+            $reader = Auth::user()->reader;
+            if ($reader) {
+                $orders = Borrow::with(['items.book', 'reader', 'librarian', 'payments'])
+                    ->where('reader_id', $reader->id)
+                    ->orderBy('created_at', 'desc')
+                    ->paginate(10);
+            } else {
+                // User chưa có thẻ độc giả
+                $orders = new \Illuminate\Pagination\LengthAwarePaginator(
+                    collect(),
+                    0,
+                    10,
+                    1
+                );
+            }
+        } else {
+            // Chưa đăng nhập
+            $orders = new \Illuminate\Pagination\LengthAwarePaginator(
+                collect(),
+                0,
+                10,
+                1
+            );
+        }
         
         // Chỉ trả JSON nếu request từ API route (api/*)
-        // Tất cả request từ web route (/orders) sẽ trả về HTML
-        // KHÔNG kiểm tra expectsJson() để tránh browser cache header
         if ($request->is('api/*')) {
             \Log::info('Returning JSON for API request');
             return response()->json([
@@ -376,8 +431,6 @@ class OrderController extends Controller
         }
         
         // Force trả về HTML view cho browser với header rõ ràng
-        // Đảm bảo không bao giờ trả về JSON cho web route
-        // Bỏ qua tất cả Accept headers và luôn trả về HTML
         \Log::info('Returning HTML view for web request', [
             'orders_count' => $orders->count(),
             'view_path' => 'orders.index'
@@ -590,6 +643,115 @@ class OrderController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Có lỗi xảy ra khi hủy đơn hàng: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Hủy đơn mượn sách (chỉ khi đang chờ xử lí)
+     */
+    public function cancelBorrow(Request $request, $id)
+    {
+        try {
+            // Validate lí do hủy
+            $validated = $request->validate([
+                'cancellation_reason' => 'required|string|min:10|max:500',
+            ], [
+                'cancellation_reason.required' => 'Vui lòng nhập lí do hủy đơn mượn',
+                'cancellation_reason.min' => 'Lí do hủy đơn phải có ít nhất 10 ký tự',
+                'cancellation_reason.max' => 'Lí do hủy đơn không được vượt quá 500 ký tự',
+            ]);
+            
+            $borrow = Borrow::with(['items.inventory', 'reader'])->findOrFail($id);
+            
+            // Kiểm tra quyền truy cập - chỉ reader của đơn mượn mới được hủy
+            if (!Auth::check()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bạn cần đăng nhập để thực hiện thao tác này'
+                ], 401);
+            }
+
+            $reader = Auth::user()->reader;
+            if (!$reader || $borrow->reader_id !== $reader->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bạn không có quyền hủy đơn mượn này'
+                ], 403);
+            }
+            
+            // Kiểm tra trạng thái - chỉ có thể hủy khi đang chờ duyệt
+            if ($borrow->trang_thai !== 'Cho duyet') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Chỉ có thể hủy đơn mượn đang chờ xử lí'
+                ], 400);
+            }
+            
+            DB::beginTransaction();
+            
+            try {
+                // Cập nhật trạng thái đơn mượn thành Hủy với lí do
+                $cancelNote = 'Đã hủy bởi khách hàng lúc ' . now()->format('d/m/Y H:i') . 
+                             '. Lí do: ' . $validated['cancellation_reason'];
+                
+                $borrow->update([
+                    'trang_thai' => 'Huy',
+                    'ghi_chu' => ($borrow->ghi_chu ? $borrow->ghi_chu . ' | ' : '') . $cancelNote
+                ]);
+                
+                // Cập nhật trạng thái các BorrowItem (sử dụng update trực tiếp để nhanh hơn)
+                $borrow->items()->update(['trang_thai' => 'Huy']);
+                
+                // Hoàn lại inventory về trạng thái "Co san" nếu đã bị lock
+                // Sử dụng query trực tiếp để tránh N+1 và nhanh hơn
+                // Lưu ý: cột là 'inventorie_id' (có chữ 'e' ở cuối), không phải 'inventory_id'
+                DB::table('inventories')
+                    ->join('borrow_items', 'inventories.id', '=', 'borrow_items.inventorie_id')
+                    ->where('borrow_items.borrow_id', $borrow->id)
+                    ->whereNotNull('borrow_items.inventorie_id') // Chỉ update những item có inventory
+                    ->where('inventories.status', 'Cho muon')
+                    ->update(['inventories.status' => 'Co san']);
+                
+                DB::commit();
+                
+                // Lưu ý: Hoàn tiền sẽ được xử lý tự động bởi BorrowObserver
+                // sau khi transaction commit, không block response
+                
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+            
+            \Log::info('Borrow cancelled by customer', [
+                'borrow_id' => $borrow->id,
+                'reader_id' => $reader->id,
+                'reader_name' => $reader->ho_ten,
+                'reason' => $validated['cancellation_reason']
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Đã hủy đơn mượn thành công'
+            ]);
+            
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->errors()['cancellation_reason'][0] ?? 'Dữ liệu không hợp lệ'
+            ], 422);
+        } catch (\Exception $e) {
+            DB::rollback();
+            
+            \Log::error('Borrow cancellation failed', [
+                'borrow_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Có lỗi xảy ra khi hủy đơn mượn: ' . $e->getMessage()
             ], 500);
         }
     }

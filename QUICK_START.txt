@@ -1,0 +1,64 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                  SỬA LỖI VNPAY - HƯỚNG DẪN NHANH                         ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+❌ LỖI: "Xác thực chữ ký thất bại"
+
+✅ GIẢI PHÁP NHANH (1 phút):
+
+   1. Double-click: fix_vnpay_now.bat
+   2. Mở trình duyệt: http://quanlythuviennn.test/vnpay-debug
+   3. Thử thanh toán lại
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📁 CÁC FILE ĐÃ TẠO:
+
+   ✓ fix_vnpay_now.bat          → Sửa lỗi tự động (khuyến nghị)
+   ✓ check_and_fix_vnpay.php    → Script PHP kiểm tra và sửa
+   ✓ clear_cache.bat            → Xóa cache Laravel
+   ✓ HUONG_DAN_SUA_LOI_VNPAY.md → Hướng dẫn chi tiết
+   ✓ README_VNPAY_FIX.txt       → Hướng dẫn ngắn gọn
+   ✓ QUICK_START.txt            → File này
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔧 TÍNH NĂNG MỚI:
+
+   • Logging chi tiết hơn trong storage/logs/laravel.log
+   • Trang debug đẹp: /vnpay-debug
+   • Thông báo lỗi trên trang thanh toán thất bại có link hướng dẫn
+   • Script tự động sửa lỗi
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 GHI CHÚ:
+
+   • Thông tin mặc định là cho SANDBOX (test)
+   • TMN_CODE: E6I8Z7HX
+   • HASH_SECRET: LYS57TC0V5NARXASTFT3Y0D50NHNPWEZ
+   
+   Nếu dùng tài khoản thật, lấy thông tin từ trang VNPay admin.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 MẸO:
+
+   Sau khi sửa file .env, luôn chạy:
+   
+   php artisan config:clear
+   
+   Hoặc: clear_cache.bat
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 KẾT QUẢ:
+
+   ✅ Không còn lỗi "Xác thực chữ ký thất bại"
+   ✅ Thanh toán VNPay hoạt động bình thường
+   ✅ Log chi tiết giúp debug dễ dàng
+
+╔════════════════════════════════════════════════════════════════════════════╗
+║                           CHÚC BẠN THÀNH CÔNG!                           ║
+╚════════════════════════════════════════════════════════════════════════════╝
+

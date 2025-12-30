@@ -6,11 +6,10 @@ use App\Models\Book;
 use App\Models\Category;
 use App\Models\Borrow;
 use App\Models\BorrowItem;
-use App\Models\PurchasableBook;
-use App\Models\Order;
 use App\Models\Fine;
 use App\Models\Reader;
 use App\Models\Inventory;
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -21,23 +20,13 @@ class DashboardController extends Controller
         // Lấy thống kê tổng quan theo đúng như trong ảnh
         $totalBooks = Book::count();
         $totalBorrowingReaders = Borrow::where('trang_thai', 'Dang muon')->count();
-        $totalSoldBooks = PurchasableBook::sum('so_luong_ban');
         
         // Thống kê bổ sung
         $totalReservations = 0; // Reservation model đã bị xóa
         
         // Thống kê theo thể loại
         $categoryStats = Category::withCount('books')->get();
-        
-        // Tổng hợp tiền - Doanh thu từ đơn hàng BÁN SÁCH
-        $totalRevenueFromSales = Order::where('payment_status', 'paid')->sum('total_amount');
-        $monthlyRevenueFromSales = Order::where('payment_status', 'paid')
-            ->whereYear('created_at', Carbon::now()->year)
-            ->whereMonth('created_at', Carbon::now()->month)
-            ->sum('total_amount');
-        $todayRevenueFromSales = Order::where('payment_status', 'paid')
-            ->whereDate('created_at', Carbon::today())
-            ->sum('total_amount');
+        $totalCategories = Category::count();
         
         // Tổng hợp tiền - Doanh thu từ MƯỢN SÁCH
         // Tính tổng tiền từ các phiếu mượn (có thể lọc theo trạng thái đã hoàn thành hoặc tất cả)
@@ -48,20 +37,31 @@ class DashboardController extends Controller
         $todayRevenueFromBorrows = Borrow::whereDate('created_at', Carbon::today())
             ->sum('tong_tien');
         
-        // TỔNG HỢP - Cộng cả bán sách và mượn sách
-        $totalRevenue = $totalRevenueFromSales + $totalRevenueFromBorrows;
-        $monthlyRevenue = $monthlyRevenueFromSales + $monthlyRevenueFromBorrows;
-        $todayRevenue = $todayRevenueFromSales + $todayRevenueFromBorrows;
+        // Tổng hợp tiền - Doanh thu từ ĐẶT TRƯỚC/MUA SÁCH (Orders)
+        // Chỉ tính các đơn hàng đã thanh toán
+        $totalRevenueFromOrders = Order::where('payment_status', 'paid')->sum('total_amount');
+        $monthlyRevenueFromOrders = Order::where('payment_status', 'paid')
+            ->whereYear('created_at', Carbon::now()->year)
+            ->whereMonth('created_at', Carbon::now()->month)
+            ->sum('total_amount');
+        $todayRevenueFromOrders = Order::where('payment_status', 'paid')
+            ->whereDate('created_at', Carbon::today())
+            ->sum('total_amount');
+        
+        // TỔNG HỢP - Từ cả mượn sách và đặt trước
+        $totalRevenue = $totalRevenueFromBorrows + $totalRevenueFromOrders;
+        $monthlyRevenue = $monthlyRevenueFromBorrows + $monthlyRevenueFromOrders;
+        $todayRevenue = $todayRevenueFromBorrows + $todayRevenueFromOrders;
         
         // Tính doanh thu tháng trước để so sánh
-        $lastMonthRevenueFromSales = Order::where('payment_status', 'paid')
-            ->whereYear('created_at', Carbon::now()->subMonth()->year)
-            ->whereMonth('created_at', Carbon::now()->subMonth()->month)
-            ->sum('total_amount');
         $lastMonthRevenueFromBorrows = Borrow::whereYear('created_at', Carbon::now()->subMonth()->year)
             ->whereMonth('created_at', Carbon::now()->subMonth()->month)
             ->sum('tong_tien');
-        $lastMonthRevenue = $lastMonthRevenueFromSales + $lastMonthRevenueFromBorrows;
+        $lastMonthRevenueFromOrders = Order::where('payment_status', 'paid')
+            ->whereYear('created_at', Carbon::now()->subMonth()->year)
+            ->whereMonth('created_at', Carbon::now()->subMonth()->month)
+            ->sum('total_amount');
+        $lastMonthRevenue = $lastMonthRevenueFromBorrows + $lastMonthRevenueFromOrders;
         
         // Tính phần trăm tăng/giảm so với tháng trước
         $revenueChangePercent = 0;
@@ -83,22 +83,20 @@ class DashboardController extends Controller
             $year = $date->year;
             $month = $date->month;
             
-            $revenueFromSales = Order::where('payment_status', 'paid')
-                ->whereYear('created_at', $year)
-                ->whereMonth('created_at', $month)
-                ->sum('total_amount');
-            
             $revenueFromBorrows = Borrow::whereYear('created_at', $year)
                 ->whereMonth('created_at', $month)
                 ->sum('tong_tien');
             
-            $totalMonthlyRevenue = $revenueFromSales + $revenueFromBorrows;
+            $revenueFromOrders = Order::where('payment_status', 'paid')
+                ->whereYear('created_at', $year)
+                ->whereMonth('created_at', $month)
+                ->sum('total_amount');
             
             $monthlyRevenueStats[] = [
                 'label' => 'T' . $date->month,
                 'month' => $date->month,
                 'year' => $year,
-                'revenue' => $totalMonthlyRevenue
+                'revenue' => $revenueFromBorrows + $revenueFromOrders
             ];
         }
         
@@ -130,19 +128,19 @@ class DashboardController extends Controller
         return view('admin.dashboard', compact(
             'totalBooks',
             'totalBorrowingReaders',
-            'totalSoldBooks',
             'totalReservations',
             'categoryStats',
+            'totalCategories',
             'totalRevenue',
             'monthlyRevenue',
             'todayRevenue',
             'revenueChangePercent',
-            'totalRevenueFromSales',
-            'monthlyRevenueFromSales',
-            'todayRevenueFromSales',
             'totalRevenueFromBorrows',
             'monthlyRevenueFromBorrows',
             'todayRevenueFromBorrows',
+            'totalRevenueFromOrders',
+            'monthlyRevenueFromOrders',
+            'todayRevenueFromOrders',
             'totalFinesPaid',
             'totalFinesPending',
             'totalFinesOverdue',

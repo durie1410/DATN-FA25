@@ -585,6 +585,9 @@
                 </div>
             </div>
             <div class="user-actions">
+                <a href="{{ route('pricing.policy') }}" class="action-button" style="margin-right: 10px;" title="Chính sách giá">
+                    <i class="fas fa-tags"></i> Chính sách giá
+                </a>
                 @auth
                     <a href="{{ route('borrow-cart.index') }}" class="action-button cart-button" id="borrow-cart-link" title="Giỏ sách">
                         <i class="fas fa-book"></i>

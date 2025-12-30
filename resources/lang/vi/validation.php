@@ -143,6 +143,12 @@ return [
         'attribute-name' => [
             'rule-name' => 'custom-message',
         ],
+        'distance' => [
+            'max' => 'Khoảng cách giao hàng không được vượt quá :max km. Vui lòng chọn địa chỉ gần hơn.',
+        ],
+        'items.*.distance' => [
+            'max' => 'Khoảng cách giao hàng không được vượt quá :max km. Vui lòng chọn địa chỉ gần hơn.',
+        ],
     ],
 
     /*
@@ -173,6 +179,7 @@ return [
         'dia_chi' => 'địa chỉ',
         'ngay_sinh' => 'ngày sinh',
         'gioi_tinh' => 'giới tính',
+        'distance' => 'khoảng cách',
     ],
 
 ];

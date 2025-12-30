@@ -1,7 +1,7 @@
 @php
     $currentRoute = request()->route()->getName();
     $user = auth()->user();
-    // Load relationship reader để hiển thị "Sách đang mượn" ngay sau khi đăng ký
+    // Load relationship reader để hiển thị "Sách đang mượn" nếu có
     $user->load('reader');
 @endphp
 <aside class="account-sidebar">
@@ -15,24 +15,19 @@
             <li class="{{ $currentRoute === 'account.borrowed-books' ? 'active' : '' }}">
                 <a href="{{ route('account.borrowed-books') }}"><span class="icon">📚</span> Sách đang mượn</a>
             </li>
-            <li class="{{ $currentRoute === 'account.reader-info' ? 'active' : '' }}">
-                <a href="{{ route('account.reader-info') }}"><span class="icon">👥</span> Thông tin độc giả</a>
-            </li>
             @endif
             <li class="{{ $currentRoute === 'account' ? 'active' : '' }}">
-                <a href="{{ route('account') }}"><span class="icon">👤</span> Thông tin khách hàng</a>
+                <a href="{{ route('account') }}"><span class="icon">👤</span> Thông tin cá nhân</a>
             </li>
             <li class="{{ $currentRoute === 'account.change-password' ? 'active' : '' }}">
                 <a href="{{ route('account.change-password') }}"><span class="icon">🔒</span> Đổi mật khẩu</a>
             </li>
+            <li class="{{ in_array($currentRoute, ['account.wallet', 'account.wallet.transactions']) ? 'active' : '' }}">
+                <a href="{{ route('account.wallet') }}"><span class="icon">💰</span> Ví của tôi</a>
+            </li>
             <li class="{{ $currentRoute === 'orders.index' ? 'active' : '' }}">
-                <a href="{{ route('orders.index') }}"><span class="icon">🛒</span> Lịch sử mua hàng</a>
+                 <a href="{{ route('orders.index') }}" class="dropdown-item"><span>📋</span> Lịch sử đơn mượn</a>
             </li>
-            @if(!$user->reader)
-            <li class="{{ $currentRoute === 'account.register-reader' ? 'active' : '' }}">
-                <a href="{{ route('account.register-reader') }}"><span class="icon">📝</span> Đăng kí độc giả</a>
-            </li>
-            @endif
             <li><a href="#" class="logout-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"><span class="icon">➡️</span> Đăng xuất</a></li>
         </ul>
     </nav>

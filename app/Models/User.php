@@ -31,6 +31,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'district',
         'address',
         'so_cccd',
+        'cccd_image',
+        'ngay_sinh',
+        'gioi_tinh',
     ];
 
     /**
@@ -64,6 +67,18 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasOne(Librarian::class);
     }
 
+    public function wallet()
+    {
+        return $this->hasOne(Wallet::class);
+    }
+
+    /**
+     * Lấy hoặc tạo wallet cho user
+     */
+    public function getWallet()
+    {
+        return Wallet::getOrCreateForUser($this->id);
+    }
 
     /**
      * The attributes that should be cast.
@@ -72,6 +87,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'ngay_sinh' => 'date',
     ];
 
     /**
@@ -178,6 +194,52 @@ class User extends Authenticatable implements MustVerifyEmail
         
         $roles = $this->getRoleNames();
         return $roles->first() ?? 'user';
+    }
+
+    /**
+     * Kiểm tra thông tin user có đầy đủ để mượn sách không
+     */
+    public function hasCompleteProfile()
+    {
+        return !empty($this->name) &&
+               !empty($this->email) &&
+               !empty($this->phone) &&
+               !empty($this->so_cccd) &&
+               !empty($this->ngay_sinh) &&
+               !empty($this->gioi_tinh) &&
+               !empty($this->address);
+    }
+
+    /**
+     * Lấy danh sách các trường còn thiếu
+     */
+    public function getMissingFields()
+    {
+        $missing = [];
+        
+        if (empty($this->name)) {
+            $missing[] = 'Họ và tên';
+        }
+        if (empty($this->email)) {
+            $missing[] = 'Email';
+        }
+        if (empty($this->phone)) {
+            $missing[] = 'Số điện thoại';
+        }
+        if (empty($this->so_cccd)) {
+            $missing[] = 'Số CCCD';
+        }
+        if (empty($this->ngay_sinh)) {
+            $missing[] = 'Ngày sinh';
+        }
+        if (empty($this->gioi_tinh)) {
+            $missing[] = 'Giới tính';
+        }
+        if (empty($this->address)) {
+            $missing[] = 'Địa chỉ';
+        }
+        
+        return $missing;
     }
 
 }

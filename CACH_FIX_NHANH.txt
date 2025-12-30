@@ -1,0 +1,56 @@
+========================================
+  CÁCH FIX LỖI NHANH NHẤT
+========================================
+
+LỖI: Column not found: 1054 Unknown column 'anh_hoan_tra'
+
+CÁCH 1: Chạy SQL trong phpMyAdmin (NHANH NHẤT - 30 giây)
+
+1. Mở phpMyAdmin: http://localhost/phpmyadmin
+2. Chọn database của bạn (tên trong file .env, dòng DB_DATABASE)
+3. Click tab "SQL"
+4. Copy và paste lệnh này:
+
+ALTER TABLE `borrows` 
+ADD COLUMN `anh_hoan_tra` VARCHAR(255) NULL 
+COMMENT 'Ảnh minh chứng hoàn trả sách từ khách hàng';
+
+5. Click "Thực thi" (Go)
+6. Xong! Refresh lại trang web
+
+========================================
+
+CÁCH 2: Nếu lỗi về "AFTER tinh_trang_sach"
+
+Chạy lệnh này (không có AFTER):
+
+ALTER TABLE `borrows` 
+ADD COLUMN `anh_hoan_tra` VARCHAR(255) NULL 
+COMMENT 'Ảnh minh chứng hoàn trả sách từ khách hàng';
+
+========================================
+
+CÁCH 3: Chạy file PHP
+
+Mở Command Prompt/PowerShell trong thư mục project và chạy:
+
+php add_column_direct.php
+
+========================================
+
+CÁCH 4: Truy cập qua trình duyệt
+
+http://quanlythuviennn.test/FIX_NOW.php
+
+(Nếu không được, thử Cách 1 - nhanh nhất)
+
+========================================
+
+SAU KHI FIX:
+
+1. Refresh trang /account/borrowed-books
+2. Thử lại chức năng "Hoàn trả sách"
+3. Nếu vẫn lỗi, clear cache:
+   php artisan cache:clear
+
+========================================

@@ -2,6 +2,30 @@
 
 @section('title', 'Quản Lý Sách - LIBHUB Admin')
 
+@push('styles')
+<style>
+    /* Highlight animation for updated book */
+    .book-updated-highlight {
+        animation: highlightFade 3s ease-in-out;
+        background: linear-gradient(90deg, rgba(0, 255, 153, 0.2) 0%, rgba(0, 255, 153, 0.05) 100%) !important;
+    }
+    
+    @keyframes highlightFade {
+        0% {
+            background: rgba(0, 255, 153, 0.3);
+            transform: scale(1.01);
+        }
+        50% {
+            background: rgba(0, 255, 153, 0.2);
+        }
+        100% {
+            background: transparent;
+            transform: scale(1);
+        }
+    }
+</style>
+@endpush
+
 @section('content')
 <!-- Page Header -->
 <div class="page-header">
@@ -13,10 +37,6 @@
         <p class="page-subtitle">Quản lý và theo dõi tất cả sách trong thư viện</p>
     </div>
     <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <a href="{{ route('admin.inventory.receipts.create') }}" class="btn btn-warning">
-            <i class="fas fa-warehouse"></i>
-            Nhập sách vào kho
-        </a>
         <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
             <span class="badge badge-success" style="font-size: 12px; padding: 6px 12px;">
                 <i class="fas fa-check-circle"></i> Có trong kho: {{ $booksWithInventory ?? 0 }}
@@ -24,19 +44,6 @@
             <span class="badge badge-warning" style="font-size: 12px; padding: 6px 12px;">
                 <i class="fas fa-exclamation-triangle"></i> Chưa có trong kho: {{ $booksWithoutInventory ?? 0 }}
             </span>
-            @if(($booksWithoutInventory ?? 0) > 0)
-                <form action="{{ route('admin.books.delete-without-inventory') }}" 
-                      method="POST" 
-                      style="display: inline;"
-                      onsubmit="return confirm('Bạn có chắc chắn muốn xóa tất cả {{ $booksWithoutInventory }} sách không có trong kho?\\n\\n⚠️ CẢNH BÁO: Hành động này không thể hoàn tác!');">
-                    @csrf
-                    <button type="submit" 
-                            class="btn btn-danger btn-sm" 
-                            title="Xóa tất cả sách không có trong kho">
-                        <i class="fas fa-trash"></i> Xóa sách không có trong kho
-                    </button>
-                </form>
-            @endif
             <form action="{{ route('admin.books.reset-ids') }}" 
                   method="POST" 
                   style="display: inline;"
@@ -130,7 +137,7 @@
                 </thead>
                 <tbody>
                     @foreach($books as $book)
-                        <tr>
+                        <tr id="book-row-{{ $book->id }}" class="{{ session('updated_book_id') == $book->id ? 'book-updated-highlight' : '' }}">
                             <td>
                                 <span class="badge badge-info">{{ $book->id }}</span>
                             </td>
@@ -139,8 +146,10 @@
                                     @php
                                         // Clean path and build URL directly
                                         $imagePath = ltrim(str_replace('\\', '/', $book->hinh_anh), '/');
-                                        // Add timestamp to prevent caching issues
-                                        $imageUrl = asset('storage/' . $imagePath) . '?t=' . $book->updated_at->timestamp;
+                                        // Strong cache busting: timestamp + milliseconds + random
+                                        // This ensures the image URL is different every time
+                                        $cacheBuster = $book->updated_at->timestamp . substr((string)microtime(true), -6) . mt_rand(1000, 9999);
+                                        $imageUrl = asset('storage/' . $imagePath) . '?v=' . $cacheBuster;
                                     @endphp
                                     <img src="{{ $imageUrl }}" 
                                          width="50" 
@@ -214,7 +223,7 @@
                                        title="Xem chi tiết">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a href="{{ route('admin.books.edit', $book->id) }}" 
+                                    <a href="{{ route('admin.books.edit', $book->id) }}?page={{ request()->get('page', 1) }}" 
                                        class="btn btn-sm btn-primary" 
                                        title="Chỉnh sửa">
                                         <i class="fas fa-edit"></i>
@@ -270,4 +279,25 @@
         </div>
     @endif
 </div>
+
+@push('scripts')
+<script>
+    // Scroll to updated book and add visual feedback
+    document.addEventListener('DOMContentLoaded', function() {
+        @if(session('updated_book_id'))
+            const updatedBookRow = document.getElementById('book-row-{{ session('updated_book_id') }}');
+            if (updatedBookRow) {
+                // Scroll to the updated book with smooth behavior
+                setTimeout(() => {
+                    updatedBookRow.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center' 
+                    });
+                }, 100);
+            }
+        @endif
+    });
+</script>
+@endpush
+
 @endsection

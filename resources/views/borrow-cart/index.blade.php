@@ -396,6 +396,10 @@
                         @foreach($cart->items as $item)
                         @php
                             $book = $item->book;
+                            // Skip if book doesn't exist
+                            if (!$book) {
+                                continue;
+                            }
                             $availableCopies = \App\Models\Inventory::where('book_id', $book->id)
                                 ->where('status', 'Co san')
                                 ->count();
@@ -406,19 +410,15 @@
                                 'tien_thue' => $item->tien_thue ?? 0,
                             ];
                             $borrowDays = $item->borrow_days ?? 14;
+                            // Phí ship tính theo đơn (không theo từng item), sẽ được tính trong summary
                             $itemTienShip = 0;
-                            if ($loop->first && $item->distance > 5) {
-                                $extraKm = $item->distance - 5;
-                                $itemTienShip = (int) ($extraKm * 5000);
-                            }
                         @endphp
                         <div class="cart-item" 
                              data-item-id="{{ $item->id }}"
                              data-tien-thue="{{ $itemFees['tien_thue'] * $item->quantity }}"
                              data-tien-coc="{{ $itemFees['tien_coc'] * $item->quantity }}"
-                             data-tien-ship="{{ $itemTienShip }}"
                              data-borrow-days="{{ $borrowDays }}"
-                             data-is-first="{{ $loop->first ? '1' : '0' }}">
+                             data-distance="{{ $item->distance ?? 0 }}">
                             <div class="cart-item-checkbox-wrapper">
                                 <input type="checkbox" class="item-checkbox" data-item-id="{{ $item->id }}" {{ $item->is_selected ? 'checked' : '' }} onchange="handleCheckboxChange(this)">
                             </div>
@@ -454,50 +454,18 @@
                                     <button type="button" class="btn-quantity" onclick="updateQuantity({{ $item->id }}, 1)">+</button>
                                 </div>
                                 <span class="quantity-max">/ {{ $availableCopies }} cuốn có sẵn</span>
-                                
-                                <div class="detail-row-inline">
-                                    <label>Số ngày mượn:</label>
-                                    <select id="borrow-days-{{ $item->id }}" 
-                                            onchange="updateBorrowDays({{ $item->id }})"
-                                            class="form-select borrow-days-select">
-                                        @for($i = 7; $i <= 30; $i++)
-                                            <option value="{{ $i }}" {{ $item->borrow_days == $i ? 'selected' : '' }}>
-                                                {{ $i }} ngày
-                                            </option>
-                                        @endfor
-                                    </select>
-                                </div>
                             </div>
                             <div class="cart-item-subtotal-column">
                                 @php
                                     // Sử dụng giá đã lưu trong database
+                                    // Phí ship tính theo đơn (không theo từng item), sẽ được hiển thị trong summary
                                     $tienCoc = $item->tien_coc ?? 0;
                                     $tienThue = $item->tien_thue ?? 0;
-                                    $tienShip = 0;
-                                    if ($item->distance > 5) {
-                                        $extraKm = $item->distance - 5;
-                                        $tienShip = (int) ($extraKm * 5000);
-                                    }
                                     $itemTotal = ($tienThue + $tienCoc) * $item->quantity;
-                                    if ($loop->first) {
-                                        $itemTotal += $tienShip;
-                                    }
                                 @endphp
                                 <span class="item-subtotal" id="subtotal-{{ $item->id }}">
                                     {{ number_format($itemTotal, 0, ',', '.') }}₫
                                 </span>
-                                
-                                <div class="detail-row-inline">
-                                    <label>Khoảng cách (km):</label>
-                                    <input type="number" 
-                                           id="distance-{{ $item->id }}" 
-                                           value="{{ $item->distance }}" 
-                                           min="0" 
-                                           step="0.1"
-                                           onchange="updateDistance({{ $item->id }})"
-                                           class="form-control distance-input"
-                                           placeholder="Nhập khoảng cách">
-                                </div>
                             </div>
                             <div class="cart-item-delete-column">
                                 <button type="button" 
@@ -527,13 +495,18 @@
                             $totalTienShip = 0;
                             $totalBorrowDays = 0;
                             $itemCount = 0;
-                            $isFirstSelectedItem = true;
+                            $maxDistance = 0; // Tìm khoảng cách xa nhất
                             
                             // CHỈ TÍNH CHO CÁC ITEMS ĐÃ ĐƯỢC CHỌN
                             $selectedItems = $cart->items->where('is_selected', true);
                             
                             foreach($selectedItems as $index => $item) {
                                 $book = $item->book;
+                                
+                                // Skip if book doesn't exist
+                                if (!$book) {
+                                    continue;
+                                }
                                 
                                 $borrowDays = $item->borrow_days ?? 14;
                                 $totalBorrowDays = max($totalBorrowDays, $borrowDays);
@@ -542,15 +515,15 @@
                                 $totalTienThue += ($item->tien_thue ?? 0) * $item->quantity;
                                 $totalTienCoc += ($item->tien_coc ?? 0) * $item->quantity;
                                 
-                                // Calculate shipping fee (only once for the first SELECTED item with distance > 5)
-                                if ($isFirstSelectedItem && $item->distance > 5) {
-                                    $extraKm = $item->distance - 5;
-                                    $totalTienShip = (int) ($extraKm * 5000);
-                                    $isFirstSelectedItem = false;
-                                }
+                                // Khoảng cách luôn là 0 - không sử dụng giá trị từ database
+                                $distance = 0;
+                                $maxDistance = 0;
                                 
                                 $itemCount += $item->quantity;
                             }
+                            
+                            // Phí ship luôn là 0 vì khoảng cách không được nhập thủ công (luôn là 0)
+                            $totalTienShip = 0;
                             
                             $tongTien = $totalTienThue + $totalTienCoc + $totalTienShip;
                             $giamGiaSP = 0;
@@ -567,29 +540,30 @@
                             </div>
                             <div id="rental-fees-container">
                                 @php
-                                    // Nhóm items theo số ngày mượn - CHỈ TÍNH CHO CÁC ITEMS ĐÃ ĐƯỢC CHỌN
-                                    $groupedByDays = [];
+                                    // Tìm số ngày mượn chung từ các item được chọn (lấy giá trị đầu tiên hoặc max)
+                                    $commonBorrowDays = 14; // Mặc định
+                                    if ($selectedItems->count() > 0) {
+                                        $commonBorrowDays = $selectedItems->first()->borrow_days ?? 14;
+                                    }
+                                    
+                                    // Tính tiền thuê dựa trên số ngày mượn chung
+                                    $totalTienThueForDisplay = 0;
                                     $selectedItemsForFees = $cart->items->where('is_selected', true);
                                     foreach($selectedItemsForFees as $item) {
-                                        $borrowDays = $item->borrow_days ?? 14;
-                                        
-                                        // Sử dụng giá đã lưu trong database
-                                        $tienThue = $item->tien_thue ?? 0;
-                                        
-                                        if (!isset($groupedByDays[$borrowDays])) {
-                                            $groupedByDays[$borrowDays] = 0;
+                                        // Skip if book doesn't exist
+                                        if (!$item->book) {
+                                            continue;
                                         }
-                                        $groupedByDays[$borrowDays] += $tienThue * $item->quantity;
+                                        
+                                        // Sử dụng giá đã lưu trong database (đã được tính dựa trên số ngày mượn của item)
+                                        $tienThue = $item->tien_thue ?? 0;
+                                        $totalTienThueForDisplay += $tienThue * $item->quantity;
                                     }
-                                    // Sắp xếp theo số ngày giảm dần
-                                    krsort($groupedByDays);
                                 @endphp
-                                @foreach($groupedByDays as $days => $fee)
-                                <div class="fee-detail-row rental-fee-row" data-days="{{ $days }}">
-                                    <span class="fee-label">Tiền thuê ({{ $days }} ngày):</span>
-                                    <span class="fee-value">{{ number_format($fee, 0, ',', '.') }}₫</span>
+                                <div class="fee-detail-row rental-fee-row" data-days="{{ $commonBorrowDays }}">
+                                    <span class="fee-label">Tiền thuê ({{ $commonBorrowDays }} ngày):</span>
+                                    <span class="fee-value">{{ number_format($totalTienThueForDisplay, 0, ',', '.') }}₫</span>
                                 </div>
-                                @endforeach
                             </div>
                             <div class="fee-detail-row">
                                 <span class="fee-label">Tiền cọc:</span>
@@ -603,10 +577,90 @@
                         
                         <!-- Thông báo phí ship -->
                         <div class="shipping-info-box mb-3" style="background: #fef3c7; border: 1.5px dashed #fbbf24; border-radius: 8px; padding: 12px 15px; margin-top: 15px;">
-                            <small style="color: #92400e; line-height: 1.5;">
+                            <small style="color: #92400e; line-height: 1.5; display: block; margin-bottom: 10px;">
                                 <i class="fas fa-info-circle me-1"></i>
-                                Phí ship tính theo đơn (không giới hạn số lượng sách) cứ sau 5km mỗi 1km tăng thêm 5 nghìn.
+                                Phí ship tính từ Cao đẳng FPT Polytechnic Hà Nội. Miễn phí 5km đầu, sau đó 5.000₫/km.
                             </small>
+                            <div style="border-top: 1px dashed #fbbf24; padding-top: 10px; margin-top: 10px;">
+                                <label class="form-label mb-2" style="font-size: 0.9rem; color: #92400e; font-weight: 600; display: block;">
+                                    <i class="fas fa-map-marker-alt me-1"></i> Nhập địa chỉ để tự động tính phí:
+                                </label>
+                                <div class="mb-2">
+                                    <select class="form-control form-control-sm mb-2" id="shipping-tinh-cart" style="font-size: 0.85rem;">
+                                        <option value="">-- Chọn Tỉnh/Thành phố --</option>
+                                        @php
+                                            $provinces = ['Hà Nội', 'Hồ Chí Minh', 'Đà Nẵng', 'Hải Phòng', 'Cần Thơ', 'An Giang', 'Bà Rịa - Vũng Tàu', 'Bắc Giang', 'Bắc Kạn', 'Bạc Liêu', 'Bắc Ninh', 'Bến Tre', 'Bình Định', 'Bình Dương', 'Bình Phước', 'Bình Thuận', 'Cà Mau', 'Cao Bằng', 'Đắk Lắk', 'Đắk Nông', 'Điện Biên', 'Đồng Nai', 'Đồng Tháp', 'Gia Lai', 'Hà Giang', 'Hà Nam', 'Hà Tĩnh', 'Hải Dương', 'Hậu Giang', 'Hòa Bình', 'Hưng Yên', 'Khánh Hòa', 'Kiên Giang', 'Kon Tum', 'Lai Châu', 'Lâm Đồng', 'Lạng Sơn', 'Lào Cai', 'Long An', 'Nam Định', 'Nghệ An', 'Ninh Bình', 'Ninh Thuận', 'Phú Thọ', 'Phú Yên', 'Quảng Bình', 'Quảng Nam', 'Quảng Ngãi', 'Quảng Ninh', 'Quảng Trị', 'Sóc Trăng', 'Sơn La', 'Tây Ninh', 'Thái Bình', 'Thái Nguyên', 'Thanh Hóa', 'Thừa Thiên Huế', 'Tiền Giang', 'Trà Vinh', 'Tuyên Quang', 'Vĩnh Long', 'Vĩnh Phúc', 'Yên Bái'];
+                                            $selectedTinh = '';
+                                            if (isset($reader) && $reader && $reader->dia_chi) {
+                                                $addressParts = explode(',', $reader->dia_chi);
+                                                $selectedTinh = count($addressParts) > 2 ? trim($addressParts[count($addressParts)-1]) : '';
+                                            }
+                                        @endphp
+                                        @foreach($provinces as $province)
+                                            <option value="{{ $province }}" @if($selectedTinh == $province) selected @endif>{{ $province }}</option>
+                                        @endforeach
+                                    </select>
+                                    <input type="text" 
+                                           class="form-control form-control-sm" 
+                                           id="shipping-xa-cart" 
+                                           value="@if(isset($reader) && $reader && $reader->dia_chi)@php $parts = explode(',', $reader->dia_chi); echo trim($parts[0] ?? ''); @endphp@endif"
+                                           placeholder="Nhập Phường/Xã/Địa chỉ" 
+                                           style="font-size: 0.85rem;">
+                                    <input type="text" 
+                                           class="form-control form-control-sm mt-2" 
+                                           id="shipping-so-nha-cart" 
+                                           placeholder="Số nhà, tên đường (tùy chọn)" 
+                                           style="font-size: 0.85rem;">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-primary mt-2 w-100" 
+                                            onclick="calculateShippingFromAddressCart()"
+                                            style="font-size: 0.85rem;">
+                                        <i class="fas fa-calculator me-1"></i> Tự động tính phí từ địa chỉ
+                                    </button>
+                                </div>
+                                <div style="border-top: 1px dashed #fbbf24; padding-top: 10px; margin-top: 10px;">
+                                    <label class="form-label mb-2" style="font-size: 0.9rem; color: #92400e; font-weight: 600; display: block;">
+                                        <i class="fas fa-ruler me-1"></i> Hoặc nhập khoảng cách thủ công (km) - Tự động tính khi nhập:
+                                    </label>
+                                    <input type="number" 
+                                           class="form-control" 
+                                           id="manual-distance-cart" 
+                                           placeholder="Ví dụ: 8.5 km" 
+                                           min="0" 
+                                           max="100" 
+                                           step="0.1"
+                                           style="font-size: 0.9rem;">
+                                    <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">
+                                        💡 Phí sẽ được tính tự động khi bạn nhập khoảng cách
+                                    </small>
+                                </div>
+                                <small class="text-muted d-block mt-2" style="font-size: 0.75rem;">
+                                    💡 <strong>Hướng dẫn:</strong> Nhập địa chỉ đầy đủ và click "Tự động tính phí" hoặc tra cứu khoảng cách trên Google Maps và nhập thủ công.
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <!-- Số ngày mượn chung cho toàn bộ đơn hàng -->
+                        <div class="summary-row" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                            <div style="width: 100%;">
+                                <label for="common-borrow-days" style="display: block; font-weight: 600; margin-bottom: 8px; color: #333; font-size: 14px;">
+                                    <i class="fas fa-calendar-alt" style="color: #ff9800; margin-right: 5px;"></i>
+                                    Số ngày mượn:
+                                </label>
+                                <select id="common-borrow-days" 
+                                        onchange="updateCommonBorrowDays()"
+                                        class="form-control"
+                                        style="width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 6px; font-size: 14px;">
+                                    @for($i = 7; $i <= 30; $i++)
+                                        <option value="{{ $i }}" {{ $commonBorrowDays == $i ? 'selected' : '' }}>
+                                            {{ $i }} ngày
+                                        </option>
+                                    @endfor
+                                </select>
+                                <small style="color: #666; display: block; margin-top: 5px; font-size: 12px;">
+                                    <i class="fas fa-info-circle"></i> Tất cả sách sẽ được mượn trong cùng số ngày. Số ngày này sẽ áp dụng cho tất cả các sách đã chọn.
+                                </small>
+                            </div>
                         </div>
                         
                         <!-- Total and Discount Section -->
@@ -906,7 +960,6 @@
 }
 
 .borrow-days-select,
-.distance-input,
 .note-textarea {
     width: 100%;
     padding: 8px 10px;
@@ -915,8 +968,7 @@
     font-size: 14px;
 }
 
-.detail-row-inline .borrow-days-select,
-.detail-row-inline .distance-input {
+.detail-row-inline .borrow-days-select {
     width: 100%;
     padding: 8px 10px;
     font-size: 13px;
@@ -1037,13 +1089,17 @@ function updateItemSelected(itemId, isSelected) {
 function recalculateSummary() {
     let totalTienCoc = 0;
     let totalTienShip = 0;
+    let totalTienThue = 0;
     let hasSelectedItems = false;
-    
-    // Nhóm tiền thuê theo số ngày
-    let rentalFeesByDays = {};
+    // Khoảng cách luôn là 0 - không cho nhập thủ công
+    let maxDistance = 0;
     
     // Lấy tất cả các item được chọn
     const checkedCheckboxes = document.querySelectorAll('.item-checkbox:checked');
+    
+    // Lấy số ngày mượn chung từ dropdown
+    const commonBorrowDaysSelect = document.getElementById('common-borrow-days');
+    const commonBorrowDays = parseInt(commonBorrowDaysSelect?.value) || 14;
     
     checkedCheckboxes.forEach((checkbox) => {
         hasSelectedItems = true;
@@ -1053,51 +1109,42 @@ function recalculateSummary() {
         if (cartItem) {
             const tienThue = parseFloat(cartItem.getAttribute('data-tien-thue')) || 0;
             const tienCoc = parseFloat(cartItem.getAttribute('data-tien-coc')) || 0;
-            const tienShip = parseFloat(cartItem.getAttribute('data-tien-ship')) || 0;
-            const borrowDays = parseInt(cartItem.getAttribute('data-borrow-days')) || 0;
+            // Khoảng cách luôn là 0 - không sử dụng giá trị từ data-distance
+            const distance = 0;
             
-            // Nhóm tiền thuê theo số ngày
-            if (!rentalFeesByDays[borrowDays]) {
-                rentalFeesByDays[borrowDays] = 0;
-            }
-            rentalFeesByDays[borrowDays] += tienThue;
-            
+            totalTienThue += tienThue;
             totalTienCoc += tienCoc;
             
-            // Chỉ tính ship fee cho item đầu tiên (data-is-first="1")
-            if (cartItem.getAttribute('data-is-first') === '1') {
-                totalTienShip += tienShip;
-            }
+            // Khoảng cách luôn là 0, không cần tìm max
         }
     });
     
+    // Phí ship - sử dụng giá trị từ khoảng cách nhập thủ công nếu có
+    if (window.manualShippingFee !== undefined && window.manualShippingFee !== null) {
+        totalTienShip = window.manualShippingFee;
+    } else {
+        totalTienShip = 0;
+    }
+    
     // Nếu không có item nào được chọn, reset
     if (!hasSelectedItems) {
-        rentalFeesByDays = {};
+        totalTienThue = 0;
         totalTienCoc = 0;
         totalTienShip = 0;
     }
     
-    // Cập nhật phần tiền thuê theo từng nhóm ngày
+    // Cập nhật phần tiền thuê với số ngày mượn chung
     const rentalFeesContainer = document.getElementById('rental-fees-container');
     rentalFeesContainer.innerHTML = '';
     
-    // Sắp xếp theo số ngày giảm dần
-    const sortedDays = Object.keys(rentalFeesByDays).sort((a, b) => b - a);
-    sortedDays.forEach(days => {
-        const fee = rentalFeesByDays[days];
-        const feeRow = document.createElement('div');
-        feeRow.className = 'fee-detail-row rental-fee-row';
-        feeRow.setAttribute('data-days', days);
-        feeRow.innerHTML = `
-            <span class="fee-label">Tiền thuê (${days} ngày):</span>
-            <span class="fee-value">${formatCurrency(fee)}</span>
-        `;
-        rentalFeesContainer.appendChild(feeRow);
-    });
-    
-    // Tính tổng tiền thuê
-    const totalTienThue = Object.values(rentalFeesByDays).reduce((sum, fee) => sum + fee, 0);
+    const feeRow = document.createElement('div');
+    feeRow.className = 'fee-detail-row rental-fee-row';
+    feeRow.setAttribute('data-days', commonBorrowDays);
+    feeRow.innerHTML = `
+        <span class="fee-label">Tiền thuê (${commonBorrowDays} ngày):</span>
+        <span class="fee-value">${formatCurrency(totalTienThue)}</span>
+    `;
+    rentalFeesContainer.appendChild(feeRow);
     
     const tongTien = totalTienThue + totalTienCoc + totalTienShip;
     const giamGiaSP = 0;
@@ -1163,67 +1210,59 @@ function updateQuantityInput(itemId) {
     });
 }
 
-function updateBorrowDays(itemId) {
-    const select = document.getElementById('borrow-days-' + itemId);
-    const borrowDays = parseInt(select.value);
+// Hàm cập nhật số ngày mượn chung cho tất cả các item được chọn
+function updateCommonBorrowDays() {
+    const commonBorrowDaysSelect = document.getElementById('common-borrow-days');
+    const borrowDays = parseInt(commonBorrowDaysSelect.value) || 14;
     
-    fetch(`{{ route('borrow-cart.update', '') }}/${itemId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        },
-        body: JSON.stringify({
-            borrow_days: borrowDays
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Đã cập nhật số ngày mượn, đang tải lại trang...', 'success');
-            setTimeout(() => {
-                location.reload();
-            }, 500);
-        } else {
-            alert(data.message || 'Có lỗi xảy ra');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Có lỗi xảy ra khi cập nhật số ngày mượn');
+    // Lấy tất cả các item được chọn
+    const checkedCheckboxes = document.querySelectorAll('.item-checkbox:checked');
+    
+    if (checkedCheckboxes.length === 0) {
+        showToast('⚠️ Vui lòng chọn ít nhất một sách!', 'warning');
+        return;
+    }
+    
+    // Cập nhật số ngày mượn cho tất cả các item được chọn
+    const updatePromises = [];
+    checkedCheckboxes.forEach((checkbox) => {
+        const itemId = checkbox.getAttribute('data-item-id');
+        
+        // Gửi request cập nhật
+        updatePromises.push(
+            fetch(`{{ route('borrow-cart.update', '') }}/${itemId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    borrow_days: borrowDays
+                })
+            })
+        );
     });
+    
+    // Chờ tất cả các request hoàn thành
+    Promise.all(updatePromises)
+        .then(responses => Promise.all(responses.map(r => r.json())))
+        .then(results => {
+            const allSuccess = results.every(r => r.success);
+            if (allSuccess) {
+                showToast('Đã cập nhật số ngày mượn cho tất cả sách, đang tải lại trang...', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 500);
+            } else {
+                showToast('Có một số lỗi xảy ra khi cập nhật số ngày mượn', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('Có lỗi xảy ra khi cập nhật số ngày mượn', 'error');
+        });
 }
 
-function updateDistance(itemId) {
-    const input = document.getElementById('distance-' + itemId);
-    const distance = parseFloat(input.value) || 0;
-    
-    fetch(`{{ route('borrow-cart.update', '') }}/${itemId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        },
-        body: JSON.stringify({
-            distance: distance
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showToast('Đã cập nhật khoảng cách, đang tải lại trang...', 'success');
-            setTimeout(() => {
-                location.reload();
-            }, 500);
-        } else {
-            alert(data.message || 'Có lỗi xảy ra');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Có lỗi xảy ra khi cập nhật khoảng cách');
-    });
-}
 
 function removeItem(itemId) {
     if (!confirm('Bạn có chắc muốn xóa sách này khỏi giỏ sách?')) {
@@ -1300,8 +1339,49 @@ function applyDiscountCode() {
 }
 
 function checkout() {
-    // Redirect đến trang checkout thay vì gọi API trực tiếp
-    window.location.href = '{{ route('borrow-cart.checkout') }}';
+    // Lưu khoảng cách vào tất cả cart items trước khi redirect
+    const manualDistanceInput = document.getElementById('manual-distance-cart');
+    const distance = manualDistanceInput ? parseFloat(manualDistanceInput.value) : 0;
+    
+    if (distance > 0 && !isNaN(distance)) {
+        // Lấy tất cả cart items được chọn
+        const checkedCheckboxes = document.querySelectorAll('.item-checkbox:checked');
+        const updatePromises = [];
+        
+        checkedCheckboxes.forEach((checkbox) => {
+            const itemId = checkbox.getAttribute('data-item-id');
+            if (itemId) {
+                // Cập nhật khoảng cách cho từng item
+                const promise = fetch(`{{ route('borrow-cart.update', '') }}/${itemId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        distance: distance
+                    })
+                })
+                .then(response => response.json())
+                .catch(error => {
+                    console.error('Error updating distance for item:', itemId, error);
+                });
+                
+                updatePromises.push(promise);
+            }
+        });
+        
+        // Đợi tất cả các request hoàn thành trước khi redirect
+        Promise.all(updatePromises).then(() => {
+            window.location.href = '{{ route('borrow-cart.checkout') }}';
+        }).catch(() => {
+            // Nếu có lỗi, vẫn redirect
+            window.location.href = '{{ route('borrow-cart.checkout') }}';
+        });
+    } else {
+        // Nếu không có khoảng cách, redirect ngay
+        window.location.href = '{{ route('borrow-cart.checkout') }}';
+    }
 }
 
 function showToast(message, type = 'success') {
@@ -1348,9 +1428,238 @@ function updateBorrowCartCount(count) {
     }
 }
 
-// Gọi recalculateSummary() khi trang load để đảm bảo summary hiển thị đúng
+// Hàm tự động tính phí vận chuyển từ địa chỉ (trang giỏ hàng)
+function calculateShippingFromAddressCart() {
+    const tinhSelect = document.getElementById('shipping-tinh-cart');
+    const xaInput = document.getElementById('shipping-xa-cart');
+    const soNhaInput = document.getElementById('shipping-so-nha-cart');
+    const shippingFeeDisplay = document.getElementById('summary-tien-ship');
+    
+    if (!tinhSelect || !xaInput || !shippingFeeDisplay) {
+        alert('Không tìm thấy các trường cần thiết');
+        return;
+    }
+    
+    const tinh = tinhSelect.value.trim();
+    const xa = xaInput.value.trim();
+    const soNha = soNhaInput?.value.trim() || '';
+    
+    if (!tinh || !xa) {
+        alert('Vui lòng nhập đầy đủ Tỉnh/Thành phố và Phường/Xã');
+        return;
+    }
+    
+    // Ghép địa chỉ đầy đủ
+    let fullAddress = '';
+    if (soNha) fullAddress += soNha + ', ';
+    if (xa) fullAddress += xa + ', ';
+    if (tinh) fullAddress += tinh + ', Việt Nam';
+    
+    console.log('Calculating shipping from address:', fullAddress);
+    
+    // Hiển thị đang tính
+    shippingFeeDisplay.textContent = 'Đang tính...';
+    
+    // Gọi API tính phí
+    fetch('/api/shipping/calculate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+        },
+        body: JSON.stringify({ address: fullAddress })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Shipping API response:', data);
+        if (data.success) {
+            const shippingFee = data.shipping_fee || 0;
+            const distance = data.distance || 0;
+            
+            // Lưu vào biến global
+            window.manualShippingFee = shippingFee;
+            window.manualDistance = distance;
+            
+            // Cập nhật hiển thị
+            shippingFeeDisplay.textContent = formatCurrency(shippingFee);
+            
+            // Cập nhật lại tổng tiền
+            recalculateSummary();
+            
+            // Cập nhật giá trị trong ô nhập khoảng cách thủ công để đồng bộ
+            const manualDistanceInput = document.getElementById('manual-distance-cart');
+            if (manualDistanceInput) {
+                manualDistanceInput.value = distance.toFixed(2);
+            }
+            
+            alert(`Tính phí thành công!\nĐịa chỉ: ${fullAddress}\nKhoảng cách: ${distance.toFixed(2)} km\nPhí vận chuyển: ${formatCurrency(shippingFee)}`);
+        } else {
+            const errorMsg = data.message || 'Không thể tính phí vận chuyển';
+            shippingFeeDisplay.textContent = 'Lỗi';
+            alert('Không thể tính phí tự động: ' + errorMsg + '\n\nVui lòng nhập khoảng cách thủ công.');
+        }
+    })
+    .catch(error => {
+        console.error('Error calculating shipping:', error);
+        shippingFeeDisplay.textContent = 'Lỗi';
+        alert('Lỗi kết nối: ' + error.message + '\n\nVui lòng nhập khoảng cách thủ công.');
+    });
+}
+
+// Hàm tính phí vận chuyển từ khoảng cách nhập thủ công (trang giỏ hàng)
+function calculateShippingFromManualDistanceCart() {
+    const manualDistanceInput = document.getElementById('manual-distance-cart');
+    const shippingFeeDisplay = document.getElementById('summary-tien-ship');
+    
+    if (!manualDistanceInput || !shippingFeeDisplay) {
+        return;
+    }
+    
+    const distance = parseFloat(manualDistanceInput.value);
+    
+    // Nếu không có giá trị hoặc giá trị không hợp lệ, đặt phí = 0
+    if (isNaN(distance) || distance < 0) {
+        window.manualShippingFee = 0;
+        window.manualDistance = 0;
+        shippingFeeDisplay.textContent = formatCurrency(0);
+        recalculateSummary();
+        return;
+    }
+    
+    // Tính phí theo công thức: miễn phí 5km đầu, từ km thứ 6 trở đi mỗi km thêm 5.000₫
+    let shippingFee = 0;
+    if (distance > 5) {
+        const extraKm = Math.ceil(distance - 5); // Làm tròn lên số km vượt quá
+        shippingFee = extraKm * 5000; // Mỗi km thêm 5.000₫
+    }
+    
+    // Lưu vào biến global để dùng trong updateSummary
+    window.manualShippingFee = shippingFee;
+    window.manualDistance = distance;
+    
+    // Cập nhật hiển thị
+    shippingFeeDisplay.textContent = formatCurrency(shippingFee);
+    
+    // Cập nhật lại tổng tiền
+    recalculateSummary();
+    
+    console.log('Manual shipping calculation (cart):', { distance, shippingFee });
+}
+
+// Gọi recalculateSummary() khi trang load
 document.addEventListener('DOMContentLoaded', function() {
     recalculateSummary();
+    
+    // Tự động điền địa chỉ từ reader nếu có và tự động tính phí
+    @if(isset($reader) && $reader && $reader->dia_chi)
+        @php
+            $addressParts = explode(',', $reader->dia_chi ?? '');
+            $tinh = count($addressParts) > 2 ? trim($addressParts[count($addressParts)-1]) : '';
+            $xa = count($addressParts) > 0 ? trim($addressParts[0]) : '';
+        @endphp
+        
+        setTimeout(() => {
+            const tinhSelect = document.getElementById('shipping-tinh-cart');
+            const xaInput = document.getElementById('shipping-xa-cart');
+            
+            if (tinhSelect && '{{ $tinh }}') {
+                tinhSelect.value = '{{ $tinh }}';
+            }
+            if (xaInput && '{{ $xa }}') {
+                xaInput.value = '{{ $xa }}';
+            }
+            
+            // Tự động tính phí sau khi điền địa chỉ
+            if (tinhSelect?.value && xaInput?.value) {
+                console.log('Auto-calculating shipping from saved address...');
+                setTimeout(() => {
+                    calculateShippingFromAddressCart();
+                }, 500);
+            }
+        }, 1000);
+    @endif
+    
+    // Lắng nghe sự kiện thay đổi địa chỉ để tự động tính lại phí
+    const tinhSelectCart = document.getElementById('shipping-tinh-cart');
+    const xaInputCart = document.getElementById('shipping-xa-cart');
+    const soNhaInputCart = document.getElementById('shipping-so-nha-cart');
+    let addressChangeTimeout = null;
+    
+    if (tinhSelectCart) {
+        tinhSelectCart.addEventListener('change', function() {
+            clearTimeout(addressChangeTimeout);
+            if (this.value && xaInputCart?.value) {
+                addressChangeTimeout = setTimeout(() => {
+                    calculateShippingFromAddressCart();
+                }, 1000);
+            }
+        });
+    }
+    
+    if (xaInputCart) {
+        xaInputCart.addEventListener('input', function() {
+            clearTimeout(addressChangeTimeout);
+            if (this.value.trim().length >= 3 && tinhSelectCart?.value) {
+                addressChangeTimeout = setTimeout(() => {
+                    calculateShippingFromAddressCart();
+                }, 1000);
+            }
+        });
+        
+        xaInputCart.addEventListener('blur', function() {
+            clearTimeout(addressChangeTimeout);
+            if (this.value.trim() && tinhSelectCart?.value) {
+                calculateShippingFromAddressCart();
+            }
+        });
+    }
+    
+    if (soNhaInputCart) {
+        soNhaInputCart.addEventListener('input', function() {
+            clearTimeout(addressChangeTimeout);
+            if (this.value.trim().length >= 5 && tinhSelectCart?.value && xaInputCart?.value) {
+                addressChangeTimeout = setTimeout(() => {
+                    calculateShippingFromAddressCart();
+                }, 1000);
+            }
+        });
+    }
+    
+    // Tự động tính phí khi nhập khoảng cách thủ công
+    const manualDistanceInput = document.getElementById('manual-distance-cart');
+    let manualDistanceTimeout = null;
+    
+    if (manualDistanceInput) {
+        manualDistanceInput.addEventListener('input', function() {
+            clearTimeout(manualDistanceTimeout);
+            const value = parseFloat(this.value);
+            
+            // Nếu giá trị hợp lệ, tự động tính sau 0.5 giây
+            if (!isNaN(value) && value >= 0) {
+                manualDistanceTimeout = setTimeout(() => {
+                    calculateShippingFromManualDistanceCart();
+                }, 500);
+            } else if (this.value === '' || this.value === null) {
+                // Nếu xóa hết, đặt phí = 0
+                window.manualShippingFee = 0;
+                window.manualDistance = 0;
+                const shippingFeeDisplay = document.getElementById('summary-tien-ship');
+                if (shippingFeeDisplay) {
+                    shippingFeeDisplay.textContent = formatCurrency(0);
+                }
+                recalculateSummary();
+            }
+        });
+        
+        manualDistanceInput.addEventListener('blur', function() {
+            clearTimeout(manualDistanceTimeout);
+            const value = parseFloat(this.value);
+            if (!isNaN(value) && value >= 0) {
+                calculateShippingFromManualDistanceCart();
+            }
+        });
+    }
 });
 </script>
 </body>

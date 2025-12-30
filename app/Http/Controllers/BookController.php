@@ -20,6 +20,11 @@ class BookController extends Controller
 {
     public function index(Request $request)
     {
+        // Thêm cache-control headers để ngăn browser cache dữ liệu cũ
+        header('Cache-Control: no-cache, no-store, must-revalidate');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        
         $query = Book::with('category');
 
         // Lọc theo thể loại (nếu có)
@@ -205,20 +210,18 @@ class BookController extends Controller
                 'gia' => 'nullable|numeric|min:0',
                 'trang_thai' => 'required|in:active,inactive',
                 'nha_xuat_ban_id' => 'nullable|exists:publishers,id',
-                'so_luong' => 'required|integer|min:0',
+                'so_luong_them' => 'nullable|integer|min:0',
             ]);
 
             // Giữ nguyên ảnh cũ nếu không upload ảnh mới
             $path = $book->hinh_anh;
+            $oldImagePath = $book->hinh_anh; // Lưu path cũ để xóa SAU KHI commit thành công
+            $newImagePath = null;
             
             if ($request->hasFile('hinh_anh')) {
                 try {
-                    // Xóa ảnh cũ nếu có
-                    if ($book->hinh_anh && \Storage::disk('public')->exists($book->hinh_anh)) {
-                        FileUploadService::deleteFile($book->hinh_anh, 'public');
-                    }
-                    
                     // Upload ảnh mới sử dụng FileUploadService
+                    // KHÔNG xóa ảnh cũ ngay - chỉ xóa SAU KHI transaction commit thành công
                     $result = FileUploadService::uploadImage(
                         $request->file('hinh_anh'),
                         'books',
@@ -235,7 +238,8 @@ class BookController extends Controller
                         throw new \Exception('Không thể lấy đường dẫn ảnh sau khi upload.');
                     }
                     
-                    $path = $result['path'];
+                    $newImagePath = $result['path'];
+                    $path = $newImagePath;
                     
                     // Verify file exists after upload
                     if (!\Storage::disk('public')->exists($path)) {
@@ -267,6 +271,8 @@ class BookController extends Controller
             \Log::info('Preparing to save book update', [
                 'book_id' => $book->id,
                 'has_new_image' => $request->hasFile('hinh_anh'),
+                'old_image_path' => $oldImagePath,
+                'new_image_path' => $newImagePath,
                 'hinh_anh_path' => $path,
                 'path_exists' => $path ? \Storage::disk('public')->exists($path) : false,
             ]);
@@ -280,7 +286,8 @@ class BookController extends Controller
                 'mo_ta' => $request->mo_ta,
                 'gia' => $request->gia,
                 'trang_thai' => $request->trang_thai,
-                'so_luong' => $request->so_luong ?? 0,
+                // KHÔNG CẬP NHẬT so_luong từ form edit
+                // Số lượng chỉ được cập nhật thông qua việc duyệt phiếu nhập kho
             ];
 
             // Thêm nha_xuat_ban_id nếu có trong request
@@ -288,19 +295,39 @@ class BookController extends Controller
                 $updateData['nha_xuat_ban_id'] = $request->nha_xuat_ban_id;
             }
 
-            // Kiểm tra nếu số lượng tăng lên, tạo phiếu nhập kho (chờ duyệt)
-            $oldQuantity = $book->so_luong ?? 0;
-            $newQuantity = $request->so_luong ?? 0;
-            $quantityDifference = $newQuantity - $oldQuantity;
+            // Lấy số lượng muốn thêm vào kho
+            $soLuongThem = $request->so_luong_them ?? 0;
 
             DB::beginTransaction();
             try {
-                // Cập nhật số lượng sách ngay
+                // Log data before update for debugging
+                \Log::info('About to update book', [
+                    'book_id' => $book->id,
+                    'update_data' => $updateData,
+                    'old_hinh_anh' => $book->hinh_anh,
+                    'new_hinh_anh' => $updateData['hinh_anh'] ?? null,
+                ]);
+                
+                // Cập nhật thông tin sách (KHÔNG BAO GỒM số lượng)
+                // Force update updated_at to ensure timestamp changes for cache busting
+                $updateData['updated_at'] = now();
                 $book->update($updateData);
+                
+                // Verify update immediately
+                \Log::info('After update, before refresh', [
+                    'book_id' => $book->id,
+                    'hinh_anh_after_update' => $book->hinh_anh,
+                    'getChanges' => $book->getChanges(),
+                    'getDirty' => $book->getDirty(),
+                ]);
+                
+                // Log update BEFORE refresh - to capture changes properly
+                // Note: Must be done before any other operations that might fail
+                AuditService::logUpdated($book, $oldValues, "Book '{$book->ten_sach}' updated");
 
-                // Nếu số lượng tăng, tạo phiếu nhập kho (chờ duyệt)
-                // Inventory items sẽ được tạo khi duyệt phiếu
-                if ($quantityDifference > 0) {
+                // Nếu có số lượng muốn thêm, tạo phiếu nhập kho (chờ duyệt)
+                // Số lượng sách sẽ KHÔNG được cập nhật ngay, chỉ khi duyệt phiếu
+                if ($soLuongThem > 0) {
                     // Tạo số phiếu
                     $receiptNumber = InventoryReceipt::generateReceiptNumber();
 
@@ -319,22 +346,41 @@ class BookController extends Controller
                         'receipt_number' => $receiptNumber,
                         'receipt_date' => now()->toDateString(),
                         'book_id' => $book->id,
-                        'quantity' => $quantityDifference,
+                        'quantity' => $soLuongThem,
                         'storage_location' => $defaultLocation,
                         'storage_type' => 'Kho',
                         'unit_price' => $book->gia ?? 0,
-                        'total_price' => ($book->gia ?? 0) * $quantityDifference,
-                        'supplier' => 'Cập nhật trực tiếp từ quản lý sách',
+                        'total_price' => ($book->gia ?? 0) * $soLuongThem,
+                        'supplier' => 'Cập nhật từ quản lý sách',
                         'received_by' => Auth::id(),
                         'approved_by' => null, // Chưa được duyệt
                         'status' => 'pending', // Chờ duyệt
-                        'notes' => 'Phiếu nhập kho tự động được tạo khi cập nhật số lượng sách từ ' . $oldQuantity . ' lên ' . $newQuantity . '. Vui lòng duyệt phiếu để sách được nhập vào kho.',
+                        'notes' => "Phiếu nhập kho được tạo từ form chỉnh sửa sách. Số lượng: {$soLuongThem} cuốn. Vui lòng duyệt phiếu để sách được nhập vào kho và cập nhật số lượng.",
                     ]);
-
-                    // KHÔNG tạo Inventory items ngay, chỉ tạo khi duyệt phiếu
                 }
 
                 DB::commit();
+                
+                // SAU KHI commit thành công, xóa ảnh cũ nếu có ảnh mới
+                if ($newImagePath && $oldImagePath && $oldImagePath !== $newImagePath) {
+                    if (\Storage::disk('public')->exists($oldImagePath)) {
+                        try {
+                            FileUploadService::deleteFile($oldImagePath, 'public');
+                            \Log::info('Old image deleted after successful update', [
+                                'old_path' => $oldImagePath,
+                                'new_path' => $newImagePath,
+                                'book_id' => $book->id,
+                            ]);
+                        } catch (\Exception $e) {
+                            // Log error nhưng không rollback vì database đã commit
+                            \Log::warning('Failed to delete old image after update', [
+                                'old_path' => $oldImagePath,
+                                'error' => $e->getMessage(),
+                                'book_id' => $book->id,
+                            ]);
+                        }
+                    }
+                }
 
                 // Refresh book model to get latest data including updated image
                 $book->refresh();
@@ -348,22 +394,45 @@ class BookController extends Controller
                     'image_url' => $book->hinh_anh ? \Storage::disk('public')->url($book->hinh_anh) : null,
                     'asset_url' => $book->hinh_anh ? asset('storage/' . ltrim(str_replace('\\', '/', $book->hinh_anh), '/')) : null,
                 ]);
-
-                // Log update with old values (array) and description (string)
-                AuditService::logUpdated($book, $oldValues, "Book '{$book->ten_sach}' updated");
                 
                 // Clear dashboard cache
                 CacheService::clearDashboard();
 
+                // Tạo thông báo success
                 $successMessage = 'Cập nhật sách thành công!';
-                if ($quantityDifference > 0) {
-                    $successMessage .= ' Đã tạo phiếu nhập kho số lượng ' . $quantityDifference . ' cuốn (chờ duyệt). Vui lòng duyệt phiếu để sách được nhập vào kho.';
+                if ($soLuongThem > 0) {
+                    $successMessage .= " Đã tạo phiếu nhập kho số lượng {$soLuongThem} cuốn (chờ duyệt). Vui lòng vào 'Phiếu nhập kho' để duyệt phiếu.";
                 }
 
-                // Redirect back to index page
-                return redirect()->route('admin.books.index')->with('success', $successMessage);
+                // Redirect back to index page with current page if available
+                $redirectUrl = route('admin.books.index');
+                if ($request->has('redirect_page')) {
+                    $redirectUrl .= '?page=' . $request->redirect_page;
+                }
+                // Thêm book_id để highlight sách vừa cập nhật
+                return redirect($redirectUrl)
+                    ->with('success', $successMessage)
+                    ->with('updated_book_id', $book->id);
             } catch (\Exception $e) {
                 DB::rollBack();
+                
+                // Nếu có ảnh mới được upload nhưng transaction thất bại, xóa ảnh mới
+                if ($newImagePath && \Storage::disk('public')->exists($newImagePath)) {
+                    try {
+                        FileUploadService::deleteFile($newImagePath, 'public');
+                        \Log::info('New image deleted after transaction rollback', [
+                            'new_path' => $newImagePath,
+                            'book_id' => $book->id,
+                        ]);
+                    } catch (\Exception $deleteException) {
+                        \Log::error('Failed to delete new image after rollback', [
+                            'new_path' => $newImagePath,
+                            'error' => $deleteException->getMessage(),
+                            'book_id' => $book->id,
+                        ]);
+                    }
+                }
+                
                 \Log::error('Update Book error:', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
                 return redirect()->back()
                     ->with('error', 'Có lỗi xảy ra khi cập nhật sách: ' . $e->getMessage())

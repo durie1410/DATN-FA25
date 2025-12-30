@@ -59,12 +59,22 @@ public function voucher()
 {
     return $this->belongsTo(Voucher::class, 'voucher_id');
 }
-public function getDaysRemainingAttribute()
-{
-    $today = Carbon::today(); // hôm nay
-    return $this->ngay_hen_tra->diffInDays($today, false); 
-    // Nếu >=0: còn hạn, <0: quá hạn
-}
+    public function getDaysRemainingAttribute()
+    {
+        if (!$this->ngay_hen_tra) {
+            return 0;
+        }
+        
+        $today = Carbon::today(); // hôm nay
+        // Đảm bảo ngay_hen_tra là Carbon object
+        $ngayHenTra = $this->ngay_hen_tra;
+        if (!($ngayHenTra instanceof Carbon)) {
+            $ngayHenTra = Carbon::parse($ngayHenTra);
+        }
+        
+        return $ngayHenTra->diffInDays($today, false); 
+        // Nếu >=0: còn hạn, <0: quá hạn
+    }
 
 
     public function borrow()
@@ -79,7 +89,17 @@ public function getDaysRemainingAttribute()
 
     public function isOverdue()
     {
-        return $this->trang_thai === 'Dang muon' && $this->ngay_hen_tra < now()->toDateString();
+        if ($this->trang_thai !== 'Dang muon' || !$this->ngay_hen_tra) {
+            return false;
+        }
+        
+        // Đảm bảo ngay_hen_tra là Carbon object
+        $ngayHenTra = $this->ngay_hen_tra;
+        if (!($ngayHenTra instanceof Carbon)) {
+            $ngayHenTra = Carbon::parse($ngayHenTra);
+        }
+        
+        return $ngayHenTra < now();
     }
 
     public function canExtend()
@@ -91,8 +111,14 @@ public function getDaysRemainingAttribute()
     {
         if (!$this->canExtend()) return false;
 
+        // Đảm bảo ngay_hen_tra là Carbon object
+        $ngayHenTra = $this->ngay_hen_tra;
+        if (!($ngayHenTra instanceof Carbon)) {
+            $ngayHenTra = Carbon::parse($ngayHenTra);
+        }
+
         $this->update([
-            'ngay_hen_tra' => $this->ngay_hen_tra->addDays($days),
+            'ngay_hen_tra' => $ngayHenTra->copy()->addDays($days),
             'so_lan_gia_han' => $this->so_lan_gia_han + 1,
             'ngay_gia_han_cuoi' => now()->toDateString(),
         ]);
@@ -106,6 +132,14 @@ public function payments() {
 
 public function shippingLogs() {
     return $this->hasMany(ShippingLog::class);
+}
+
+public function fines() {
+    return $this->hasMany(Fine::class);
+}
+
+public function pendingFines() {
+    return $this->hasMany(Fine::class)->where('status', 'pending');
 }
 
 }

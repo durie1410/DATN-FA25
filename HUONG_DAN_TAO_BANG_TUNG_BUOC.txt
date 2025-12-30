@@ -1,0 +1,73 @@
+═══════════════════════════════════════════════════════════════════
+   HƯỚNG DẪN TẠO BẢNG WALLET - TỪNG BƯỚC CỤ THỂ
+═══════════════════════════════════════════════════════════════════
+
+Bạn đang ở phpMyAdmin rồi, làm theo các bước sau:
+
+═══════════════════════════════════════════════════════════════════
+BƯỚC 1: MỞ FILE SQL
+═══════════════════════════════════════════════════════════════════
+
+1. Tìm file: CREATE_WALLET_TABLES_SIMPLE.sql (trong thư mục project)
+2. Mở file bằng Notepad
+3. Nhấn Ctrl+A (chọn tất cả)
+4. Nhấn Ctrl+C (copy)
+
+═══════════════════════════════════════════════════════════════════
+BƯỚC 2: VÀO TAB SQL TRONG PHPMYADMIN
+═══════════════════════════════════════════════════════════════════
+
+1. Ở phpMyAdmin, đảm bảo đã chọn database "quanlythuvien"
+2. Ở phía TRÊN CÙNG, có các tab: Cấu trúc, SQL, Tìm kiếm,...
+3. Click vào tab "SQL"
+
+═══════════════════════════════════════════════════════════════════
+BƯỚC 3: PASTE VÀ CHẠY SQL
+═══════════════════════════════════════════════════════════════════
+
+1. Trong ô SQL lớn, nhấn Ctrl+V (paste nội dung đã copy)
+2. Click nút "Go" ở phía dưới (màu xanh)
+   HOẶC nhấn Ctrl+Enter
+
+═══════════════════════════════════════════════════════════════════
+BƯỚC 4: KIỂM TRA KẾT QUẢ
+═══════════════════════════════════════════════════════════════════
+
+1. Bạn sẽ thấy thông báo: "2 rows affected" hoặc tương tự
+2. Ở BÊN TRÁI, trong danh sách bảng của database quanlythuvien
+3. Tìm 2 bảng mới:
+   ✓ wallets
+   ✓ wallet_transactions
+
+Nếu thấy 2 bảng này → THÀNH CÔNG!
+
+═══════════════════════════════════════════════════════════════════
+BƯỚC 5: TEST TRANG WEB
+═══════════════════════════════════════════════════════════════════
+
+1. Mở trình duyệt mới
+2. Truy cập: http://quanlythuviennn.test/account/wallet
+3. Nếu thấy trang ví (số dư = 0 VNĐ) → HOÀN TẤT!
+
+═══════════════════════════════════════════════════════════════════
+NẾU GẶP LỖI
+═══════════════════════════════════════════════════════════════════
+
+Nếu gặp lỗi về Foreign Key, chạy 2 lệnh sau TRƯỚC:
+
+SET FOREIGN_KEY_CHECKS=0;
+
+Sau đó chạy lại script tạo bảng.
+
+Sau khi xong, bật lại:
+
+SET FOREIGN_KEY_CHECKS=1;
+
+═══════════════════════════════════════════════════════════════════
+
+FILE SQL CẦN DÙNG: CREATE_WALLET_TABLES_SIMPLE.sql
+
+═══════════════════════════════════════════════════════════════════
+
+
+

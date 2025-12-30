@@ -131,6 +131,7 @@ class InventoryController extends Controller
     public function create()
     {
         $books = Book::all();
+        $receiptNumber = InventoryReceipt::generateReceiptNumber();
         $categories = \App\Models\Category::all();
         $publishers = \App\Models\Publisher::all();
         
@@ -163,6 +164,7 @@ class InventoryController extends Controller
         
         return view('admin.inventory.create', compact(
             'books', 
+            'receiptNumber',
             'categories', 
             'publishers',
             'locationsInStock',
@@ -177,16 +179,15 @@ class InventoryController extends Controller
         if ($bookInputType === 'new') {
             // Validate cho sách mới
             $request->validate([
+                'receipt_date' => 'required|date',
                 'ten_sach' => 'required|string|max:255',
                 'tac_gia' => 'required|string|max:255',
                 'category_id' => 'required|exists:categories,id',
-                'barcode' => 'nullable|string|max:100|unique:inventories',
+                'quantity' => 'required|integer|min:1',
                 'location' => 'required|string|max:100',
                 'storage_type' => 'required|in:Kho,Trung bay',
-                'condition' => 'required|in:Moi,Tot,Trung binh,Cu,Hong',
-                'status' => 'required|in:Co san,Dang muon,Mat,Hong,Thanh ly',
-                'purchase_price' => 'nullable|numeric|min:0',
-                'purchase_date' => 'nullable|date',
+                'unit_price' => 'nullable|numeric|min:0',
+                'supplier' => 'nullable|string|max:255',
                 'notes' => 'nullable|string|max:500',
                 'nha_xuat_ban_id' => 'nullable|exists:publishers,id',
                 'nam_xuat_ban' => 'nullable|integer|min:1900|max:' . date('Y'),
@@ -196,14 +197,13 @@ class InventoryController extends Controller
         } else {
             // Validate cho sách có sẵn
             $request->validate([
+                'receipt_date' => 'required|date',
                 'book_id' => 'required|exists:books,id',
-                'barcode' => 'nullable|string|max:100|unique:inventories',
+                'quantity' => 'required|integer|min:1',
                 'location' => 'required|string|max:100',
                 'storage_type' => 'required|in:Kho,Trung bay',
-                'condition' => 'required|in:Moi,Tot,Trung binh,Cu,Hong',
-                'status' => 'required|in:Co san,Dang muon,Mat,Hong,Thanh ly',
-                'purchase_price' => 'nullable|numeric|min:0',
-                'purchase_date' => 'nullable|date',
+                'unit_price' => 'nullable|numeric|min:0',
+                'supplier' => 'nullable|string|max:255',
                 'notes' => 'nullable|string|max:500',
             ]);
         }
@@ -218,7 +218,7 @@ class InventoryController extends Controller
                     'category_id' => $request->category_id,
                     'nha_xuat_ban_id' => $request->nha_xuat_ban_id,
                     'nam_xuat_ban' => $request->nam_xuat_ban ?? date('Y'),
-                    'gia' => $request->gia ?? $request->purchase_price ?? 0,
+                    'gia' => $request->gia ?? $request->unit_price ?? 0,
                     'mo_ta' => $request->mo_ta,
                     'trang_thai' => 'active',
                     'danh_gia_trung_binh' => 0,
@@ -230,56 +230,34 @@ class InventoryController extends Controller
                 $bookId = $request->book_id;
             }
 
-            // Tạo mã vạch tự động nếu không có
-            $barcode = $request->barcode;
-            if (!$barcode) {
-                $baseNumber = Inventory::count() + 1;
-                $barcode = 'BK' . str_pad($baseNumber, 6, '0', STR_PAD_LEFT);
-                
-                // Đảm bảo mã vạch là unique
-                $counter = 0;
-                while (Inventory::where('barcode', $barcode)->exists() && $counter < 100) {
-                    $baseNumber++;
-                    $barcode = 'BK' . str_pad($baseNumber, 6, '0', STR_PAD_LEFT);
-                    $counter++;
-                }
-            }
+            // Tính tổng giá
+            $unitPrice = $request->unit_price ?? 0;
+            $totalPrice = $unitPrice * $request->quantity;
 
-            $inventory = Inventory::create([
+            // Tạo số phiếu
+            $receiptNumber = InventoryReceipt::generateReceiptNumber();
+
+            // Tạo phiếu nhập (chỉ tạo phiếu, không tạo Inventory items)
+            // Inventory items sẽ được tạo khi duyệt phiếu
+            $receipt = InventoryReceipt::create([
+                'receipt_number' => $receiptNumber,
+                'receipt_date' => $request->receipt_date,
                 'book_id' => $bookId,
-                'barcode' => $barcode,
-                'location' => $request->location,
+                'quantity' => $request->quantity,
+                'storage_location' => $request->location,
                 'storage_type' => $request->storage_type,
-                'condition' => $request->condition,
-                'status' => $request->status,
-                'purchase_price' => $request->purchase_price,
-                'purchase_date' => $request->purchase_date,
+                'unit_price' => $unitPrice,
+                'total_price' => $totalPrice,
+                'supplier' => $request->supplier,
+                'received_by' => Auth::id(),
+                'status' => 'pending', // Cần phê duyệt để tạo Inventory items
                 'notes' => $request->notes,
-                'created_by' => Auth::id(),
-            ]);
-
-            // Tạo transaction nhập kho
-            InventoryTransaction::create([
-                'inventory_id' => $inventory->id,
-                'type' => 'Nhap kho',
-                'quantity' => 1,
-                'to_location' => $request->location,
-                'condition_after' => $request->condition,
-                'status_after' => $request->status,
-                'reason' => $bookInputType === 'new' ? 'Nhập kho sách mới' : 'Nhập kho mới',
-                'notes' => $request->notes,
-                'performed_by' => Auth::id(),
             ]);
 
             DB::commit();
 
-            $message = 'Sách đã được thêm vào kho thành công!';
-            if ($bookInputType === 'new') {
-                $message = 'Sách mới đã được tạo và thêm vào kho thành công!';
-            }
-
-            return redirect()->route('admin.inventory.index')
-                ->with('success', $message);
+            return redirect()->route('admin.inventory.receipts')
+                ->with('success', 'Phiếu nhập kho đã được tạo thành công! Vui lòng duyệt phiếu để hoàn tất nhập kho.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withInput()->with('error', 'Có lỗi xảy ra: ' . $e->getMessage());

@@ -10,24 +10,27 @@ use Carbon\Carbon;
 class Fine extends Model
 {
     use HasFactory,SoftDeletes; 
-    protected $fillable = [
-        'borrow_id',
-        'reader_id',
- 'borrow_item_id',        
- 'amount',
-        'type',
-        'description',
-        'status',
-        'due_date',
-        'paid_date',
-        'notes',
-        'created_by',
-    ];
+   protected $fillable = [
+    'borrow_id',
+    'reader_id',
+    'borrow_item_id',
+    'amount',
+    'img',
+    'type',
+    'description',
+    'status',
+    'due_date',
+    'notes',
+    'created_by',
+];
+
 
     protected $casts = [
         'amount' => 'decimal:2',
         'due_date' => 'date',
         'paid_date' => 'date',
+        'damage_images' => 'array',
+        'inspected_at' => 'datetime',
     ];
 public function borrowItem()
     {
@@ -46,6 +49,39 @@ public function borrowItem()
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function inspector()
+    {
+        return $this->belongsTo(User::class, 'inspected_by');
+    }
+
+    // Helper methods cho damage management
+    public function hasDamageImages()
+    {
+        return !empty($this->damage_images) && is_array($this->damage_images) && count($this->damage_images) > 0;
+    }
+
+    public function getDamageImagesAttribute($value)
+    {
+        if (empty($value)) {
+            return [];
+        }
+        if (is_string($value)) {
+            return json_decode($value, true) ?? [];
+        }
+        return $value ?? [];
+    }
+
+    public function getDamageSeverityTextAttribute()
+    {
+        return match($this->damage_severity) {
+            'nhe' => 'Nhẹ',
+            'trung_binh' => 'Trung bình',
+            'nang' => 'Nặng',
+            'mat_sach' => 'Mất sách',
+            default => 'Chưa xác định',
+        };
     }
 
     // Scope để lấy phạt chưa thanh toán

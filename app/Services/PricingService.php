@@ -10,32 +10,36 @@ class PricingService
 {
     /**
      * Tính phí thuê dựa trên giá sách và số ngày mượn
+     * Tính phí thuê cho tất cả sách (không phụ thuộc vào condition)
      * 
      * @param float $bookPrice Giá sách
      * @param int $days Số ngày mượn
-     * @param bool $hasCard Có thẻ độc giả hay không
+     * @param string $condition Tình trạng sách (Moi, Tot, Trung binh, Cu)
      * @return float Phí thuê
      */
-    public static function calculateRentalFee($bookPrice, $days, $hasCard = false)
+    public static function calculateRentalFee($bookPrice, $days, $condition = 'Trung binh')
     {
-        // Tỷ lệ phí thuê mỗi ngày (1% giá sách mỗi ngày)
-        // Có thể điều chỉnh tỷ lệ này trong config
-        $dailyRate = config('library.rental_daily_rate', 0.01); // 1% mỗi ngày
-        
-        // Nếu có thẻ độc giả, có thể giảm tỷ lệ
-        if ($hasCard) {
-            $dailyRate = config('library.rental_daily_rate_with_card', 0.005); // 0.5% mỗi ngày
+        // Kiểm tra giá sách hợp lệ
+        if ($bookPrice <= 0 || $days <= 0) {
+            return 0;
         }
+        
+        // Tỷ lệ phí thuê mỗi ngày (1% giá sách mỗi ngày)
+        // Không phân biệt có thẻ độc giả hay không
+        // Tính phí thuê cho tất cả sách, không phân biệt tình trạng (theo config: only_for_new_books = false)
+        $dailyRate = config('pricing.rental.daily_rate', config('library.rental_daily_rate', 0.01)); // 1% mỗi ngày
         
         // Tính phí thuê = giá sách * tỷ lệ mỗi ngày * số ngày
         $rentalFee = $bookPrice * $dailyRate * $days;
         
-        // Làm tròn đến hàng nghìn
-        return round($rentalFee / 1000) * 1000;
+        // Làm tròn theo cấu hình (mặc định làm tròn đến hàng nghìn)
+        $roundTo = config('pricing.rental.round_to', 1000);
+        return round($rentalFee / $roundTo) * $roundTo;
     }
 
     /**
-     * Tính tiền cọc dựa trên giá sách và tình trạng sách
+     * Tính tiền cọc dựa trên giá sách
+     * Tiền cọc = giá sách (1:1)
      * 
      * @param float $bookPrice Giá sách
      * @param string $condition Tình trạng sách (Moi, Tot, Trung binh, Cu)
@@ -45,48 +49,8 @@ class PricingService
      */
     public static function calculateDeposit($bookPrice, $condition, $bookType = 'binh_thuong', $hasCard = false)
     {
-        // Nếu sách quý, tiền cọc = 100% giá sách
-        if ($bookType === 'quy') {
-            if (in_array($condition, ['Moi', 'Tot'])) {
-                return $bookPrice;
-            } elseif ($condition === 'Trung binh') {
-                return round($bookPrice * 0.7);
-            } elseif ($condition === 'Cu') {
-                return round($bookPrice * 0.6);
-            }
-            return $bookPrice;
-        }
-
-        // Sách bình thường hoặc tham khảo
-        if ($hasCard) {
-            // Có thẻ độc giả
-            switch ($condition) {
-                case 'Moi':
-                    return round($bookPrice * 0.4);
-                case 'Tot':
-                    return round($bookPrice * 0.3);
-                case 'Trung binh':
-                    return round($bookPrice * 0.2);
-                case 'Cu':
-                    return round($bookPrice * 0.15);
-                default:
-                    return round($bookPrice * 0.2);
-            }
-        } else {
-            // Không có thẻ độc giả
-            switch ($condition) {
-                case 'Moi':
-                    return round($bookPrice * 0.4);
-                case 'Tot':
-                    return round($bookPrice * 0.3);
-                case 'Trung binh':
-                    return round($bookPrice * 0.3);
-                case 'Cu':
-                    return round($bookPrice * 0.2);
-                default:
-                    return round($bookPrice * 0.2);
-            }
-        }
+        // Tiền cọc = giá sách (1:1)
+        return $bookPrice;
     }
 
     /**
@@ -121,21 +85,92 @@ class PricingService
             ];
         }
         
-        // Tính phí thuê
-        $tienThue = self::calculateRentalFee($bookPrice, $days, $hasCard);
+        // Tính phí thuê (tính cho tất cả sách)
+        $tienThue = self::calculateRentalFee($bookPrice, $days, $condition);
         
         // Tính tiền cọc
         $tienCoc = self::calculateDeposit($bookPrice, $condition, $bookType, $hasCard);
-        
-        // Nếu sách quý và có thẻ, không tính phí thuê
-        if ($bookType === 'quy' && $hasCard) {
-            $tienThue = 0;
-        }
         
         return [
             'tien_thue' => $tienThue,
             'tien_coc' => $tienCoc
         ];
+    }
+
+    /**
+     * Tính phí trả muộn
+     * 
+     * @param Carbon $dueDate Ngày hẹn trả
+     * @param Carbon|null $returnDate Ngày trả thực tế (null nếu chưa trả)
+     * @return float Phí trả muộn
+     */
+    public static function calculateLateReturnFine($dueDate, $returnDate = null)
+    {
+        $dueDateCarbon = Carbon::parse($dueDate);
+        $returnDateCarbon = $returnDate ? Carbon::parse($returnDate) : Carbon::now();
+        
+        // Tính số ngày quá hạn
+        $daysOverdue = max(0, $dueDateCarbon->diffInDays($returnDateCarbon, false));
+        
+        if ($daysOverdue <= 0) {
+            return 0;
+        }
+        
+        // Lấy tỷ lệ phí trả muộn từ config
+        $dailyRate = config('pricing.fines.late_return.daily_rate', 5000);
+        
+        // Tính phí = số ngày quá hạn × phí mỗi ngày
+        $fineAmount = $daysOverdue * $dailyRate;
+        
+        return round($fineAmount);
+    }
+
+    /**
+     * Tính phí làm hỏng sách
+     * 
+     * @param float $bookPrice Giá sách
+     * @param string $bookType Loại sách (quy, binh_thuong, tham_khao)
+     * @param string $condition Tình trạng sách khi mượn (Moi, Tot, Trung binh, Cu, Hong)
+     * @return float Phí làm hỏng
+     */
+    public static function calculateDamagedBookFine($bookPrice, $bookType, $condition)
+    {
+        if ($bookPrice <= 0) {
+            return 0;
+        }
+        
+        $fineConfig = config('pricing.fines.damaged_book.by_book_type', []);
+        
+        // Xử lý sách quý
+        if ($bookType === 'quy') {
+            $rate = $fineConfig['quy']['rate'] ?? 1.0;
+            return round($bookPrice * $rate);
+        }
+        
+        // Xử lý sách bình thường và tham khảo
+        $typeConfig = $fineConfig[$bookType] ?? $fineConfig['binh_thuong'] ?? null;
+        
+        if (!$typeConfig || !isset($typeConfig['by_condition'])) {
+            // Mặc định 70% nếu không có config
+            return round($bookPrice * 0.7);
+        }
+        
+        $rate = $typeConfig['by_condition'][$condition] ?? 0.7;
+        return round($bookPrice * $rate);
+    }
+
+    /**
+     * Tính phí mất sách
+     * 
+     * @param float $bookPrice Giá sách
+     * @param string $bookType Loại sách (quy, binh_thuong, tham_khao)
+     * @param string $condition Tình trạng sách khi mượn (Moi, Tot, Trung binh, Cu, Hong)
+     * @return float Phí mất sách
+     */
+    public static function calculateLostBookFine($bookPrice, $bookType, $condition)
+    {
+        // Phí mất sách tính giống như phí làm hỏng
+        return self::calculateDamagedBookFine($bookPrice, $bookType, $condition);
     }
 }
 

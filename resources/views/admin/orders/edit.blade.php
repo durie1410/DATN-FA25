@@ -81,7 +81,7 @@
                     <div style="color: #666; font-weight: 500; margin-bottom: 8px; font-size: 14px;">Trạng thái</div>
                     <div>
                         @if(in_array($order->status, ['pending']))
-                            <span style="background-color: #fff3cd; color: #856404; padding: 4px 12px; border-radius: 12px; font-size: 13px;">Chờ xác nhận</span>
+                            <span style="background-color: #fff3cd; color: #856404; padding: 4px 12px; border-radius: 12px; font-size: 13px;">Đang chờ duyệt</span>
                         @elseif(in_array($order->status, ['confirmed', 'processing']))
                             <span style="background-color: #cfe2ff; color: #084298; padding: 4px 12px; border-radius: 12px; font-size: 13px;">Đã xác nhận</span>
                         @elseif($order->status === 'preparing')
@@ -133,57 +133,94 @@
 
     <!-- Order Status Update Section -->
     <div style="background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px;">
-        <h2 style="font-size: 20px; font-weight: 600; color: #333; margin-bottom: 20px;">Thay đổi trạng thái đơn hàng</h2>
+        <h2 style="font-size: 20px; font-weight: 600; color: #333; margin-bottom: 10px;">Cập nhật thông tin đơn hàng</h2>
         
-        <form action="{{ route('admin.orders.update', $order->id) }}" method="POST" style="display: flex; gap: 15px; align-items: flex-end;">
+        <!-- Auto-update notice -->
+        <div style="background-color: #e7f3ff; border-left: 4px solid #2196F3; padding: 12px 15px; margin-bottom: 20px; border-radius: 4px;">
+            <div style="font-size: 13px; color: #1976D2; line-height: 1.6;">
+                <i class="fas fa-info-circle"></i> <strong>Cập nhật tự động:</strong>
+                <ul style="margin: 8px 0 0 20px; padding: 0;">
+                    <li>Thanh toán <strong>Online</strong> (VNPay, MoMo, Chuyển khoản) → Tự động chuyển sang <strong>"Đã thanh toán"</strong></li>
+                    <li>COD + <strong>Giao thành công</strong> → Tự động chuyển sang <strong>"Đã thanh toán"</strong></li>
+                    <li>COD + <strong>Giao thất bại</strong> → Tự động chuyển về <strong>"Chưa thanh toán"</strong></li>
+                </ul>
+            </div>
+        </div>
+        
+        <form action="{{ route('admin.orders.update', $order->id) }}" method="POST">
             @csrf
             @method('PUT')
             
-            <div style="flex: 1;">
-                <label style="display: block; color: #666; font-weight: 500; margin-bottom: 8px; font-size: 14px;">Chọn trạng thái mới</label>
-                <select name="status" id="order-status-select" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; outline: none; background-color: white;">
-                    @php
-                        // Xác định trạng thái tiếp theo dựa trên trạng thái hiện tại
-                        $currentStatus = $order->status;
-                        $nextStatus = null;
-                        $nextStatusLabel = null;
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                <!-- Trạng thái đơn hàng -->
+                <div>
+                    <label style="display: block; color: #666; font-weight: 500; margin-bottom: 8px; font-size: 14px;">Trạng thái đơn hàng</label>
+                    <select name="status" id="order-status-select" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; outline: none; background-color: white;">
+                        @php
+                            // Xác định trạng thái tiếp theo dựa trên trạng thái hiện tại
+                            $currentStatus = $order->status;
+                            $nextStatus = null;
+                            $nextStatusLabel = null;
+                            
+                            // Workflow: pending -> confirmed -> preparing -> packing -> sent_to_post_office -> shipping -> delivered/delivery_failed
+                            if (in_array($currentStatus, ['pending'])) {
+                                $nextStatus = 'confirmed';
+                                $nextStatusLabel = 'Đã xác nhận';
+                            } elseif (in_array($currentStatus, ['confirmed', 'processing'])) {
+                                $nextStatus = 'preparing';
+                                $nextStatusLabel = 'Đang chuẩn bị hàng';
+                            } elseif ($currentStatus === 'preparing') {
+                                $nextStatus = 'packing';
+                                $nextStatusLabel = 'Đang đóng gói';
+                            } elseif ($currentStatus === 'packing') {
+                                $nextStatus = 'sent_to_post_office';
+                                $nextStatusLabel = 'Đã gửi bưu cục';
+                            } elseif ($currentStatus === 'sent_to_post_office') {
+                                $nextStatus = 'shipping';
+                                $nextStatusLabel = 'Đang giao hàng';
+                            } elseif (in_array($currentStatus, ['shipping', 'shipped'])) {
+                                // Khi đang giao hàng, có thể chuyển sang giao thành công hoặc thất bại
+                                $nextStatus = 'delivered';
+                                $nextStatusLabel = 'Đã giao thành công';
+                            }
+                        @endphp
                         
-                        // Workflow: pending -> confirmed -> preparing -> packing -> sent_to_post_office -> shipping -> delivered/delivery_failed
-                        if (in_array($currentStatus, ['pending'])) {
-                            $nextStatus = 'confirmed';
-                            $nextStatusLabel = 'Đã xác nhận';
-                        } elseif (in_array($currentStatus, ['confirmed', 'processing'])) {
-                            $nextStatus = 'preparing';
-                            $nextStatusLabel = 'Đang chuẩn bị hàng';
-                        } elseif ($currentStatus === 'preparing') {
-                            $nextStatus = 'packing';
-                            $nextStatusLabel = 'Đang đóng gói';
-                        } elseif ($currentStatus === 'packing') {
-                            $nextStatus = 'sent_to_post_office';
-                            $nextStatusLabel = 'Đã gửi bưu cục';
-                        } elseif ($currentStatus === 'sent_to_post_office') {
-                            $nextStatus = 'shipping';
-                            $nextStatusLabel = 'Đang giao hàng';
-                        } elseif (in_array($currentStatus, ['shipping', 'shipped'])) {
-                            // Khi đang giao hàng, có thể chuyển sang giao thành công hoặc thất bại
-                            $nextStatus = 'delivered';
-                            $nextStatusLabel = 'Đã giao thành công';
-                        }
-                    @endphp
-                    
-                    @if($nextStatus)
-                        <option value="{{ $nextStatus }}" selected>{{ $nextStatusLabel }}</option>
-                        @if(in_array($currentStatus, ['shipping', 'shipped']))
-                            <option value="delivery_failed">Giao thất bại</option>
+                        @if($nextStatus)
+                            <option value="{{ $nextStatus }}" selected>{{ $nextStatusLabel }}</option>
+                            @if(in_array($currentStatus, ['shipping', 'shipped']))
+                                <option value="delivery_failed">Giao thất bại</option>
+                            @endif
+                        @else
+                            <option value="{{ $currentStatus }}" disabled selected>Đơn hàng đã hoàn thành</option>
                         @endif
-                    @else
-                        <option value="{{ $currentStatus }}" disabled selected>Đơn hàng đã hoàn thành</option>
-                    @endif
+                    </select>
+                </div>
+
+                <!-- Trạng thái thanh toán -->
+                <div>
+                    <label style="display: block; color: #666; font-weight: 500; margin-bottom: 8px; font-size: 14px;">Trạng thái thanh toán</label>
+                    <select name="payment_status" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; outline: none; background-color: white;">
+                        <option value="pending" {{ $order->payment_status == 'pending' ? 'selected' : '' }}>Chưa thanh toán</option>
+                        <option value="paid" {{ $order->payment_status == 'paid' ? 'selected' : '' }}>Đã thanh toán</option>
+                        <option value="failed" {{ $order->payment_status == 'failed' ? 'selected' : '' }}>Thanh toán thất bại</option>
+                        <option value="refunded" {{ $order->payment_status == 'refunded' ? 'selected' : '' }}>Đã hoàn tiền</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Phương thức thanh toán -->
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; color: #666; font-weight: 500; margin-bottom: 8px; font-size: 14px;">Phương thức thanh toán</label>
+                <select name="payment_method" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; outline: none; background-color: white;">
+                    <option value="cash_on_delivery" {{ $order->payment_method == 'cash_on_delivery' ? 'selected' : '' }}>Thanh toán khi nhận hàng (COD)</option>
+                    <option value="bank_transfer" {{ $order->payment_method == 'bank_transfer' ? 'selected' : '' }}>Chuyển khoản ngân hàng</option>
+                    <option value="momo" {{ $order->payment_method == 'momo' ? 'selected' : '' }}>Ví MoMo</option>
+                    <option value="vnpay" {{ $order->payment_method == 'vnpay' ? 'selected' : '' }}>VNPay</option>
                 </select>
             </div>
             
-            <button type="submit" style="padding: 10px 24px; background-color: #0d6efd; color: white; border: none; border-radius: 4px; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: background-color 0.2s;">
-                Cập nhật trạng thái
+            <button type="submit" style="width: 100%; padding: 12px; background-color: #0d6efd; color: white; border: none; border-radius: 4px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background-color 0.2s;">
+                <i class="fas fa-save"></i> Cập nhật thông tin
             </button>
         </form>
     </div>

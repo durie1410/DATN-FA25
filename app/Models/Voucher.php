@@ -26,10 +26,16 @@ class Voucher extends Model
         'trang_thai',
     ];
 
-    // Mối quan hệ tới reader (nếu voucher gắn với độc giả cụ thể)
-    public function reader()
+    // Mối quan hệ tới user (reader_id tham chiếu users table)
+    public function user()
     {
-        return $this->belongsTo(Reader::class, 'reader_id');
+        return $this->belongsTo(User::class, 'reader_id');
+    }
+    
+    // Lấy reader thông qua user (helper method)
+    public function getReaderAttribute()
+    {
+        return $this->user ? $this->user->reader : null;
     }
 
     // ========================

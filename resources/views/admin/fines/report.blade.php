@@ -55,7 +55,7 @@
 
                     <!-- Thống kê tổng quan -->
                     <div class="row mb-4">
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="info-box bg-info">
                                 <span class="info-box-icon"><i class="fas fa-list"></i></span>
                                 <div class="info-box-content">
@@ -64,7 +64,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="info-box bg-success">
                                 <span class="info-box-icon"><i class="fas fa-money-bill"></i></span>
                                 <div class="info-box-content">
@@ -73,7 +73,7 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <div class="info-box bg-warning">
                                 <span class="info-box-icon"><i class="fas fa-clock"></i></span>
                                 <div class="info-box-content">
@@ -82,12 +82,31 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
+                            <div class="info-box bg-primary">
+                                <span class="info-box-icon"><i class="fas fa-check-circle"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Đã thu</span>
+                                    <span class="info-box-number">{{ number_format($stats['paid_amount'], 0, ',', '.') }} VND</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
                             <div class="info-box bg-danger">
                                 <span class="info-box-icon"><i class="fas fa-exclamation-triangle"></i></span>
                                 <div class="info-box-content">
                                     <span class="info-box-text">Quá hạn</span>
                                     <span class="info-box-number">{{ $stats['overdue_count'] }}</span>
+                                    <small>{{ number_format($stats['overdue_amount'] ?? 0, 0, ',', '.') }} VND</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="info-box bg-secondary">
+                                <span class="info-box-icon"><i class="fas fa-gift"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Đã miễn</span>
+                                    <span class="info-box-number">{{ number_format($stats['waived_amount'] ?? 0, 0, ',', '.') }} VND</span>
                                 </div>
                             </div>
                         </div>
@@ -146,9 +165,25 @@
                                                     <small class="text-muted">{{ $fine->reader->ma_so_the }}</small>
                                                 </td>
                                                 <td>
-                                                    @if($fine->borrow && $fine->borrow->book)
-                                                        <strong>{{ $fine->borrow->book->ten_sach }}</strong><br>
-                                                        <small class="text-muted">{{ $fine->borrow->book->ma_sach }}</small>
+                                                    @if($fine->borrowItem && $fine->borrowItem->book)
+                                                        <strong>{{ $fine->borrowItem->book->ten_sach }}</strong><br>
+                                                        <small class="text-muted">Mã: {{ $fine->borrowItem->book->ma_sach }}</small><br>
+                                                        <small class="text-info">Item #{{ $fine->borrowItem->id }}</small>
+                                                    @elseif($fine->borrow && $fine->borrow->borrowItems && $fine->borrow->borrowItems->count() > 0)
+                                                        @php
+                                                            $firstItem = $fine->borrow->borrowItems->first();
+                                                        @endphp
+                                                        @if($firstItem->book)
+                                                            <strong>{{ $firstItem->book->ten_sach }}</strong><br>
+                                                            <small class="text-muted">Mã: {{ $firstItem->book->ma_sach }}</small><br>
+                                                            <small class="text-warning">(Dữ liệu cũ - Phiếu #{{ $fine->borrow->id }})</small>
+                                                        @else
+                                                            <span class="text-muted">Phiếu #{{ $fine->borrow->id }}</span><br>
+                                                            <small class="text-warning">Chưa có thông tin sách</small>
+                                                        @endif
+                                                    @elseif($fine->borrow)
+                                                        <span class="text-muted">Phiếu #{{ $fine->borrow->id }}</span><br>
+                                                        <small class="text-warning">Chưa có thông tin sách</small>
                                                     @else
                                                         <span class="text-muted">Không có thông tin</span>
                                                     @endif

@@ -13,7 +13,7 @@
         <p class="page-subtitle">Cập nhật thông tin sách</p>
     </div>
     <div>
-        <a href="{{ route('admin.books.index') }}" class="btn btn-secondary">
+        <a href="{{ route('admin.books.index') }}{{ request()->has('page') ? '?page=' . request()->get('page') : '' }}" class="btn btn-secondary">
             <i class="fas fa-arrow-left"></i>
             Quay lại
         </a>
@@ -45,6 +45,48 @@
     </div>
 @endif
 
+<!-- Debug Info (chỉ hiển thị khi có lỗi upload ảnh) -->
+@if(request()->get('debug') === '1')
+<div class="card" style="margin-bottom: 20px; border: 2px solid #ffc107;">
+    <div class="card-header" style="background: #fff3cd;">
+        <h3 class="card-title">
+            <i class="fas fa-bug"></i>
+            Debug Info - Thông tin ảnh hiện tại
+        </h3>
+    </div>
+    <div class="card-body">
+        <table class="table table-sm">
+            <tr>
+                <td><strong>Đường dẫn ảnh trong DB:</strong></td>
+                <td><code>{{ $book->hinh_anh ?? 'NULL' }}</code></td>
+            </tr>
+            <tr>
+                <td><strong>Full URL:</strong></td>
+                <td><code>{{ $book->hinh_anh ? asset('storage/' . ltrim(str_replace('\\', '/', $book->hinh_anh), '/')) : 'N/A' }}</code></td>
+            </tr>
+            <tr>
+                <td><strong>File tồn tại?</strong></td>
+                <td>
+                    @if($book->hinh_anh && \Storage::disk('public')->exists($book->hinh_anh))
+                        <span class="badge badge-success">✓ CÓ</span>
+                    @else
+                        <span class="badge badge-danger">✗ KHÔNG</span>
+                    @endif
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Updated at:</strong></td>
+                <td>{{ $book->updated_at }}</td>
+            </tr>
+        </table>
+        <small class="text-muted">
+            <i class="fas fa-info-circle"></i> 
+            Để ẩn debug info, xóa <code>?debug=1</code> khỏi URL
+        </small>
+    </div>
+</div>
+@endif
+
 <!-- Edit Form -->
 <div class="card">
     <div class="card-header">
@@ -54,8 +96,11 @@
         </h3>
     </div>
     <div class="card-body">
-        <form action="{{ route('admin.books.update', $book->id) }}" method="POST" enctype="multipart/form-data">
+        <form id="bookUpdateForm" action="{{ route('admin.books.update', $book->id) }}" method="POST" enctype="multipart/form-data">
             @csrf @method('PUT')
+            
+            <!-- Lưu trang hiện tại để redirect về đúng trang sau khi update -->
+            <input type="hidden" name="redirect_page" value="{{ request()->get('page', 1) }}">
 
             <div class="row">
                 <div class="col-md-6">
@@ -133,8 +178,8 @@
                         @php
                             // Clean path and build URL directly - same method as index page
                             $imagePath = ltrim(str_replace('\\', '/', $book->hinh_anh), '/');
-                            // Add timestamp to prevent caching issues
-                            $imageUrl = asset('storage/' . $imagePath) . '?t=' . $book->updated_at->timestamp;
+                            // Add timestamp + random to prevent any caching issues
+                            $imageUrl = asset('storage/' . $imagePath) . '?v=' . $book->updated_at->timestamp . '&r=' . mt_rand();
                         @endphp
                         <img id="book-cover-image" 
                              src="{{ $imageUrl }}" 
@@ -142,7 +187,7 @@
                              style="object-fit: cover; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
                              alt="{{ $book->ten_sach }}"
                              onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div style="display: none; width: 120px; height: 160px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); align-items: center; justify-content: center; border: 1px solid rgba(0, 255, 153, 0.2);">
+                        <div id="book-cover-placeholder" style="display: none; width: 120px; height: 160px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); align-items: center; justify-content: center; border: 1px solid rgba(0, 255, 153, 0.2);">
                             <i class="fas fa-book" style="color: #666; font-size: 48px;"></i>
                         </div>
                     @else
@@ -151,10 +196,16 @@
                              width="120" height="160" 
                              style="object-fit: cover; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: none;"
                              alt="Preview">
+                        <div id="book-cover-placeholder" style="width: 120px; height: 160px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 255, 153, 0.2);">
+                            <i class="fas fa-book" style="color: #666; font-size: 48px;"></i>
+                        </div>
                     @endif
                 </div>
                 <input type="file" name="hinh_anh" id="hinh_anh_input" class="form-control @error('hinh_anh') is-invalid @enderror" accept="image/jpeg,image/png,image/jpg">
-                <small class="form-text text-muted">Chọn ảnh mới để thay thế ảnh hiện tại (tối đa 2MB, định dạng: JPG, PNG)</small>
+                <small class="form-text text-muted">
+                    <i class="fas fa-info-circle"></i> 
+                    Chọn ảnh mới để thay thế ảnh hiện tại (tối đa 2MB, định dạng: JPG, PNG)
+                </small>
                 @error('hinh_anh')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
@@ -183,17 +234,29 @@
             <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
-                        <label class="form-label">Số lượng sách <span class="text-danger">*</span></label>
-                        <input type="number" name="so_luong" value="{{ old('so_luong', $book->so_luong ?? 0) }}" class="form-control @error('so_luong') is-invalid @enderror" min="0" required>
+                        <label class="form-label">Số lượng sách hiện tại</label>
+                        <input type="number" value="{{ $book->so_luong ?? 0 }}" class="form-control" readonly disabled style="background-color: #f8f9fa; cursor: not-allowed;">
                         <small class="form-text text-muted">
-                            <i class="fas fa-info-circle"></i> Số lượng có thể chỉnh sửa trực tiếp hoặc được cập nhật tự động khi duyệt phiếu nhập kho
+                            <i class="fas fa-info-circle"></i> Số lượng hiện có trong hệ thống
                         </small>
-                        @error('so_luong')
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Số lượng muốn thêm vào kho</label>
+                        <input type="number" name="so_luong_them" value="{{ old('so_luong_them', 0) }}" class="form-control @error('so_luong_them') is-invalid @enderror" min="0" placeholder="Nhập số lượng cần thêm">
+                        <small class="form-text text-muted">
+                            <i class="fas fa-warehouse text-warning"></i> Sẽ tạo phiếu nhập kho cần duyệt
+                        </small>
+                        @error('so_luong_them')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
                 </div>
-                
+            </div>
+
+            <div class="row">
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label class="form-label">Trạng thái <span class="text-danger">*</span></label>
@@ -209,7 +272,7 @@
             </div>
 
             <div class="d-flex gap-2 mt-4">
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary" id="submitBtn">
                     <i class="fas fa-save"></i> Cập nhật sách
                 </button>
                 <a href="{{ route('admin.books.index') }}" class="btn btn-secondary">
@@ -225,6 +288,11 @@
 document.addEventListener('DOMContentLoaded', function() {
     const imageInput = document.getElementById('hinh_anh_input');
     const imagePreview = document.getElementById('book-cover-image');
+    const placeholder = document.getElementById('book-cover-placeholder');
+    const form = document.getElementById('bookUpdateForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    let hasNewImage = false;
     
     if (imageInput && imagePreview) {
         imageInput.addEventListener('change', function(e) {
@@ -234,6 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (file.size > 2 * 1024 * 1024) {
                     alert('Kích thước file vượt quá 2MB. Vui lòng chọn file nhỏ hơn.');
                     imageInput.value = '';
+                    hasNewImage = false;
                     return;
                 }
                 
@@ -242,6 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!validTypes.includes(file.type)) {
                     alert('Chỉ chấp nhận file ảnh định dạng JPEG, PNG hoặc JPG.');
                     imageInput.value = '';
+                    hasNewImage = false;
                     return;
                 }
                 
@@ -250,8 +320,41 @@ document.addEventListener('DOMContentLoaded', function() {
                 reader.onload = function(e) {
                     imagePreview.src = e.target.result;
                     imagePreview.style.display = 'block';
+                    // Hide placeholder if exists
+                    if (placeholder) {
+                        placeholder.style.display = 'none';
+                    }
                 };
                 reader.readAsDataURL(file);
+                
+                hasNewImage = true;
+                
+                // Show feedback to user
+                console.log('✅ Ảnh đã được chọn:', file.name, 'Size:', (file.size / 1024).toFixed(2) + ' KB');
+            }
+        });
+    }
+    
+    // Form submit handler để log debug info
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            console.log('📤 Đang gửi form cập nhật sách...');
+            console.log('🖼️ Có ảnh mới?', hasNewImage);
+            
+            if (hasNewImage) {
+                const file = imageInput.files[0];
+                if (file) {
+                    console.log('📸 Thông tin ảnh:', {
+                        name: file.name,
+                        size: (file.size / 1024).toFixed(2) + ' KB',
+                        type: file.type,
+                        lastModified: new Date(file.lastModified).toLocaleString()
+                    });
+                }
+                
+                // Disable submit button to prevent double submission
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang cập nhật...';
             }
         });
     }

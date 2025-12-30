@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\InventoryFlowController;
 use App\Http\Controllers\Api\PricingController as ApiPricingController;
+use App\Http\Controllers\Api\ShippingController;
 use App\Http\Controllers\Api\LoanFlowController;
 use App\Http\Controllers\Api\ReservationFlowController;
 use App\Http\Controllers\Api\UserVerificationController;
@@ -99,6 +100,9 @@ Route::middleware(['auth:sanctum', 'role:warehouse,admin'])->prefix('inventory')
 
 // Pricing quote for rental & deposit
 Route::get('/pricing/quote', [ApiPricingController::class, 'quote']);
+
+// Shipping calculation API
+Route::post('/shipping/calculate', [ShippingController::class, 'calculate']);
 
 // Online loans (guest/member)
 Route::prefix('loans')->group(function () {

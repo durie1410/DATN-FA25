@@ -21,7 +21,7 @@ class PricingController extends Controller
 			'user_id' => 'nullable|integer',
 			'kyc_status' => 'nullable|string|in:verified,unverified,guest',
 			'delivery_type' => 'nullable|string|in:pickup,ship',
-			'distance' => 'nullable|numeric|min:0',
+			'distance' => 'nullable|numeric|min:0|max:10',
 			'days' => 'nullable|integer|min:1|max:30',
 		]);
 		if ($validator->fails()) {

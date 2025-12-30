@@ -68,7 +68,6 @@
 
                     <div class="text-center mt-3">
                         <p>Đã có tài khoản? <a href="{{ route('login') }}">Đăng nhập ngay</a></p>
-                        <p class="mt-2"><a href="{{ route('register.reader.form') }}">Đăng ký làm độc giả</a></p>
                     </div>
                 </div>
             </div>

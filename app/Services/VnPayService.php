@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class VnPayService
@@ -77,11 +78,23 @@ class VnPayService
      */
     public function handleCallback(Request $request)
     {
+        Log::info('VNPay Callback Received', [
+            'all_params' => $request->all(),
+            'hash_secret_configured' => !empty($this->vnpayConfig['hash_secret']),
+            'hash_secret_length' => strlen($this->vnpayConfig['hash_secret'] ?? ''),
+        ]);
+        
         $vnpay = new VnPayLibrary();
         $response = $vnpay->getFullResponseData($request, $this->vnpayConfig['hash_secret']);
         
         // Kiểm tra chữ ký
         if (!$response['success']) {
+            Log::error('VNPay Signature Validation Failed', [
+                'message' => $response['message'],
+                'hash_secret_length' => strlen($this->vnpayConfig['hash_secret'] ?? ''),
+                'suggestion' => 'Kiểm tra VNPAY_HASH_SECRET trong file .env có khớp với VNPay không'
+            ]);
+            
             return [
                 'success' => false,
                 'message' => 'Xác thực chữ ký thất bại',

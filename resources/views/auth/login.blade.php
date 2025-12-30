@@ -300,8 +300,7 @@
 
             <div class="register-links">
                 <p>Chưa có tài khoản? 
-                    <a href="{{ route('register') }}">Đăng ký ngay</a> | 
-                    <a href="{{ route('register.reader.form') }}">Đăng ký độc giả</a>
+                    <a href="{{ route('register') }}">Đăng ký ngay</a>
                 </p>
             </div>
         </div>
