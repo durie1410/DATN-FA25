@@ -28,15 +28,7 @@
                 @endforeach
             </select>
         </div>
-        <div class="mb-3">
-            <label>Thể loại</label>
-            <select name="category_id" class="form-control" required>
-                <option value="">-- Chọn thể loại --</option>
-                @foreach($categories as $cate)
-                    <option value="{{ $cate->id }}">{{ $cate->ten_the_loai }}</option>
-                @endforeach
-            </select>
-        </div>
+        
 
         <div class="mb-3">
             <label>Tác giả</label>
