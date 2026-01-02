@@ -18,6 +18,18 @@ class VnPayController extends Controller
     public function __construct(VnPayService $vnpayService)
     {
         $this->vnpayService = $vnpayService;
+        $this->vnpayService = $vnpayServices;
+        $this->vnpayService = $vnpayServices;
+        $this->vnpayService = $vnpayServices;
+        $this->vnpayService = $vnpayServices;
+        $this->vnpayService = $vnpayServices;
+        $this->vnpayService = $vnpayServices;
+        $this->vnpayService = $vnpayServices;
+        $this->vnpayService = $vnpayServices;
+        $this->vnpayService = $vnpayServices;
+        $this->vnpayService = $vnpayServices;
+        $this->vnpayService = $vnpayServices;
+        $this->vnpayService = $vnpayServices;
     }
 
     /**
