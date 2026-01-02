@@ -26,11 +26,7 @@ class ApiController extends Controller
                 'publishers' => '/api/publishers',
                 'readers' => '/api/readers',
                 'borrows' => '/api/borrows',
-                'auth' => '/api/auth',
-                'auth' => '/api/auth1',
-                'auth' => '/api/auth2',
-                'auth' => '/api/auth3',
-                'auth' => '/api/auth4',
+                
             ]
         ]);
     }
