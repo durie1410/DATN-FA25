@@ -18,6 +18,12 @@ class OrderItem extends Model
         'price',
         'quantity',
         'total_price',
+        'total_price',
+        'total_price',
+        'total_price',
+        'total_price',
+        'total_price',
+        'total_price',
     ];
 
     protected $casts = [
