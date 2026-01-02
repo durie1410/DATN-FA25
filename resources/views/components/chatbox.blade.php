@@ -302,8 +302,7 @@
         const messageInput = form?.querySelector('textarea[name="message"]');
         const nameInput = form?.querySelector('input[name="name"]');
         const emailInput = form?.querySelector('input[name="email"]');
-        let hasLoaded = false;
-        let isSubmitting = false;
+    
 
         function togglePanel(show) {
             const shouldShow = typeof show === 'boolean' ? show : !panel.classList.contains('open');
