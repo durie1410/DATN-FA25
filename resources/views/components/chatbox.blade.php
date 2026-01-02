@@ -293,6 +293,18 @@
         let hasLoaded = false;
         let isSubmitting = false;
 
+        const launcher = root.querySelector('.chat-launcher');
+        const panel = root.querySelector('.chat-panel');
+        const closeBtn = root.querySelector('.chat-close');
+        const form = root.querySelector('#chat-form');
+        const messagesEl = root.querySelector('#chat-messages');
+        const statusEl = root.querySelector('#chat-status');
+        const messageInput = form?.querySelector('textarea[name="message"]');
+        const nameInput = form?.querySelector('input[name="name"]');
+        const emailInput = form?.querySelector('input[name="email"]');
+        let hasLoaded = false;
+        let isSubmitting = false;
+
         function togglePanel(show) {
             const shouldShow = typeof show === 'boolean' ? show : !panel.classList.contains('open');
             panel.classList.toggle('open', shouldShow);
