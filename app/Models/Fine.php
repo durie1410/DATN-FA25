@@ -22,25 +22,7 @@ class Fine extends Model
     'due_date',
     'notes',
     'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
-    'created_by',
+
 ];
 
 
