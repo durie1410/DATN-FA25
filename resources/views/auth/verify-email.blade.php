@@ -15,13 +15,7 @@
                         <div class="alert alert-success" role="alert">
                             <i class="fas fa-check-circle"></i> Link xác thực mới đã được gửi đến email của bạn!
                         </div>
-                        <div class="alert alert-success" role="alert">
-                            <i class="fas fa-check-circle"></i> Link xác thực mới đã được gửi đến email của bạn!
-                        </div> <div class="alert alert-success" role="alert">
-                            <i class="fas fa-check-circle"></i> Link xác thực mới đã được gửi đến email của bạn!
-                        </div> <div class="alert alert-success" role="alert">
-                            <i class="fas fa-check-circle"></i> Link xác thực mới đã được gửi đến email của bạn!
-                        </div>
+                        
                     @endif
 
                     <div class="alert alert-info">
