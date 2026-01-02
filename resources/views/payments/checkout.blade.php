@@ -175,6 +175,176 @@
         </div>
     </div>
 
+    <div class="checkout-container">
+        <h1 style="font-size: 32px; font-weight: 700; margin-bottom: 10px;">
+            <i class="fas fa-credit-card"></i> Thanh toán
+        </h1>
+        
+        <div style="color: #666; margin-bottom: 20px;">
+            <a href="{{ route('home') }}" style="color: #0066cc; text-decoration: none;">Trang chủ</a>
+            <span> / </span>
+            <span>Thanh toán</span>
+        </div>
+
+        <div class="checkout-grid">
+            {{-- Left: Payment Form --}}
+            <div>
+                <div class="checkout-section">
+                    <h2 class="section-title">
+                        <i class="fas fa-info-circle"></i> Thông tin đơn hàng
+                    </h2>
+                    
+                    @if(isset($borrow))
+                        <div class="order-info-row">
+                            <span class="order-info-label">Mã phiếu mượn:</span>
+                            <span class="order-info-value">#{{ $borrow->id }}</span>
+                        </div>
+                        <div class="order-info-row">
+                            <span class="order-info-label">Người mượn:</span>
+                            <span class="order-info-value">{{ $borrow->reader->name ?? 'N/A' }}</span>
+                        </div>
+                        <div class="order-info-row">
+                            <span class="order-info-label">Ngày mượn:</span>
+                            <span class="order-info-value">{{ $borrow->created_at->format('d/m/Y') }}</span>
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Payment Method Selection --}}
+                @include('payments.form', [
+                    'borrow_id' => $borrow->id ?? null,
+                    'amount' => $amount ?? 0,
+                    'payment_type' => $payment_type ?? 'deposit'
+                ])
+            </div>
+
+            {{-- Right: Order Summary --}}
+            <div>
+                <div class="checkout-section order-summary">
+                    <h2 class="section-title">
+                        <i class="fas fa-receipt"></i> Tóm tắt thanh toán
+                    </h2>
+
+                    <div class="summary-row">
+                        <span>Loại thanh toán:</span>
+                        <span>
+                            @switch($payment_type ?? 'deposit')
+                                @case('deposit')
+                                    Tiền cọc
+                                    @break
+                                @case('borrow_fee')
+                                    Tiền thuê sách
+                                    @break
+                                @case('shipping_fee')
+                                    Phí vận chuyển
+                                    @break
+                                @case('damage_fee')
+                                    Phí đền bù
+                                    @break
+                                @default
+                                    Khác
+                            @endswitch
+                        </span>
+                    </div>
+
+                    <div class="summary-row">
+                        <span>Số tiền:</span>
+                        <span>{{ number_format($amount ?? 0, 0, ',', '.') }}đ</span>
+                    </div>
+
+                    <div class="summary-row total">
+                        <span>Tổng thanh toán:</span>
+                        <span>{{ number_format($amount ?? 0, 0, ',', '.') }}đ</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>   <div class="checkout-container">
+        <h1 style="font-size: 32px; font-weight: 700; margin-bottom: 10px;">
+            <i class="fas fa-credit-card"></i> Thanh toán
+        </h1>
+        
+        <div style="color: #666; margin-bottom: 20px;">
+            <a href="{{ route('home') }}" style="color: #0066cc; text-decoration: none;">Trang chủ</a>
+            <span> / </span>
+            <span>Thanh toán</span>
+        </div>
+
+        <div class="checkout-grid">
+            {{-- Left: Payment Form --}}
+            <div>
+                <div class="checkout-section">
+                    <h2 class="section-title">
+                        <i class="fas fa-info-circle"></i> Thông tin đơn hàng
+                    </h2>
+                    
+                    @if(isset($borrow))
+                        <div class="order-info-row">
+                            <span class="order-info-label">Mã phiếu mượn:</span>
+                            <span class="order-info-value">#{{ $borrow->id }}</span>
+                        </div>
+                        <div class="order-info-row">
+                            <span class="order-info-label">Người mượn:</span>
+                            <span class="order-info-value">{{ $borrow->reader->name ?? 'N/A' }}</span>
+                        </div>
+                        <div class="order-info-row">
+                            <span class="order-info-label">Ngày mượn:</span>
+                            <span class="order-info-value">{{ $borrow->created_at->format('d/m/Y') }}</span>
+                        </div>
+                    @endif
+                </div>
+
+                {{-- Payment Method Selection --}}
+                @include('payments.form', [
+                    'borrow_id' => $borrow->id ?? null,
+                    'amount' => $amount ?? 0,
+                    'payment_type' => $payment_type ?? 'deposit'
+                ])
+            </div>
+
+            {{-- Right: Order Summary --}}
+            <div>
+                <div class="checkout-section order-summary">
+                    <h2 class="section-title">
+                        <i class="fas fa-receipt"></i> Tóm tắt thanh toán
+                    </h2>
+
+                    <div class="summary-row">
+                        <span>Loại thanh toán:</span>
+                        <span>
+                            @switch($payment_type ?? 'deposit')
+                                @case('deposit')
+                                    Tiền cọc
+                                    @break
+                                @case('borrow_fee')
+                                    Tiền thuê sách
+                                    @break
+                                @case('shipping_fee')
+                                    Phí vận chuyển
+                                    @break
+                                @case('damage_fee')
+                                    Phí đền bù
+                                    @break
+                                @default
+                                    Khác
+                            @endswitch
+                        </span>
+                    </div>
+
+                    <div class="summary-row">
+                        <span>Số tiền:</span>
+                        <span>{{ number_format($amount ?? 0, 0, ',', '.') }}đ</span>
+                    </div>
+
+                    <div class="summary-row total">
+                        <span>Tổng thanh toán:</span>
+                        <span>{{ number_format($amount ?? 0, 0, ',', '.') }}đ</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     @include('components.footer')
 </body>
 </html>
