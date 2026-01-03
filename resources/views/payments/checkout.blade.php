@@ -179,6 +179,7 @@
     @include('components.footer')
     @include('components.footer')
     @include('components.footer')
+    @include('components.footer')
 </body>
 </html>
 
