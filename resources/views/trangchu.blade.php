@@ -130,17 +130,7 @@
                         }
                     </style>
                 @else
-                    <a href="{{ route('borrow-cart.index') }}" class="cart-link" id="borrow-cart-link" title="Giỏ sách">
-                        <i class="fas fa-shopping-cart"></i>
-                        <span>Giỏ sách</span>
-                        <span class="cart-badge" id="borrow-cart-count" style="display: none;">0</span>
-                    </a>
-                    <a href="{{ route('login') }}" class="auth-link">Đăng nhập</a>
-                @endauth
-            </div>
-        </div>
-        <div class="header-nav">
-            <div class="search-bar">
+                   
                 <form action="{{ route('books.public') }}" method="GET" class="search-form">
                     <input type="text" name="keyword" placeholder="Tìm sách, tác giả, sản phẩm mong muốn..." value="{{ request('keyword') }}" class="search-input">
                     <button type="submit" class="search-button">🔍 Tìm kiếm</button>
@@ -250,17 +240,7 @@ function updateBorrowCartCount(count) {
                             }
                         @endphp
                         
-                        @foreach($bannerImages as $index => $banner)
-                            <div class="carousel-slide {{ $index === 0 ? 'active' : '' }}">
-                                <a href="{{ $banner['link'] }}" class="slide-link">
-                                    @if($banner['image'])
-                                        <img src="{{ $banner['image'] }}" alt="{{ $banner['title'] }}" class="slide-image">
-                                    @else
-                                        <div class="slide-placeholder">
-                                            <div class="placeholder-content">
-                                                <h2>{{ $banner['title'] }}</h2>
-                                                <p>Khám phá thư viện sách đa dạng</p>
-                                            </div>
+                       
                                         </div>
                                     @endif
                                     <div class="slide-overlay">
@@ -425,16 +405,7 @@ function updateBorrowCartCount(count) {
                                                     </svg>
                                                 @endif
                                             </div>
-                                            <p class="book-title">{{ $book->ten_sach ?? 'Chưa có tên' }}</p>
-                                            @if(isset($book->tac_gia) && !empty($book->tac_gia))
-                                                <p class="book-author">{{ $book->tac_gia }}</p>
-                                            @endif
-                                            <div class="book-rating">
-                                                <span class="stars">★★★★★</span>
-                                            </div>
-                                            @if(isset($book->gia) && $book->gia > 0)
-                                                <p class="book-price">Chỉ từ {{ number_format($book->gia, 0, ',', '.') }}₫</p>
-                                            @elseif(isset($book->gia_ban) && $book->gia_ban > 0)
+                                        
                                                 <p class="book-price">Chỉ từ {{ number_format($book->gia_ban, 0, ',', '.') }}₫</p>
                                             @else
                                                 <p class="book-price">Chỉ từ 120.000₫</p>
@@ -480,18 +451,7 @@ function updateBorrowCartCount(count) {
                                                     </svg>
                                                 @endif
                                             </div>
-                                            <p class="book-title">{{ $book->ten_sach ?? 'Chưa có tên' }}</p>
-                                            @if(isset($book->tac_gia) && !empty($book->tac_gia))
-                                                <p class="book-author">{{ $book->tac_gia }}</p>
-                                            @endif
-                                            <div class="book-rating">
-                                                <span class="stars">★★★★★</span>
-                                            </div>
-                                            @if(isset($book->gia) && $book->gia > 0)
-                                                <p class="book-price">Chỉ từ {{ number_format($book->gia, 0, ',', '.') }}₫</p>
-                                            @elseif(isset($book->so_luong_ban) && $book->so_luong_ban > 0)
-                                                <p class="book-price">Đã bán: {{ $book->so_luong_ban }}</p>
-                                            @endif
+                                            
                                         </a>
                                     </div>
                                 @empty
@@ -528,21 +488,7 @@ function updateBorrowCartCount(count) {
                     </div>
                     
                     <!-- Phần Có thể bạn thích -->
-                    <div class="book-section">
-                        <div class="section-header">
-                            <h2 class="section-title">Có thể bạn thích</h2>
-                            <a href="{{ route('books.public', ['category_id' => null]) }}" class="view-all-link">
-                                Xem toàn bộ <span>→</span>
-                            </a>
-                        </div>
-                        <div class="book-carousel-wrapper">
-                            <div class="book-list sach-list-container" id="co-the-ban-thich-carousel">
-                                @forelse($recommended_books ?? [] as $book)
-                                    <div class="book-item">
-                                        <a href="{{ route('books.show', $book->id) }}" class="book-link">
-                                            <div class="book-cover">
-                                                @if(isset($book->hinh_anh) && !empty($book->hinh_anh) && file_exists(public_path('storage/'.$book->hinh_anh)))
-                                                    <img src="{{ asset('storage/'.$book->hinh_anh) }}" alt="{{ $book->ten_sach ?? 'Sách' }}">
+                   
                                                 @else
                                                     <svg viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg">
                                                         <rect width="210" height="297" fill="#f0f0f0"></rect>
@@ -620,18 +566,7 @@ function updateBorrowCartCount(count) {
                                                     </svg>
                                                 @endif
                                             </div>
-                                            <p class="book-title">{{ $book->ten_sach ?? 'Chưa có tên' }}</p>
-                                            @if(isset($book->tac_gia) && !empty($book->tac_gia))
-                                                <p class="book-author">{{ $book->tac_gia }}</p>
-                                            @endif
-                                            <div class="book-rating">
-                                                <span class="stars">★★★★★</span>
-                                            </div>
-                                            @if(isset($book->gia) && $book->gia > 0)
-                                                <p class="book-price">Chỉ từ {{ number_format($book->gia, 0, ',', '.') }}₫</p>
-                                            @elseif(isset($book->so_luong_ban) && $book->so_luong_ban > 0)
-                                                <p class="book-price">Đã bán: {{ $book->so_luong_ban }}</p>
-                                            @endif
+                                            
                                         </a>
                                     </div>
                                 @empty
@@ -707,17 +642,7 @@ function updateBorrowCartCount(count) {
                             </div>
                         </div>
                         
-                        <!-- Phần Sách xem nhiều nhất -->
-                        <div class="bestbooks-section">
-                            <h2 class="section-title-bestbooks">Sách xem nhiều nhất</h2>
-                            <div class="bestbooks-list">
-                                @forelse($most_viewed_books ?? [] as $index => $book)
-                                    <div class="bestbook-item">
-                                        <a href="{{ route('books.show', $book->id) }}" class="bestbook-link">
-                                            <div class="bestbook-cover">
-                                                @if(isset($book->hinh_anh) && $book->hinh_anh && file_exists(public_path('storage/'.$book->hinh_anh)))
-                                                    <img src="{{ asset('storage/'.$book->hinh_anh) }}" alt="{{ $book->ten_sach }}">
-                                                @else
+                        
                                                     <svg viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg">
                                                         <rect width="210" height="297" fill="#f0f0f0"/>
                                                         <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-size="16" fill="#999">📚</text>
@@ -810,17 +735,7 @@ function updateBorrowCartCount(count) {
                             <div class="book-item">
                                 <a href="{{ route('books.show', $book->id) }}" class="book-link">
                                     <div class="book-cover">
-                                        @if(isset($book->hinh_anh) && !empty($book->hinh_anh) && file_exists(public_path('storage/'.$book->hinh_anh)))
-                                            <img src="{{ asset('storage/'.$book->hinh_anh) }}" alt="{{ $book->ten_sach ?? 'Sách' }}">
-                                        @else
-                                            <svg viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg">
-                                                <rect width="210" height="297" fill="#f0f0f0"></rect>
-                                                <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-size="16" fill="#999">📚</text>
-                                            </svg>
-                                        @endif
-                                    </div>
-                                    <p class="book-title">{{ $book->ten_sach ?? 'Chưa có tên' }}</p>
-                                    @if(isset($book->tac_gia) && !empty($book->tac_gia))
+                                        
                                         <p class="book-author">{{ $book->tac_gia }}</p>
                                     @endif
                                     <div class="book-rating">
@@ -879,15 +794,7 @@ function updateBorrowCartCount(count) {
                                         </div>
                                         <div class="collection-price">
                                             @php
-                                                $gia_ban = $book->gia_ban ?? $book->gia ?? 0;
-                                                $gia_goc = isset($book->gia_goc) && $book->gia_goc > $gia_ban ? $book->gia_goc : null;
-                                            @endphp
-                                            @if($gia_goc)
-                                                <span class="collection-price-current">{{ number_format($gia_ban, 0, ',', '.') }}₫</span>
-                                                <span class="collection-price-old">{{ number_format($gia_goc, 0, ',', '.') }}₫</span>
-                                            @elseif($gia_ban > 0)
-                                                <span class="collection-price-current">{{ number_format($gia_ban, 0, ',', '.') }}₫</span>
-                                            @else
+                                              
                                                 <span class="collection-price-current">Liên hệ</span>
                                             @endif
                                         </div>
@@ -1017,13 +924,7 @@ function updateBorrowCartCount(count) {
                                                 <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-size="16" fill="#999">📚</text>
                                             </svg>
                                         </div>
-                                        <div class="diem-sach-featured-info">
-                                            <p class="diem-sach-featured-date"></p>
-                                            <h3 class="diem-sach-featured-title">
-                                                <span class="diem-sach-title-icon">📄</span>
-                                                Chưa có điểm sách
-                                            </h3>
-                                            <p class="diem-sach-featured-description">Đang cập nhật...</p>
+                                        <div 
                                         </div>
                                     </div>
                                 @endif
@@ -1089,10 +990,7 @@ function updateBorrowCartCount(count) {
                     </a>
                 </div>
                 @php
-                    // Tìm ảnh cho news banners từ admin
-                    $newsImages = [];
-                    $bannerDir = public_path('storage/banners');
-                    $extensions = ['jpg', 'jpeg', 'png', 'webp'];
+                
                     
                     // Tìm ảnh news-featured
                     $newsImages['featured'] = null;
@@ -1215,17 +1113,7 @@ function updateBorrowCartCount(count) {
                 </div>
             </div>
             
-            <!-- Phần Trân trọng phục vụ -->
-            <div class="book-section service-section">
-                <h2 class="section-title text-center" style="margin-bottom: 30px;">Trân trọng phục vụ</h2>
-                @php
-                    // Tìm ảnh cho service banners từ admin
-                    $serviceImages = [];
-                    $bannerDir = public_path('storage/banners');
-                    $extensions = ['jpg', 'jpeg', 'png', 'webp'];
-                    $serviceConfigs = [
-                        1 => 'Bộ Xây dựng',
-                        2 => 'Viện nghiên cứu',
+    
                         3 => 'Doanh nghiệp/ Tổ chức',
                         4 => 'Nhà sách',
                         5 => 'Quản lý thư viện',

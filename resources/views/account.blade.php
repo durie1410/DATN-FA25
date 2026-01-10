@@ -67,7 +67,7 @@
                             </form>
                         </div>
                     </div>
-                    <style>
+                <style>
                         .user-menu-dropdown {
                             position: relative;
                         }
@@ -145,26 +145,6 @@
     </nav>
 
     <main class="account-container">
-        <aside class="account-sidebar">
-            <div class="user-profile">
-                <div class="user-avatar">{{ strtoupper(substr($user->name, 0, 1)) }}</div>
-                <div class="username">{{ $user->name }}</div>
-            </div>
-            <nav class="account-nav">
-                <ul>
-                    @if($user->reader)
-                    <li><a href="{{ route('account.borrowed-books') }}"><span class="icon">📚</span> Sách đang mượn</a></li>
-                    @endif
-                    <li class="active"><a href="{{ route('account') }}"><span class="icon">👤</span> Thông tin khách hàng</a></li>
-                    <li><a href="{{ route('account.change-password') }}"><span class="icon">🔒</span> Đổi mật khẩu</a></li>
-                    <li><a href="{{ route('orders.index') }}"><span class="icon">🛒</span> Lịch sử mua hàng</a></li>
-                    <li><a href="#" class="logout-link" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"><span class="icon">➡️</span> Đăng xuất</a></li>
-                </ul>
-            </nav>
-            <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
-                @csrf
-            </form>
-        </aside>
 
         <section class="account-content">
             <div class="account-details-form">
@@ -203,6 +183,8 @@
                             <span class="input-icon">📋</span>
                         </div>
                     </div>
+
+
                     <div class="form-group">
                         <label for="phone">Số điện thoại của bạn</label>
                         <div class="input-with-icon">
