@@ -16,24 +16,7 @@ class BorrowDashboardController extends Controller
         $startDate = Carbon::now()->subDays($dateRange);
         $endDate = Carbon::now();
 
-        // Thống kê tổng quan
-        $stats = $this->getOverviewStats($startDate, $endDate);
         
-        // Thống kê theo thời gian
-        $timeStats = $this->getTimeStats($startDate, $endDate);
-        
-        // Top sách được mượn nhiều nhất
-        $topBooks = $this->getTopBooks($startDate, $endDate);
-        
-        // Top độc giả mượn nhiều nhất
-        $topReaders = $this->getTopReaders($startDate, $endDate);
-        
-        // Thống kê theo trạng thái
-        $statusStats = $this->getStatusStats();
-        
-        // Thống kê quá hạn
-        $overdueStats = $this->getOverdueStats();
-
         return view('admin.borrows.dashboard', compact(
             'stats', 
             'timeStats', 
@@ -47,19 +30,6 @@ class BorrowDashboardController extends Controller
 
     private function getOverviewStats($startDate, $endDate)
     {
-        return [
-            'total_borrows' => Borrow::whereBetween('created_at', [$startDate, $endDate])->count(),
-            'active_borrows' => Borrow::where('trang_thai', 'Dang muon')->count(),
-            'returned_books' => Borrow::where('trang_thai', 'Da tra')
-                ->whereBetween('ngay_tra_thuc_te', [$startDate, $endDate])
-                ->count(),
-            'overdue_books' => Borrow::where('trang_thai', 'Dang muon')
-                ->where('ngay_hen_tra', '<', now()->toDateString())
-                ->count(),
-            'total_readers' => Reader::where('trang_thai', 'Hoat dong')->count(),
-            'total_books' => Book::count(),
-        ];
-    }
 
     private function getTimeStats($startDate, $endDate)
     {
@@ -82,38 +52,12 @@ class BorrowDashboardController extends Controller
         ];
     }
 
-    private function getTopBooks($startDate, $endDate, $limit = 10)
-    {
-        return Borrow::whereBetween('created_at', [$startDate, $endDate])
-            ->with('book')
-            ->selectRaw('book_id, COUNT(*) as borrow_count')
-            ->groupBy('book_id')
-            ->orderBy('borrow_count', 'asc')
-            ->limit($limit)
-            ->get()
-            ->map(function($item) {
-                return [
-                    'book' => $item->book,
-                    'count' => $item->borrow_count
-                ];
-            });
+    
     }
 
     private function getTopReaders($startDate, $endDate, $limit = 10)
     {
-        return Borrow::whereBetween('created_at', [$startDate, $endDate])
-            ->with('reader')
-            ->selectRaw('reader_id, COUNT(*) as borrow_count')
-            ->groupBy('reader_id')
-            ->orderBy('borrow_count', 'asc')
-            ->limit($limit)
-            ->get()
-            ->map(function($item) {
-                return [
-                    'reader' => $item->reader,
-                    'count' => $item->borrow_count
-                ];
-            });
+        
     }
 
     private function getStatusStats()
@@ -144,24 +88,7 @@ class BorrowDashboardController extends Controller
 
     public function export(Request $request)
     {
-        $dateRange = $request->get('date_range', '30');
-        $startDate = Carbon::now()->subDays($dateRange);
-        $endDate = Carbon::now();
-
-        $borrows = Borrow::whereBetween('created_at', [$startDate, $endDate])
-            ->with(['reader', 'book', 'librarian'])
-            ->get();
-
-        $filename = "borrow_report_{$startDate->format('Y-m-d')}_to_{$endDate->format('Y-m-d')}.csv";
-
-        $headers = [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
-        ];
-
-        $callback = function() use ($borrows) {
-            $file = fopen('php://output', 'w');
-            
+        
             // Header
             fputcsv($file, [
                 'ID', 'Độc giả', 'Sách', 'Ngày mượn', 'Hạn trả', 
@@ -169,18 +96,7 @@ class BorrowDashboardController extends Controller
             ]);
 
             // Data
-            foreach ($borrows as $borrow) {
-                fputcsv($file, [
-                    $borrow->id,
-                    $borrow->reader->ho_ten,
-                    $borrow->book->ten_sach,
-                    $borrow->ngay_muon->format('d/m/Y'),
-                    $borrow->ngay_hen_tra->format('d/m/Y'),
-                    $borrow->ngay_tra_thuc_te ? $borrow->ngay_tra_thuc_te->format('d/m/Y') : '',
-                    $borrow->trang_thai,
-                    $borrow->so_lan_gia_han,
-                    $borrow->librarian ? $borrow->librarian->name : ''
-                ]);
+            
             }
 
             fclose($file);

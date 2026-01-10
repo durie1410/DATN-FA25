@@ -210,16 +210,7 @@ class BorrowCartController extends Controller
                         'message' => "Số lượng tối đa có thể mượn là {$availableCopies} cuốn."
                     ], 400);
                 }
-                $existingItem->update([
-                    'quantity' => $newQuantity,
-                    'borrow_days' => $borrowDays,
-                    'distance' => $distance,
-                    'note' => $note ?: $existingItem->note,
-                    'tien_coc' => $fees['tien_coc'],
-                    'tien_thue' => $fees['tien_thue'],
-                ]);
-                $item = $existingItem;
-            } else {
+                
                 // Tạo mới item
                 $item = $cart->items()->create([
                     'book_id' => $book->id,
@@ -424,7 +415,7 @@ class BorrowCartController extends Controller
         return redirect()->route('login')->with('error', 'Vui lòng đăng nhập để đặt mượn sách');
     }
 
-<<<<<<< HEAD
+
     $user = auth()->user();
     
     // Kiểm tra thông tin user có đầy đủ không
@@ -435,32 +426,13 @@ class BorrowCartController extends Controller
     }
 
     // Tự động tạo reader nếu chưa có (từ thông tin user)
-    $reader = $user->reader;
-    if (!$reader) {
-        // Tạo số thẻ độc giả unique
-        $soTheDocGia = $this->generateUniqueReaderCardNumber();
-        
-        // Tạo reader từ thông tin user
-        $reader = Reader::create([
-            'user_id' => $user->id,
-            'ho_ten' => $user->name,
-            'email' => $user->email,
-            'so_dien_thoai' => $user->phone,
-            'so_cccd' => $user->so_cccd,
-            'ngay_sinh' => $user->ngay_sinh,
-            'gioi_tinh' => $user->gioi_tinh,
-            'dia_chi' => $user->address,
-            'so_the_doc_gia' => $soTheDocGia,
-            'ngay_cap_the' => now(),
-            'ngay_het_han' => now()->addYear(),
-            'trang_thai' => 'Hoat dong',
-        ]);
-=======
+    
+            
     $reader = Reader::where('user_id', auth()->id())->first();
     if (!$reader) {
         return redirect()->route('register.reader.form')
             ->with('error', 'Bạn chưa có thẻ độc giả. Vui lòng đăng ký thẻ độc giả trước khi mượn sách.');
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
+
     }
 
     if ($reader->trang_thai !== 'Hoat dong') {
@@ -498,49 +470,11 @@ class BorrowCartController extends Controller
             ];
         }
 
-<<<<<<< HEAD
-        $maxDistance = 0; // Lưu khoảng cách xa nhất để tính ship fee
-        
-=======
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
-        foreach ($rawItems as $rawItem) {
-            $book = Book::find($rawItem['book_id'] ?? null);
-            if (!$book) continue;
-
-            $quantity = max(1, intval($rawItem['quantity'] ?? 1));
-            $borrowDays = max(1, intval($rawItem['borrow_days'] ?? 14));
-<<<<<<< HEAD
-            // Đọc khoảng cách từ request, mặc định là 0
-            $distance = max(0, floatval($rawItem['distance'] ?? 0));
-            $note = $rawItem['note'] ?? '';
-
-            // Cập nhật khoảng cách xa nhất để tính ship fee
-            if ($distance > $maxDistance) {
-                $maxDistance = $distance;
-            }
-
-=======
-            $distance = floatval($rawItem['distance'] ?? 0);
-            $note = $rawItem['note'] ?? '';
-
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
+5fc1
             $fees = $this->calculateItemFees($book, $borrowDays);
 
-            $items[] = [
-                'book' => $book,
-                'quantity' => $quantity,
-                'borrow_days' => $borrowDays,
-                'distance' => $distance,
-                'note' => $note,
-                'tien_coc' => $fees['tien_coc'],
-                'tien_thue' => $fees['tien_thue'],
-                'total' => ($fees['tien_coc'] + $fees['tien_thue']) * $quantity,
-            ];
+           
 
-            $totalTienCoc += $fees['tien_coc'] * $quantity;
-            $totalTienThue += $fees['tien_thue'] * $quantity;
-<<<<<<< HEAD
-        }
         
         // Tính phí ship dựa trên khoảng cách xa nhất
         if ($maxDistance > 0) {
@@ -548,26 +482,15 @@ class BorrowCartController extends Controller
             $totalTienShip = $shippingService->calculateShippingFee($maxDistance);
         } else {
             $totalTienShip = 0;
-=======
 
             if ($totalTienShip === 0 && $distance > 5) {
                 $totalTienShip = ceil($distance - 5) * 5000;
             }
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
+
         }
 
     } else {
-        // --- LUỒNG MƯỢN TỪ GIỎ HÀNG ---
-        $cart = $this->getOrCreateCart();
-        if (!$cart || $cart->items()->count() === 0) {
-            return redirect()->route('borrow-cart.index')->with('error', 'Giỏ sách của bạn đang trống');
-        }
-
-        $selectedCount = $cart->items()->where('is_selected', true)->count();
-        if ($selectedCount === 0) {
-            $cart->items()->update(['is_selected' => true]);
-        }
-
+        
         $cart->load(['items' => function($query) {
             $query->where('is_selected', true);
         }, 'items.book']);
@@ -576,7 +499,7 @@ class BorrowCartController extends Controller
             return redirect()->route('borrow-cart.index')->with('error', 'Giỏ sách của bạn đang trống');
         }
 
-<<<<<<< HEAD
+
         $maxDistance = 0;
         foreach ($cart->items as $cartItem) {
             $book = $cartItem->book;
@@ -586,16 +509,16 @@ class BorrowCartController extends Controller
                 continue;
             }
             
-=======
+
         $shipFeeCalculated = false;
         foreach ($cart->items as $cartItem) {
             $book = $cartItem->book;
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
+
             $quantity = $cartItem->quantity;
             $borrowDays = $cartItem->borrow_days;
             $distance = $cartItem->distance;
             $note = $cartItem->note ?? '';
-<<<<<<< HEAD
+
 
             // Cập nhật khoảng cách xa nhất
             if ($distance > $maxDistance) {
@@ -663,18 +586,7 @@ class BorrowCartController extends Controller
      */
     public function applyVoucher(Request $request)
     {
-        $request->validate([
-            'voucher_code' => 'required|string',
-            'total_amount' => 'required|numeric|min:0',
-        ]);
-
-        $voucherCode = trim($request->input('voucher_code'));
-        $totalAmount = floatval($request->input('total_amount'));
-
-        // Tìm voucher
-        $voucher = Voucher::where('ma', $voucherCode)->first();
-
-        if (!$voucher) {
+        
             return response()->json([
                 'success' => false,
                 'message' => 'Mã giảm giá không tồn tại'
@@ -740,19 +652,7 @@ class BorrowCartController extends Controller
 
         $finalAmount = max(0, $totalAmount - $discountAmount);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Áp dụng mã giảm giá thành công',
-            'voucher' => [
-                'id' => $voucher->id,
-                'code' => $voucher->ma,
-                'type' => $voucher->loai,
-                'discount_value' => $voucher->gia_tri,
-            ],
-            'discount_amount' => $discountAmount,
-            'original_amount' => $totalAmount,
-            'final_amount' => $finalAmount,
-        ]);
+        
 =======
 
             $fees = $this->calculateItemFees($book, $borrowDays);
@@ -791,30 +691,13 @@ class BorrowCartController extends Controller
      */
 public function processCheckout(Request $request)
 {
-<<<<<<< HEAD
+
     // Validate input - Các trường địa chỉ bắt buộc, thêm thông tin khách hàng chi tiết
 =======
     // Validate input
 >>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
     $request->validate([
-        'reader_name' => 'required|string|max:255',
-        'reader_phone' => 'required|string|max:20',
-        'reader_email' => 'required|email',
-<<<<<<< HEAD
-        'reader_cccd' => 'nullable|string|max:20',
-        'reader_birthday' => 'required|date|before:today',
-        'reader_gender' => 'required|in:Nam,Nu,Khac',
-        'payment_method' => 'required|in:bank_transfer,vnpay,wallet,cod',
-        'tinh_thanh' => 'required|string|max:100',
-        'xa' => 'required|string|max:200',
-        'so_nha' => 'nullable|string|max:200',
-        'notes' => 'nullable|string|max:1000',
-        'book_id' => 'nullable|integer',
-        'quantity' => 'nullable|integer|min:1',
-        'borrow_days' => 'nullable|integer|min:1',
-        'items_json' => 'nullable|string',
-        'checkout_source' => 'nullable|string',
-        'manual_shipping_fee' => 'nullable|numeric|min:0',
+        '
     ]);
 
     if (!auth()->check()) {
@@ -881,24 +764,7 @@ public function processCheckout(Request $request)
         return redirect()->back()->with('error', 'Thẻ độc giả của bạn đã bị khóa hoặc tạm dừng. Vui lòng liên hệ thư viện.');
     }
 
-    if ($reader->ngay_het_han < now()->toDateString()) {
-        return redirect()->back()->with('error', 'Thẻ độc giả của bạn đã hết hạn. Vui lòng gia hạn thẻ.');
-    }
-
-    // Xác định nguồn checkout
-    $checkoutSource = $request->input('checkout_source', 'cart');
-    $items = collect();
-
-    // Kiểm tra mượn từ URL params (items_json)
-    if ($checkoutSource === 'url' && $request->has('items_json')) {
-        try {
-            $itemsData = json_decode($request->input('items_json'), true);
-            if (is_array($itemsData) && count($itemsData) > 0) {
-                foreach ($itemsData as $itemData) {
-                    $book = Book::find($itemData['book_id'] ?? null);
-                    if ($book) {
-                        $items->push((object)[
-                            'book' => $book,
+    
                             'quantity' => $itemData['quantity'] ?? 1,
                             'borrow_days' => $itemData['borrow_days'] ?? 14,
                             'distance' => $itemData['distance'] ?? 0,
@@ -993,14 +859,14 @@ public function processCheckout(Request $request)
         ]]);
     } else {
         // Xử lý giỏ hàng như bình thường
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
+
         $cart = $this->getOrCreateCart();
         if (!$cart || $cart->items()->count() === 0) {
             return redirect()->route('borrow-cart.index')
                 ->with('error', 'Giỏ sách của bạn đang trống. Vui lòng thêm sách vào giỏ trước khi mượn.');
         }
 
-<<<<<<< HEAD
+
         $cartItems = $cart->items()->where('is_selected', true)->with('book')->get();
         if ($cartItems->count() === 0) {
             // Nếu không có item nào được chọn, chọn tất cả
@@ -1028,7 +894,7 @@ public function processCheckout(Request $request)
                 'message' => 'Vui lòng chọn ít nhất một cuốn sách để đặt mượn'
             ], 400);
         }
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
+
     }
 
     try {
@@ -1040,7 +906,7 @@ public function processCheckout(Request $request)
         $totalTienShip = 0;
         $ngayMuon = now()->toDateString();
 
-<<<<<<< HEAD
+
         // Lấy thông tin thanh toán và địa chỉ (đã loại bỏ huyen)
         $paymentMethod = $request->input('payment_method');
         $tinhThanh = $request->input('tinh_thanh', '');
@@ -1049,27 +915,12 @@ public function processCheckout(Request $request)
         $paymentMethod = $request->input('payment_method');
         $tinhThanh = $request->input('tinh_thanh', '');
         $huyen = $request->input('huyen', '');
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
         $xa = $request->input('xa', '');
         $soNha = $request->input('so_nha', '');
         $notes = $request->input('notes');
 
-<<<<<<< HEAD
-        // Xử lý voucher nếu có
-        $voucherId = $request->input('voucher_id');
-        $voucher = null;
-        $discountAmount = 0;
+
         
-        if ($voucherId) {
-            $voucher = Voucher::find($voucherId);
-            if ($voucher && $voucher->kich_hoat == 1 && $voucher->trang_thai === 'active') {
-                // Validate lại voucher trước khi áp dụng
-                $today = now()->toDateString();
-                if ((!$voucher->ngay_bat_dau || $voucher->ngay_bat_dau <= $today) &&
-                    (!$voucher->ngay_ket_thuc || $voucher->ngay_ket_thuc >= $today) &&
-                    $voucher->so_luong > 0) {
-                    // Voucher hợp lệ, sẽ tính discount sau khi có tổng tiền
-                } else {
                     $voucher = null; // Voucher không còn hợp lệ
                 }
             } else {
@@ -1086,11 +937,11 @@ public function processCheckout(Request $request)
             'ten_nguoi_muon' => $request->input('reader_name'),
             'so_dien_thoai' => $request->input('reader_phone'),
             'tinh_thanh' => $tinhThanh,
-<<<<<<< HEAD
+
             'huyen' => '', // Không sử dụng nữa
 =======
             'huyen' => $huyen,
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
+
             'xa' => $xa,
             'so_nha' => $soNha,
             'ngay_muon' => $ngayMuon,
@@ -1099,7 +950,7 @@ public function processCheckout(Request $request)
             'tien_thue' => 0,
             'tien_ship' => 0,
             'tong_tien' => 0,
-<<<<<<< HEAD
+
             'voucher_id' => $voucher ? $voucher->id : null,
             'ghi_chu' => trim($notes ?: ($checkoutSource === 'url' ? 'Mượn trực tiếp' : 'Đặt mượn từ giỏ sách')),
         ]);
@@ -1175,7 +1026,7 @@ public function processCheckout(Request $request)
                 ], 400);
             }
 
-<<<<<<< HEAD
+
             foreach ($availableInventories as $index => $inventory) {
                 $fees = \App\Services\PricingService::calculateFees(
                     $book,
@@ -1191,18 +1042,7 @@ public function processCheckout(Request $request)
                     $shipFeeAssigned = true;
                 }
 
-                $borrowItem = \App\Models\BorrowItem::create([
-                    'borrow_id' => $borrow->id,
-                    'book_id' => $book->id,
-                    'inventorie_id' => $inventory->id,
-                    'ngay_muon' => $ngayMuon,
-                    'ngay_hen_tra' => $ngayHenTra,
-                    'trang_thai' => 'Cho duyet',
-                    'tien_coc' => $fees['tien_coc'],
-                    'tien_thue' => $fees['tien_thue'],
-                    'tien_ship' => $itemShipFee,
-                    'ghi_chu' => $note ?: "Yêu cầu mượn - {$quantity} cuốn - {$borrowDays} ngày",
-                ]);
+                
 
 =======
             // Tính phí ship 1 lần
@@ -1228,18 +1068,7 @@ public function processCheckout(Request $request)
                     $shipFeeCalculated = true;
                 }
 
-                $borrowItem = \App\Models\BorrowItem::create([
-                    'borrow_id' => $borrow->id,
-                    'book_id' => $book->id,
-                    'inventorie_id' => $inventory->id,
-                    'ngay_muon' => $ngayMuon,
-                    'ngay_hen_tra' => $ngayHenTra,
-                    'trang_thai' => 'Cho duyet',
-                    'tien_coc' => $fees['tien_coc'],
-                    'tien_thue' => $fees['tien_thue'],
-                    'tien_ship' => $itemShipFee,
-                    'ghi_chu' => $note ?: "Yêu cầu mượn - {$quantity} cuốn - {$borrowDays} ngày",
-                ]);
+                $
 
 >>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                 $allBorrowItems[] = $borrowItem;
@@ -1248,8 +1077,7 @@ public function processCheckout(Request $request)
             }
         }
 
-<<<<<<< HEAD
-        // Tính tổng tiền trước khi áp dụng voucher
+AD        // Tính tổng tiền trước khi áp dụng voucher
         $tongTienTruocGiam = $totalTienCoc + $totalTienThue + $totalTienShip;
         
         // Áp dụng voucher nếu có
@@ -1284,7 +1112,7 @@ public function processCheckout(Request $request)
             'tien_coc' => $totalTienCoc,
             'tien_thue' => $totalTienThue,
             'tien_ship' => $totalTienShip,
-<<<<<<< HEAD
+
             'tong_tien' => $tongTienSauGiam,
             'voucher_id' => $voucher ? $voucher->id : null,
         ]);
@@ -1360,30 +1188,7 @@ public function processCheckout(Request $request)
             default => 'Thanh toán online'
         };
 
-        \App\Models\BorrowPayment::create([
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
-            'borrow_id' => $borrow->id,
-            'amount' => $totalTienCoc + $totalTienThue + $totalTienShip,
-            'payment_type' => 'deposit',
-            'payment_method' => $paymentMethodEnum,
-<<<<<<< HEAD
-            'payment_status' => $paymentStatus,
-=======
-            'payment_status' => 'pending',
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
-            'transaction_code' => $transactionCode,
-            'note' => $paymentNote . ' - Tiền cọc, phí thuê và phí vận chuyển',
-        ]);
-
-        // Nếu từ giỏ hàng, xóa item đã chọn
-<<<<<<< HEAD
-        if ($checkoutSource === 'cart') {
-            $cart = $this->getOrCreateCart();
-            if ($cart) {
-                $cart->items()->where('is_selected', true)->delete();
-                $cart->update(['total_items' => $cart->getTotalItemsAttribute()]);
-            }
-        }
+        
 
         DB::commit();
 

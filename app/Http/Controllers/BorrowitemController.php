@@ -31,16 +31,7 @@ public function update(Request $request, $id)
     // Validate dữ liệu, bỏ 'trang_thai' khỏi form để tránh ghi đè
     $validated = $request->except('trang_thai');
     $validated += $request->validate([
-        'book_id' => 'required|exists:books,id',
-        'ngay_muon' => 'required|date',
-        'ngay_hen_tra' => 'required|date|after_or_equal:ngay_muon',
-        'tien_coc' => 'required|numeric|min:0',
-        'tien_thue' => 'nullable|numeric|min:0',
-        'tien_ship' => 'required|numeric|min:0',
-        'trang_thai_coc' => 'required|in:cho_xu_ly,da_thu,da_hoan,tru_vao_phat',
-        'so_lan_gia_han' => 'nullable|integer|min:0',
-        'ghi_chu' => 'nullable|string',
-    ]);
+       
 
     // 1️⃣ Cập nhật BorrowItem
     $item->update($validated);
@@ -69,12 +60,11 @@ public function update(Request $request, $id)
             $borrow->trang_thai = 'Cho duyet';
         } elseif (in_array('Dang muon', $statuses)) {
             $borrow->trang_thai = 'Dang muon';
-<<<<<<< HEAD
         } elseif (in_array('Huy', $statuses) && count(array_unique($statuses)) === 1) {
             // Nếu TẤT CẢ items đều bị hủy
             $borrow->trang_thai = 'Huy';
-=======
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
+
+
         } else {
             $borrow->trang_thai = 'Da tra';
         }
@@ -160,17 +150,7 @@ public function approve($id)
             
             \Log::info('Tất cả trạng thái items', ['statuses' => $statuses]);
             
-            // Xác định trạng thái mới cho Borrow
-            $newBorrowStatus = 'Da tra';
-            if (in_array('Mat sach', $statuses)) {
-                $newBorrowStatus = 'Mat sach';
-            } elseif (in_array('Qua han', $statuses)) {
-                $newBorrowStatus = 'Qua han';
-            } elseif (in_array('Cho duyet', $statuses) || in_array('Chua nhan', $statuses)) {
-                $newBorrowStatus = 'Cho duyet';
-            } elseif (in_array('Dang muon', $statuses)) {
-                $newBorrowStatus = 'Dang muon';
-            }
+            
             
             $borrowAffected = \DB::table('borrows')
                 ->where('id', $checkItem->borrow_id)
@@ -200,20 +180,7 @@ public function approve($id)
             throw $innerEx;
         }
 
-        // Redirect về trang trước với thông báo thành công
-        $referer = request()->header('referer');
-        if ($referer && str_contains($referer, '/admin/borrows/') && str_contains($referer, '/edit')) {
-            return redirect()->route('admin.borrows.edit', $checkItem->borrow_id)
-                ->with('success', '✅ Đã duyệt thành công! Sách chuyển sang trạng thái "Đang mượn".')
-                ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-                ->header('Pragma', 'no-cache')
-                ->header('Expires', '0');
-        } else {
-            return redirect()->route('admin.borrows.index')
-                ->with('success', '✅ Đã duyệt thành công! Sách chuyển sang trạng thái "Đang mượn".')
-                ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
-                ->header('Pragma', 'no-cache')
-                ->header('Expires', '0');
+       
         }
     } catch (\Exception $e) {
         \DB::rollBack();
@@ -644,16 +611,13 @@ public function updateStatus(Request $request, $id)
             case 'Da tra':
                 // Cập nhật trạng thái item
                 $item->update(['trang_thai' => 'Da tra']);
-
-<<<<<<< HEAD
-                // Cập nhật inventory về 'Co san' (Có sẵn)
+        // Cập nhật inventory về 'Co san' (Có sẵn)
                 if ($item->inventory) {
                     $item->inventory->update(['status' => 'Co san']);
-=======
+
                 // Cập nhật inventory về Available
                 if ($item->inventory) {
                     $item->inventory->update(['status' => 'Available']);
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
                 }
 
                 $message = 'Đã đánh dấu sách đã trả!';
@@ -691,7 +655,7 @@ public function updateStatus(Request $request, $id)
                     $inventory->update(['status' => 'Hong']);
                 }
 
-<<<<<<< HEAD
+
                 // Lưu vào fines với đầy đủ thông tin hư hỏng
                 $damageDescription = $request->input('damage_description', 'Sách bị hư hỏng khi trả');
                 $damageType = $request->input('damage_type', 'khac');
@@ -705,9 +669,9 @@ public function updateStatus(Request $request, $id)
                     }
                 }
                 
-=======
+
                 // Lưu vào fines
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
+
                 Fine::create([
                     'borrow_id'      => $item->borrow_id,
                     'borrow_item_id' => $item->id,
@@ -715,7 +679,7 @@ public function updateStatus(Request $request, $id)
                     'amount'         => $phatGoc,
                     'type'           => 'damaged_book',
                     'description'    => 'Sách hỏng: ' . $book->ten_sach . ', tình trạng khi mượn: ' . $tinhTrangKhiMuon,
-<<<<<<< HEAD
+
                     'damage_description' => $damageDescription,
                     'damage_images' => !empty($damageImages) ? $damageImages : null,
                     'damage_severity' => 'trung_binh',
@@ -727,10 +691,10 @@ public function updateStatus(Request $request, $id)
                     'inspected_at' => now(),
                     'status'         => 'pending',
                     'due_date'       => now()->addDays(30),
-=======
+
                     'status'         => 'pending',
                     'due_date'       => now()->addDays(7),
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
+
                     'created_by'     => auth()->id(),
                 ]);
 

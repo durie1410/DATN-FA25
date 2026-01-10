@@ -37,23 +37,7 @@ class BorrowController extends Controller
             });
         }
 
-        if ($request->filled('trang_thai')) {
-            if ($request->trang_thai === 'Cho duyet') {
-                $query->whereHas('items', function($q) {
-                    $q->where('trang_thai', 'Cho duyet');
-                });
-            } elseif ($request->trang_thai === 'Huy') {
-                $query->whereHas('items', function($q) {
-                    $q->where('trang_thai', 'Huy');
-                });
-            } elseif ($request->trang_thai === 'Mat sach') {
-                $query->whereHas('items', function($q) {
-                    $q->where('trang_thai', 'Mat sach');
-                });
-            } elseif ($request->trang_thai === 'Hong') {
-                $query->whereHas('items', function($q) {
-                    $q->where('trang_thai', 'Hong');
-                });
+        
             } else {
                 $query->where('trang_thai', $request->trang_thai);
             }
@@ -81,7 +65,7 @@ class BorrowController extends Controller
         $borrows->getCollection()->transform(function($borrow) {
             // Reload hoàn toàn từ database để tránh cache
             $borrow = Borrow::with(['reader', 'librarian', 'items', 'voucher'])->find($borrow->id);
-<<<<<<< HEAD
+
             
             // Đồng bộ tien_ship từ items lên borrow nếu borrow->tien_ship = 0
             if ($borrow && $borrow->items && $borrow->items->count() > 0) {
@@ -112,13 +96,12 @@ class BorrowController extends Controller
         
         return response()
             ->view('admin.borrows.index', compact('borrows', 'stats'))
-=======
             return $borrow;
         });
         
         return response()
             ->view('admin.borrows.index', compact('borrows'))
->>>>>>> 6526361d58f679f60113153c54886f88ed175fc1
+
             ->header('Cache-Control', 'no-cache, no-store, must-revalidate')
             ->header('Pragma', 'no-cache')
             ->header('Expires', '0');
@@ -138,19 +121,7 @@ class BorrowController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'reader_id' => 'nullable|exists:readers,id',
-            'librarian_id' => 'required|exists:users,id',
-            'ten_nguoi_muon' => 'required|string|max:255',
-            'so_dien_thoai' => 'required|string|max:20',
-            'tinh_thanh' => 'required|string|max:255',
-            'huyen' => 'required|string|max:255',
-            'xa' => 'required|string|max:255',
-            'so_nha' => 'required|string|max:255',
-            'ngay_muon' => 'required|date',
-            'ghi_chu' => 'nullable|string|max:500',
-        ]);
-
+        
         Borrow::create($request->all());
 
         return redirect()->route('admin.borrows.index')
@@ -201,19 +172,7 @@ class BorrowController extends Controller
     {
         $borrow = Borrow::findOrFail($id);
 
-        $data = $request->validate([
-            'reader_id' => 'nullable|exists:readers,id',
-            'librarian_id' => 'nullable|exists:users,id',
-            'ten_nguoi_muon' => 'required|string|max:255',
-            'ngay_muon' => 'required|date',
-            'so_dien_thoai' => 'required|string|max:20',
-            'tinh_thanh' => 'required|string|max:255',
-            'huyen' => 'required|string|max:255',
-            'xa' => 'required|string|max:255',
-            'so_nha' => 'required|string|max:255',
-            'ghi_chu' => 'nullable|string',
-            'voucher_id' => 'nullable|exists:vouchers,id',
-        ]);
+        
 
         $borrow->update($data);
 
