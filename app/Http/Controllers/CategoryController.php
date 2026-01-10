@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Book;
 use App\Services\CacheService;
-use Illuminate\Http\Request;
+
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\CategoriesExport;
@@ -23,141 +23,7 @@ class CategoryController extends Controller
     }
 
     // Hiển thị danh sách với tìm kiếm và lọc
-    public function index(Request $request)
-    {
-        $query = Category::withCount('books');
-
-        // Tìm kiếm theo tên thể loại
-        if ($request->filled('keyword')) {
-            $keyword = $request->keyword;
-            $query->where('ten_the_loai', 'like', "%{$keyword}%");
-        }
-
-        // Lọc theo số lượng sách
-        if ($request->filled('min_books')) {
-            $query->having('books_count', '>=', $request->min_books);
-        }
-        if ($request->filled('max_books')) {
-            $query->having('books_count', '<=', $request->max_books);
-        }
-
-        // Sắp xếp
-        $sortBy = $request->get('sort_by', 'created_at');
-        $sortOrder = $request->get('sort_order', 'asc');
-        
-        switch ($sortBy) {
-            case 'name':
-                $query->orderBy('ten_the_loai', $sortOrder);
-                break;
-            case 'books_count':
-                $query->orderBy('books_count', $sortOrder);
-                break;
-            case 'created_at':
-                $query->orderBy('created_at', $sortOrder);
-                break;
-            default:
-                $query->orderBy('created_at', 'desc');
-        }
-
-        $categories = $query->paginate(15);
-
-        return view('admin.categories.index', compact('categories'));
-    }
-
-    // Form thêm
-    public function create()
-    {
-        return view('admin.categories.create');
-    }
-
-    // Lưu thể loại mới
-    public function store(Request $request)
-    {
-        $request->validate([
-            'ten_the_loai' => 'required|max:255|unique:categories',
-            'mo_ta' => 'nullable|max:500',
-            'trang_thai' => 'required|in:active,inactive',
-            'mau_sac' => 'nullable|string|max:7',
-            'icon' => 'nullable|string|max:50',
-        ]);
-
-        Category::create([
-            'ten_the_loai' => $request->ten_the_loai,
-            'mo_ta' => $request->mo_ta,
-            'trang_thai' => $request->trang_thai,
-            'mau_sac' => $request->mau_sac,
-            'icon' => $request->icon,
-        ]);
-
-        // Clear cache khi tạo category mới
-        CacheService::clearCategories();
-        CacheService::clearDashboard();
-
-        return redirect()->route('admin.categories.index')->with('success', 'Thêm thể loại thành công!');
-    }
-
-    // Xem chi tiết thể loại
-    public function show($id)
-    {
-        $category = Category::withCount('books')->findOrFail($id);
-        
-        // Lấy sách trong thể loại này
-        $books = Book::where('category_id', $id)
-            ->with(['borrows'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
-
-        // Thống kê
-        $stats = [
-            'total_books' => $books->total(),
-            'total_borrows' => Book::where('category_id', $id)
-                ->withCount('borrows')
-                ->get()
-                ->sum('borrows_count'),
-            'popular_books' => Book::where('category_id', $id)
-                ->withCount('borrows')
-                ->orderBy('borrows_count', 'desc')
-                ->limit(5)
-                ->get(),
-        ];
-
-        return view('admin.categories.show', compact('category', 'books', 'stats'));
-    }
-
-    // Form sửa
-    public function edit($id)
-    {
-        $category = Category::findOrFail($id);
-        return view('admin.categories.edit', compact('category'));
-    }
-
-    // Cập nhật thể loại
-    public function update(Request $request, $id)
-    {
-        $request->validate([
-            'ten_the_loai' => 'required|max:255|unique:categories,ten_the_loai,' . $id,
-            'mo_ta' => 'nullable|max:500',
-            'trang_thai' => 'required|in:active,inactive',
-            'mau_sac' => 'nullable|string|max:7',
-            'icon' => 'nullable|string|max:50',
-        ]);
-
-        $category = Category::findOrFail($id);
-        $category->update([
-            'ten_the_loai' => $request->ten_the_loai,
-            'mo_ta' => $request->mo_ta,
-            'trang_thai' => $request->trang_thai,
-            'mau_sac' => $request->mau_sac,
-            'icon' => $request->icon,
-        ]);
-
-        // Clear cache khi cập nhật category
-        CacheService::clearCategories();
-        CacheService::clearDashboard();
-
-        return redirect()->route('admin.categories.index')->with('success', 'Cập nhật thành công!');
-    }
-
+    
     // Xóa thể loại
     public function destroy($id)
     {
@@ -168,6 +34,7 @@ class CategoryController extends Controller
             return redirect()->route('admin.categories.index')
                 ->with('error', 'Không thể xóa thể loại có sách! Vui lòng chuyển sách sang thể loại khác trước.');
         }
+
 
         $category->delete();
         
